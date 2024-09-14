@@ -2,7 +2,7 @@
  ; If !A_IsAdmin
  ; 	 Run *RunAs "%A_ScriptFullPath%"
 
-; #warn  ; enable warning to assist with detecting common errors.
+#warn  ; enable warning to assist with detecting common errors.
 #SingleInstance, Force
 #NoEnv
 #Persistent ; Keeps a script permanently running (that is, until the user closes it or ExitApp is encountered)
@@ -20,7 +20,7 @@ FormatTime, A_Time,, Time
 FormatTime, A_ShortDate,, ShortDate
 FormatTime, A_LongDate,, LongDate
 FormatTime, A_YY,, yy
-formattime, A_HH,, HH
+formattime, A_HH,, HH 
 formattime, A_tt,, tt
 {
     Date := A_Now
@@ -28,7 +28,7 @@ formattime, A_tt,, tt
     TextMenuDate(List)
 }
 StartTime := A_TickCount
-ScriptVersion := "v.2024.09.13"
+ScriptVersion := "v.2024.09.13-2"
 ScriptName := "Extended CAPS Context Menu"
 url := "https://www.github.com/indigofairyx"
 dittourl := "https://github.com/sabrogden/Ditto"
@@ -112,8 +112,8 @@ menu, case, icon, More Convert Case..., %A_ScriptDir%\Images\richtext_editor__32
 menu, Case, Add ; line ;-------------------------
 menu, Case, Add, Put in "Quotes", ClipQuote
 menu, Case, icon, Put in "Quotes", %A_ScriptDir%\Images\format quote_24x24.ico
-menu, Case, add, 3 `{Curly Brackets`} on new lines, wrapincbrackets
-menu, Case, icon, 3 `{Curly Brackets`} on new lines, %A_ScriptDir%\Images\coding code json filetype_24x24.ico
+menu, Case, add, Put in `{Curly Brackets`}, wrapincbrackets
+menu, Case, icon, Put in `{Curly Brackets`}, %A_ScriptDir%\Images\coding code json filetype_24x24.ico
 
 
 menu, cform, add ; line  ;-------------------------
@@ -121,10 +121,10 @@ menu, cform, deleteall
 menu, cform, add, Put in `/`* Block Comment `*`/, commentblock
 menu, cform, add, Put in (Parentheses), wrapparen
 menu, cform, add, Put in [Square Brackets], squbracket
-menu, cform, Add, 1 ``Code - `Inline``, CodeLine
-menu, cform, Add, 2 ``````Code - Box``````, CodeBox
-menu, cform, icon, 2 ``````Code - Box``````, %A_ScriptDir%\Images\selection text code Resources_200_24x24.ico
-menu, cform, add, 5 `<`!-- xml Comment --`>, wrapinxmlcomment
+menu, cform, Add, Put in ``Code - `Inline``, CodeLine
+menu, cform, Add, Put in ``````Code - Box``````, CodeBox
+menu, cform, icon, Put in ``````Code - Box``````, %A_ScriptDir%\Images\selection text code Resources_200_24x24.ico
+menu, cform, add, Put in `<`!-- xml Comment --`>, wrapinxmlcomment
 menu, cform, add, ; line ;------------------------- '
 menu, cform, Add, Add &More Formatting, Addmore
 menu, cform, icon, Add &More Formatting, %A_ScriptDir%\Images\notepad++_100.ico
@@ -156,20 +156,20 @@ Menu, case, icon, Open Emoji Keyboard, %A_ScriptDir%\Images\emoji-face people_25
 menu, Case, Add ; line ;-------------------------
 
 ; menu, ctools, deleteall
-menu, ctools, add, Copy To NewFile.txt, newtxtfile
-menu, ctools, icon, Copy To NewFile.txt, %A_ScriptDir%\Images\document rename FLUENT_colored_453_64x64.ico
+menu, ctools, add, Copy Selection To New Document, newtxtfile
+menu, ctools, icon, Copy Selection To New Document, %A_ScriptDir%\Images\document new text txt add FLUENT_colored_454_64x64.ico
 menu, ctools, add, Quick Save NewFile.txt, autotxtfile
 menu, ctools, icon, Quick Save NewFile.txt, %A_ScriptDir%\Images\lc_savebasicas_26x26.ico
 menu, ctools, add, Open Quick Notes Dir, openquick
 menu, ctools, icon, Open Quick Notes Dir, C:\Windows\System32\imageres.dll, 265
 menu, ctools, add, ; line ;-------------------------
-MENU, ctools, add, AHK Auto Correct, abc
-MENU, ctools, icon, AHK Auto Correct, %A_ScriptDir%\Images\autocorrect_icon_32x32.ico
-menu, ctools, add, ; line ;-------------------------
+menu, ctools, add, Save Clipboard to New Document, SaveClipboardAsTxt
+menu, ctools, icon, Save Clipboard to New Document, C:\xsysicons\Fluent Colored icons\Dopus FLUENT Icon Set\document rename FLUENT_colored_453_64x64.ico
 menu, ctools, add, View Clipboard, viewclip
 menu, ctools, icon, View Clipboard, %A_ScriptDir%\Images\message Magic Box.ico
 menu, ctools, add, Clear Clipboard, clearclip
 menu, ctools, icon, Clear Clipboard, %A_ScriptDir%\Images\clean broom sweep icon.ico
+
 
 menu, ctools, add, ; line ;------------------------- 
 Menu, ctools, Add, Dark Mode | Light Mode, DMToggle
@@ -178,6 +178,9 @@ menu, ctools, add, About, aboutwindow
 menu, ctools, icon, About, %A_ScriptDir%\Images\about_48x48.ico
 MENU, ctools, add, Debug Lines, lines
 menu, ctools, icon, Debug Lines, %A_ScriptDir%\Images\bug report FLUENT_colored_217_64x64.ico
+menu, ctools, add, ; line ;-------------------------
+MENU, ctools, add, Run AHK Auto Correct, abc
+MENU, ctools, icon, Run AHK Auto Correct, %A_ScriptDir%\Images\autocorrect_icon_32x32.ico
 menu, ctools, add, ; line ;------------------------- 
 menu, ctools, add, Ditto Clipboard, dittobutton
 menu, ctools, icon, Ditto Clipboard, %A_ScriptDir%\Images\ditto quote clipboard 128x128.ico
@@ -197,8 +200,8 @@ menu, case, icon, Text Tools && Apps, %A_ScriptDir%\Images\Pencil and Ruler__32x
 menu, case, add ; line ;-------------------------
 menu, Case, Add, Copy, basiccopy
 menu, Case, icon, Copy, %A_ScriptDir%\Images\edit-copy_32x32.ico
-; menu, case, add, Copy Append, appendclip
-; menu, case, icon, Copy Append, %A_ScriptDir%\Images\copySpecial_48x48.ico
+menu, case, add, Copy + Add to Clipboard, appendclip
+menu, case, icon, Copy + Add to Clipboard, %A_ScriptDir%\Images\clipboard--plus_16x16.ico
 Menu, Case, add, Cut, basiccut
 menu, case, icon, Cut, %A_ScriptDir%\Images\edit-cut_32x32.ico
 menu, case, add, Paste, basicpaste
@@ -568,15 +571,37 @@ return
 basiccopy:
 Send ^{vk43} ;Ctrl C ; SendInput, ^c Send {Ctrl down}c{Ctrl up}  ; Send ^{vk43}
 return
+
 basiccut:
 SendInput, ^x
 return
+
 basicpaste:
 Send ^{vk56} ;Ctrl V ; SendInput, ^v
 return
 
 appendclip:
+{
+    SavedClip := ClipboardAll ; Save the current clipboard content
+    Clipboard := ""  ; Clear the clipboard to capture new content
+    Sleep 175  ; Ensure enough time for clipboard to clear
+    Send ^c ; Send Ctrl+C to copy the selected text
+    ClipWait, 1  ; Wait for clipboard to be filled with new text
 
+    if !ErrorLevel
+    {
+        NewText := Clipboard  ; Get the copied text ; If text is successfully copied, append it to the clipboard
+        Clipboard := SavedClip  ; Restore the original clipboard content
+        Clipboard := Clipboard . "`n`n" NewText  ; Append the new text to the existing content
+        Sleep 150  ; Allow time for clipboard to update
+    }
+    else
+    {
+        Clipboard := SavedClip ; If no text was copied, restore the original clipboard content
+    }
+    ; MsgBox, Text has been appended to the clipboard! ; Optional: Notify the user that text was appended
+    return
+}
 return
 
 Lines:
@@ -792,7 +817,9 @@ Return
 ClipQuote:
 {
 SavedClip := ClipboardAll
+sleep 175
 Clipboard =
+sleep 75
 Send ^{vk43} ;Ctrl C
 ClipWait 1
 Tmp:=Clipboard
@@ -844,8 +871,7 @@ dtMenuAction:
 	SendInput %A_ThisMenuItem%
 Return
 
-;; fastkeys 08-10-2024
-Dictionarydotcom:  ; added to caps\ccase menu
+Dictionarydotcom:  ; added to caps\case menu
 SaveClip := ClipboardAll
 Clipboard := ""
 Send ^{vk43} ;Ctrl C
@@ -858,45 +884,82 @@ return
 
 
 newtxtfile:
-  origClipboard=%clipboard%
+origClipboard=%clipboard%
+sleep 150
   clipboard=
+  sleep 75
   SendInput, ^{vk43} ;Ctrl C
-  ClipWait, 2
-  inputbox, notename, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will be saved as a .txt file, , ,
-  if (noteName = ""){
-	tooltip, Canceled
-	sleep 1000
-	tooltip
-	return
-}
-fileselectFolder, NoteLocation, *%A_MyDocuments%, 3, Select a folder to Save %notename%.txt in.`n`nIf %notename%.txt already exists, the new content will be appended to the end of the note.
-if (noteLocation = ""){
-	tooltip Canceled - You did not select a valid Location
-	sleep 1000
-	tooltip
-	return
-}
-
-fileappend,%Clipboard%,%NoteLocation%\%notename%.txt
-
-msgbox, 4, Edit Now?, Would you like to edit %notename%.txt now?`nThis message box will auto close in 5 seconds., 5
-ifmsgbox, yes
-	run, notepad.exe "%NoteLocation%\%notename%.txt"
-ifmsgbox, no
-	return
-ifmsgbox, timeout
-	return
-sleep 200
+  ClipWait, 1
+  if errorlevel
+	 {
+        TrayTip, CAPSkey, Copy to clipboard failed.`nAborted Auto Save., 4, 18
+		Clipboard := origClipboard  ; Restore the clipboard
+        return
+    }
+   FileSelectFile, SavePath, S16, %A_MyDocuments%, Save Selected Text as a New Document, Text Files (*.txt) ; Prompt for where to save the file
+    if SavePath =  ; If no file was selected
+        Return
+    FileAppend, %Clipboard%, %SavePath%  ; Append clipboard contents to the selected file
+	sleep 200
   clipboard=%origClipboard%
+msgbox, 4, Selected Text Saved, Your selected text as been saved to...`n`n%SavePath%`n`nWould you like to Edit this file now?`n`nThis popup will auto-close in 5 seconds., 5
+	ifmsgbox yes
+		run "notepad.exe" "%SavePath%"
+	ifmsgbox no
+		return
+	Ifmsgbox timeout
+		return
 return
+
+/*
+ ; newtxtfile:  ; og newfile, replaced with better options
+  ; origClipboard=%clipboard%
+  ; clipboard=
+  ; SendInput, ^{vk43} ;Ctrl C
+  ; ClipWait, 2
+  ; inputbox, notename, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will be saved as a .txt file, , ,
+  ; if (noteName = ""){
+	; tooltip, Canceled
+	; sleep 1000
+	; tooltip
+	; return
+; }
+; fileselectFolder, NoteLocation, *%A_MyDocuments%, 3, Select a folder to Save %notename%.txt in.`n`nIf %notename%.txt already exists, the new content will be appended to the end of the note.
+; if (noteLocation = ""){
+	; tooltip Canceled - You did not select a valid Location
+	; sleep 1000
+	; tooltip
+	; return
+; }
+; fileappend,%Clipboard%,%NoteLocation%\%notename%.txt
+; msgbox, 4, Edit Now?, Would you like to edit %notename%.txt now?`nThis message box will auto close in 5 seconds., 5
+; ifmsgbox, yes
+	; run, notepad.exe "%NoteLocation%\%notename%.txt"
+; ifmsgbox, no
+	; return
+; ifmsgbox, timeout
+	; return
+; sleep 200
+  ; clipboard=%origClipboard%
+; return 
+
+*/
+
 
 autotxtfile:
 {
   origClipboard=%clipboard%
+  sleep 150
   clipboard=
   SendInput, ^{vk43} ;Ctrl C
   ClipWait, 2
-  inputbox, notename, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will be saved as a .txt file, , ,
+  if errorlevel
+	 {
+        TrayTip, CAPSkey, Copy to clipboard failed.`nAborted Auto Save., 4, 18
+		Clipboard := origClipboard  ; Restore the clipboard
+        return
+    }
+  inputbox, notename, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will auto-save as a .txt file`nIt will automatically be saved to`n%A_ScriptDir%\Auto Saved Text Notes\, , ,
   if (noteName = ""){
 	tooltip, Canceled
 	sleep 1000
@@ -907,16 +970,30 @@ FileCreateDir, Auto Saved Text Notes
 sleep 100
 fileappend,%Clipboard%,%A_ScriptDir%\Auto Saved Text Notes\%notename%.txt
 sleep 300
-Tooltip, %notename%.txt saved to `n%A_ScriptDir%\Auto Saved Text Notes\
-sleep 3500
-tooltip
-return
 }
 return
+
 
 openquick:
 try run, %A_ScriptDir%\Auto Saved Text Notes\
 return
+
+SaveClipboardAsTxt:
+    FileSelectFile, SavePath, S16, %A_MyDocuments%, Save Clipboard As, Text Files (*.*) ; Prompt for where to save the file
+    if SavePath =  ; If no file was selected
+        Return
+    
+    FileAppend, %Clipboard%, %SavePath%  ; Append clipboard contents to the selected file
+    ; MsgBox, Clipboard saved to %SavePath%!
+	msgbox, 4, Clipboard Saved, The text in your Clipboard as been saved to...`n`n%SavePath%`n`nWould you like to Edit this file now?`n`nThis popup will auto-close in 5 seconds., 5
+	ifmsgbox yes
+		run "notepad.exe" "%SavePath%"
+	ifmsgbox no
+		return
+	Ifmsgbox timeout
+		return
+Return
+
 
 togglenum:
 If (numtoggle := !numtoggle) {

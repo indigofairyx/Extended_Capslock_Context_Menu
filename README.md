@@ -17,6 +17,8 @@ To run protablely, download zip from relases page. drag & drop the `.ahk` file o
 
 ![convertcase](https://raw.githubusercontent.com/indigofairyx/Capslock_Context_Menu/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/menus_caps_582x554.png)
 
+***
 
-coming soon...
+v.2024.09.13-3 updates to the clipboard options. You can now append new items to the existing clipboard. As well as save your clipboard to a new text based document without opening an editor. 
+![clipboardupdates](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/clipboard%20updates%20590x638.png)
 

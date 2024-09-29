@@ -1,11 +1,12 @@
-# Capslock_Context_Menu
+# Extended Capslock Context Menu
 An AutoHotkey menu for working-playing with text
 
-To run protablely, download zip from relases page. drag & drop the `.ahk` file onto the AutoHotkey.exe
+## To run protablely, download zip from relases page. drag & drop the `.ahk` file onto the AutoHotkey.exe
+
+Download the this Repo from the [Releases](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases) for lasted Updates and Bugfixes!
 
 
-
-## About Extended Capslock Menu
+### About Extended Capslock Menu
 ![Extended Capslock Context Menu/Images/Screenshots/about window_766x1265.png](https://raw.githubusercontent.com/indigofairyx/Capslock_Context_Menu/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/about%20window_766x1265.png)
 
 # Screenshots

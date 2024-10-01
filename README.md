@@ -4,6 +4,7 @@ An AutoHotkey menu for working-playing with text
 ## To run, portably, download zip from Releases page, drag & drop the `.ahk` file onto the AutoHotkey.exe
 
 Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases) for lasted Updates and Bugfixes!
+
 **NOTE!!!** *This script needs to run from the folder its zipped in, or the icons will be missing and it will error out.*
 
 

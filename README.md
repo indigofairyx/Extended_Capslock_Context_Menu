@@ -10,6 +10,7 @@ Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_
 
 # About Extended Capslock Menu
 ![Extended_Capslock_Menu_2024-10-14_01-08-54AM_880x1527](https://github.com/user-attachments/assets/033ab52f-60ff-44c8-96ff-9ce3bd26de8f)
+
 ![Extended_Capslock_Menu_2024-10-14_01-09-45AM_544x672](https://github.com/user-attachments/assets/a458c45f-6844-45fa-a1b0-03feb308c3a1)
 
 ## Hotkeys
@@ -44,7 +45,13 @@ Ctrl + Shift + R -- Reload Script
 
 ![menu2ligthmode](https://github.com/indigofairyx/Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/menus_caps_602x550.png)
 
-![insertdatetime](https://github.com/indigofairyx/Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/menus%20caps%20sub%20date%20time__366x269.png)
+![menu date time LIGHT MODE notepad++_786x695](https://github.com/user-attachments/assets/e41cd97d-df7b-4358-97e1-e9fa3ea443ab)
+
+
+[menu find notepad++_909x747](https://github.com/user-attachments/assets/f4f975f5-c17a-487a-ba15-985adb041ecf)
+
+![new sticky notes VSCodium_1453x604](https://github.com/user-attachments/assets/e37ea6ac-1d60-4d2e-874c-4060bdf5572b)
+
 
 ![convertcase](https://raw.githubusercontent.com/indigofairyx/Capslock_Context_Menu/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/menus_caps_582x554.png)
 

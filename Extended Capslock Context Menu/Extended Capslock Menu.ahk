@@ -4786,15 +4786,5 @@ altmenualttxtshow:
 menu, alttxt, show
 return
 
-; syntax-- IniWrite, Value, %inifile%, Section, Key
-; syntax-- IniWrite, Pairs, %inifile%, Section
-; syntax-example- IniWrite, this is a new value, %inifile%, section2, key
-; syntax-- IniRead, OutputVar, %inifile%, section2, key
-; syntax-- IniRead, OutputVarSection, %inifile%, Section
-; syntax-- IniRead, OutputVarSectionNames, %inifile%
-; syntax-def- iniread, // Reads a value, section or list of section names from a standard format .ini file.
-; syntax-example- IniRead, OutputVar, %inifile%, section2, key // MsgBox, The value is %OutputVar%.
-; syntax-- IniDelete, %inifile%, Section , Key // Deletes a value from a standard format .ini file.
-; syntax-example- IniDelete, %inifile%, section2, key
-; syntax iniread, iniwrite, inidelete // looks like this // [SectionName] `n Key=Value
+
 

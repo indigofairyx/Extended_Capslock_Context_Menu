@@ -67,9 +67,6 @@ TIP -- You can also click that Live Preview menu item at any time to see a messa
 
 ## Screenshots
 
-
-
-
 ![menu date time LIGHT MODE notepad++_786x695](https://github.com/user-attachments/assets/e41cd97d-df7b-4358-97e1-e9fa3ea443ab)
 
 
@@ -83,5 +80,8 @@ TIP -- You can also click that Live Preview menu item at any time to see a messa
 ***
 
 v.2024.09.13-3 updates to the clipboard options. You can now append new items to the existing clipboard. As well as save your clipboard to a new text based document without opening an editor. 
-![clipboardupdates](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Screenshots/clipboard%20updates%20590x638.png)
+
+
+![menu copy add to clipboard_590x638](https://github.com/user-attachments/assets/bb542dea-0c4d-4778-a98c-2a99a7e2eed5)
+
 

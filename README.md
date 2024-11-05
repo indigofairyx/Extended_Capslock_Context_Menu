@@ -14,49 +14,74 @@ Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_
 ![Extended_Capslock_Menu_2024-10-14_01-09-45AM_544x672](https://github.com/user-attachments/assets/a458c45f-6844-45fa-a1b0-03feb308c3a1)
 
 ## Hotkeys
-![image](https://github.com/user-attachments/assets/84514e14-f9d7-4271-be93-cf6550fe5b15)
 
 ```autohotkey
-Extended CAPSLOCK Functionality Using AutoHotkey:
-	-Capslock, Single Tap, COPY
-	-Capslock, Double Tap, PASTE
-	-Capslock, HOLD, Show Extended Capslock Menu
-**************************************************
+
+-----[[[[ HOTKEYS ]]]]-----
+Extended CAPSLOCK KEY Functionality Using AutoHotkey:
+	+ Capslock, Single Tap, COPY
+	+ Capslock, Double Tap, PASTE
+	+ Capslock, HOLD, Show Extended Capslock Menu
+
+Middle Mouse Button -- Alt Mouse Hotkey to OPEN MENU
+Ctrl + Alt + F3 -- Alt Keyboard Hotkey to OPEN MENU
+
+  Ctrl + Shift + F2 -- New Sticky Filled With Selection
+  Ctrl + Alt + F2 -- New Empty Sticky Note
+  Ctrl + Shift + R -- Reload Script
+-------------------------------------------------- 
 Alt + Capslock -- Toggle Capslock
 Ctrl + Capslock -- Toggle Caplock
 Shift + Capslock -- Switch between UPPERCASE & lowercase
+-------------------------------------------------- 
+--- Hotkeys for the Sticky Note GUI Windows ---
+Alt + M -- Show Sticky GUI Quick Menu
+Ctrl + S -- Save Sticky As
+Ctrl + Shift + S -- Quick Save As '.txt'
+Ctrl + N -- Create New Empty Temp Sticky
+Ctrl + P -- Pin Sticky To Top
+Ctrl + Shift + O -- Open Quick Notes Folder
+Ctrl + ESC -- Close Stick without saving
 **************************************************
 
-Ctrl + Shift + " -- Paste Clipboard in Quotes
-Ctrl + " -- Put Quotes around Selected Text
-
-Alt + G -- Google Selection
+         -----+++ OTHER HOTKEYS +++-----
+Ctrl + Shift + `" -- Paste Clipboard in Quotes
+	Ctrl + `" -- Put Quotes Around [*Selected Text*]
 Win + H -- Add Auto Correct Hot Strings ...
-...(if Auto Correct is running)
-Ctrl + Alt + F2 -- New Empty Sticky Note
-Ctrl + Alt + F3 -- Alt Hotkey to Open Menu
+		 ...(if include Auto Correct script is running)
+-------------------------------------------------- 
+==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
+Right Click -- Can replace NP++ menu with this one. (optional)
+Ctrl + Space -- Open Live Folder Menu... [*Experimental*]
+	if a [* C:\Filepath.txt *] is selected it show's that files folder
+	if nothing is selected it will show the folder of the Active file
+	+ this can also work in Everything 1.5a on a selected file
+	- this menu hotkey is turn off else where
+Ctrl + Alt + N -- Open Active File in Alternative Text Editor Menu
+**************************************************
 
-Ctrl + Shift + R -- Reload Script
+TIP -- You can also click that Live Preview menu item at any time to see a message box of the text in your Clipboard, whether or not Live Preview is running.
+
 ```
 
 
 ## Screenshots
-![menu1](https://github.com/indigofairyx/Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/menus_caps_556x777.png)
 
-![menu2ligthmode](https://github.com/indigofairyx/Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/menus_caps_602x550.png)
+
+
 
 ![menu date time LIGHT MODE notepad++_786x695](https://github.com/user-attachments/assets/e41cd97d-df7b-4358-97e1-e9fa3ea443ab)
 
 
-[menu find notepad++_909x747](https://github.com/user-attachments/assets/f4f975f5-c17a-487a-ba15-985adb041ecf)
+![menu find notepad++_909x747](https://github.com/user-attachments/assets/f4f975f5-c17a-487a-ba15-985adb041ecf)
 
 ![new sticky notes VSCodium_1453x604](https://github.com/user-attachments/assets/e37ea6ac-1d60-4d2e-874c-4060bdf5572b)
 
 
-![convertcase](https://raw.githubusercontent.com/indigofairyx/Capslock_Context_Menu/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/menus_caps_582x554.png)
+
 
 ***
 
 v.2024.09.13-3 updates to the clipboard options. You can now append new items to the existing clipboard. As well as save your clipboard to a new text based document without opening an editor. 
-![clipboardupdates](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Images/Screenshots/clipboard%20updates%20590x638.png)
+![clipboardupdates](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/blob/main/Extended%20Capslock%20Context%20Menu/Screenshots/clipboard%20updates%20590x638.png)
 

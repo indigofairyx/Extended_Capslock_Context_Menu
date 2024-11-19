@@ -3201,7 +3201,7 @@ return
 #If  ; End excluding dopus condition
 
 
-Esc:: ;Escape to stop speaking
+~Esc:: ;Escape to stop speaking
     Gosub StopSpeaking
 Return
 

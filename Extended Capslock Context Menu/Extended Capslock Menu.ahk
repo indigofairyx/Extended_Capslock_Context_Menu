@@ -5,7 +5,7 @@
 
 ;!!!!!!!!!!!! IMPORTANT! THIS FILE MUST BE ENCODED WITH UTF8+BOM !!!!!!!!!!!!!!;
 
-ScriptVersion := "v.2024.11.06"
+ScriptVersion := "v.2024.11.18"
 
 ScriptName := "Extended CaplsLock Menu" 
 
@@ -17,13 +17,19 @@ ScriptName := "Extended CaplsLock Menu"
 #InstallKeybdHook
 #InstallMouseHook
 
+SetWorkingDir,%A_ScriptDir%
+filePath := A_ScriptFullPath
+global CAPSGuiToggle
+CAPSGuiToggle := false
+global quicknotesdir
+quicknotesdir = %A_ScriptDir%\Extended Capslock Menu QUICK Notes
 
 SetBatchLines -1  ; Run the script at maximum speed.
 SetWinDelay, -1  ; go quick
 CoordMode, Mouse, Screen
 SendMode Input
-SetWorkingDir,%A_ScriptDir%
-filePath := A_ScriptFullPath
+SetCapsLockState, off
+
 inifile := A_ScriptDir "\" A_ScriptName "-SETTINGS.ini"
 global inifile
 if !FileExist(inifile) {
@@ -58,15 +64,15 @@ Loop, Parse, ProgramSection, `n, `r
 ; MsgBox, % "Path to Directory rt: " dopusrt
 
 ; default to 0 ( false - off ) ; default to 1 ( true - on )
-IniRead, DarkMode, %inifile%, DarkMode, key, 1 
-IniRead, Beep_enabled, %inifile%, Beep_enabled, key, 1 
-IniRead, LiveMenuEnabled, %inifile%, LiveMenuEnabled, key, 0 
-IniRead, ShiftedNumRow, %inifile%, ShiftedNumRow, key, 0 
+IniRead, DarkMode, %inifile%, DarkMode, key, 1
+IniRead, Beep_enabled, %inifile%, Beep_enabled, key, 1
+IniRead, LiveMenuEnabled, %inifile%, LiveMenuEnabled, key, 0
+IniRead, ShiftedNumRow, %inifile%, ShiftedNumRow, key, 0
 IniRead, ReplaceNPPRightClick, %inifile%, ReplaceNPPRightClick, key, 0 
 
 ; DarkMode := DarkMode = 1
 ; Beep_enabled := Beep_enabled = 1
-; LiveMenuEnabled := LiveMenuEnabled = 1 
+; LiveMenuEnabled := LiveMenuEnabled = 1
 ; ShiftedNumRow := ShiftedNumRow = 1
 ; ReplaceNPPRightClick := ReplaceNPPRightClick = 1
 ; tooltip, DarkMode: %DarkMode%`nReplacement: %ReplaceNPPRightClick%`n SHIFTED #: %ShiftedNumRow%`n beeps: %Beep_enabled%`n livemenu: %LiveMenuEnabled%
@@ -82,61 +88,44 @@ if (DarkMode)
 			DarkMode := false
 			MenuDark(3) ; Set to ForceLight
 		}
-
-
-
-
-SetCapsLockState, off
-
+		
 ; EnvGet, userprofile, Path ;;//broken
 ;; todo, figure out which EnvGet's I dont need, clean this list out.
 envget, userprofile, userprofile
+; EnvGet, OutputVar, % A_Is64bitOS ? "ProgramW6432" : "ProgramFiles"
+EnvGet, LocalAppData, LocalAppData
+
 ; msgbox, %userprofile%
 ; EnvGet, EnvGetVar, Path
 ; EnvGet, EnvGetVar, envgetvar
 ; msgbox %envgetvar%
-; EnvGet, OutputVar, % A_Is64bitOS ? "ProgramW6432" : "ProgramFiles"
 ; MsgBox, Program files are in: %OutputVar%
-EnvGet, LocalAppData, LocalAppData
 ; MsgBox, %A_UserName%'s Local directory is located at: %LocalAppData%
 
-Global filename,dir,ext,filestem,drive,folder,lastfolder,filetoclip,highlighted
+; Global filename,dir,ext,filestem,drive,folder,lastfolder,filetoclip,highlighted
 
-
-
-
-Global texteditor
-
-global ClipSaved
-Global ClipSaved := ""   ; Variable to store saved clipboard content
+iconerror = %A_ScriptDir%\icons\view error_192x192.ico
+global iconerror
 
 ;sticky note parms
 ; currentIndex := 1 
 pinoff=%A_ScriptDir%\icons\pin-off_26x26.ico
 pinon=%A_ScriptDir%\icons\pin-on_26x26.ico
-global pinstartpic=1
-Global pinstartpic := 1  ; Variable for pin state
-Global pin   			; var for sticky notes
+; global pinstartpic=1
+global texteitor
+Global ActiveFile
+global ClipSaved
+Global ClipSaved := ""   ; Variable to store saved clipboard content
 Global StickyCount := 0  ; Global counter for sticky notes, GUI item
 Global clipcontent       ; Dynamic live menu item
-Global stickytext := ""  ; Variable for sticky note text
-
-iconerror = %A_ScriptDir%\icons\view error_192x192.ico
-
-; global toggles
-; global ReplaceNPPRightClick
-; global CAPSGuiToggle
-; global CapsGuiToggle := false
-; global LiveMenuEnabled
-; global ShiftedNumRow
-; global Beep_enabled
-; global darkmode
+Global StickyText := ""  ; Variable for sticky note text
+Global pinstartpic := 1  ; Variable for pin state
+Global pin   			; var for sticky notes
+Global TTS_Voice := ""  ; Global variable to hold the TTS COM object // TextToSpeech:
 
 ;---------------------------------------------------------------------------
 this := "" ; swap at, text func
 div := "" ;swap at, text, func
-;---------------------------------------------------------------------------
-
 
 ;---------------------------------------------------------------------------
 { ; items for menu, dtmenu,
@@ -172,30 +161,30 @@ menu, dtmenu, add, ; line ;-------------------------
 
 DateFormats(Date)
 {
-  global
-  FormatTime, OutputVar , %Date%, h:mm tt ;12 hour clock
-  List := OutputVar
-  FormatTime, OutputVar , %Date%, HH:mm tt ;24 hour clock
-  List := List . "|" . OutputVar
-  FormatTime, OutputVar , %Date%, ShortDate ; 9/5/2015
-  List := List . "|" . OutputVar
-  FormatTime, OutputVar , %Date%, MM/dd/yy ; 09/05/2015
-  List := List . "|" . OutputVar
-  FormatTime, OutputVar , %Date%, MMMM d, yyyy ; August 26, 2024
-  List := List . "|" . OutputVar
-  FormatTime, OutputVar , %Date%, LongDate ; Monday, August 26, 2024
-  List := List . "|" . OutputVar
-  FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, h:mm tt  ; Friday, September 6, 2024, 9:46 PM
-  List := List . "|" . OutputVar
-  FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, hh:mm:ss tt ; Friday, September 6, 2024, 09:46:41 PM
-  List := List . "|" . OutputVar
-  FormatTime, OutputVar, %Date%, %A_now% ; 20240826165553
-  List := List . "|" . OutputVar
-   FormatTime, OutputVar, %Date%, dddd ; Monday
-  List := List . "|" . OutputVar
-   FormatTime, OutputVar, %Date%, MMMM ; August
-  List := List . "|" . OutputVar
-  Return List
+global
+FormatTime, OutputVar , %Date%, h:mm tt ;12 hour clock
+List := OutputVar
+FormatTime, OutputVar , %Date%, HH:mm tt ;24 hour clock
+List := List . "|" . OutputVar
+FormatTime, OutputVar , %Date%, ShortDate ; 9/5/2015
+List := List . "|" . OutputVar
+FormatTime, OutputVar , %Date%, MM/dd/yy ; 09/05/2015
+List := List . "|" . OutputVar
+FormatTime, OutputVar , %Date%, MMMM d, yyyy ; August 26, 2024
+List := List . "|" . OutputVar
+FormatTime, OutputVar , %Date%, LongDate ; Monday, August 26, 2024
+List := List . "|" . OutputVar
+FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, h:mm tt  ; Friday, September 6, 2024, 9:46 PM
+List := List . "|" . OutputVar
+FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, hh:mm:ss tt ; Friday, September 6, 2024, 09:46:41 PM
+List := List . "|" . OutputVar
+FormatTime, OutputVar, %Date%, %A_now% ; 20240826165553
+List := List . "|" . OutputVar
+FormatTime, OutputVar, %Date%, dddd ; Monday
+List := List . "|" . OutputVar
+FormatTime, OutputVar, %Date%, MMMM ; August
+List := List . "|" . OutputVar
+Return List
 }
 dtmenurefresh() ;; Function
 {
@@ -208,7 +197,7 @@ TextMenuDate(List)
 
 ;---------------------------------------------------------------------------
 
-;---------------------------------------------------------------------------
+;--------------------------------------------------------------------------- 
 menu, ctxt, add, --- Modify Text && Case ---, showctxtmenu
 menu, ctxt, icon, --- Modify Text && Case ---, %A_ScriptDir%\Icons\richtext_editor__32x32.ico,,28
 menu, ctxt, default, --- Modify Text && Case ---,
@@ -253,19 +242,26 @@ menu, ctxt, icon, Swap At Anchor Word, %A_ScriptDir%\Icons\arrow_switch__32x32.i
 
 ;---------------------------------------------------------------------------
 
-menu, cform, add, `/`* Block Comment `*`/, commentblock
-menu, cform, add, `{Wrapped}, cbrakectswrapped
-menu, cform, add, (Parentheses), wrapparen
-menu, cform, add, [Square Brackets], squbracket
-menu, cform, icon, [Square Brackets], %A_ScriptDir%\Icons\code text brackets file_type_light_toml_32x32.ico
-menu, cform, add, `%PercentVar`%, wrappercent
-menu, cform, Add, ``Code - `Inline``, CodeLine
-menu, cform, Add, ``````Code - Box``````, CodeBox
-menu, cform, icon, ``````Code - Box``````, %A_ScriptDir%\Icons\selection text code Resources_200_24x24.ico
-menu, cform, add, [code]Box[/code], forumcodebox
-menu, cform, Add, <kbd>`K<`/kbd>, dopusK
-menu, cform, icon, <kbd>`K<`/kbd>, %A_ScriptDir%\Icons\xml code_128x128.ico
-menu, cform, add, `<`!-- xml Comment --`>, wrapinxmlcomment
+menu, cform, add, 1 `/`* Block Comment `*`/, commentblock
+menu, cform, icon, 1 `/`* Block Comment `*`/, %A_ScriptDir%\Icons\comment code coding com.github.jeremyvaartjes.comgen_64x64.ico
+menu, cform, add, 2 `{Wrapped}, cbrakectswrapped
+menu, cform, icon, 2 `{Wrapped}, %A_ScriptDir%\Icons\lc_symbolshapes.brace-pair_22x22.ico
+menu, cform, add, 3 (Parentheses), wrapparen
+menu, cform, icon, 3 (Parentheses), %A_ScriptDir%\Icons\lc_symbolshapes.bracket-pair_26x26.ico
+menu, cform, add, 4 [Square Brackets], squbracket
+menu, cform, icon, 4 [Square Brackets], %A_ScriptDir%\Icons\lc_symbolshapes.bracket-pair_22x22.ico
+; menu, cform, icon, 4 [Square Brackets], %A_ScriptDir%\Icons\code text brackets file_type_light_toml_32x32.ico ; alt icon
+menu, cform, add, 5 `%PercentVar`%, wrappercent
+menu, cform, icon, 5 `%PercentVar`%, %A_ScriptDir%\Icons\code format_percentage__32x32.ico
+menu, cform, Add, 6 ``Code - `Inline``, CodeLine
+menu, cform, Add, 7 ``````Code - Box``````, CodeBox
+menu, cform, icon, 7 ``````Code - Box``````, %A_ScriptDir%\Icons\selection text code Resources_200_24x24.ico
+menu, cform, add, 8 [code]Box - Forum[/code], forumcodebox
+menu, cform, Add, 9 <kbd>`K<`/kbd>, dopusK
+menu, cform, icon, 9 <kbd>`K<`/kbd>, %A_ScriptDir%\Icons\xml code_128x128.ico
+menu, cform, add, 0 `<`!-- xml Comment --`>, wrapinxmlcomment
+menu, cform, add, A ``nAHK new Line``n, ahknewline
+menu, cform, icon, A ``nAHK new Line``n, C:\xsysicons\icons extracted from software\more gen Icons 24x24\083_key return enter keyboard capt_24x24.ico
 
 
 ;---------------------------------------------------------------------------
@@ -282,8 +278,8 @@ menu, cfind, icon, define word (google), %A_ScriptDir%\Icons\Dictionary__32x32.i
 menu, cfind, add, Wikipedia Search, wikipediasearch
 menu, cfind, icon, Wikipedia Search, %A_ScriptDir%\Icons\wikipedia.ico
 
-menu, cfind, add, AHK Syntax Search, ahksearchmenu
-menu, cfind, icon, AHK Syntax Search, %A_ScriptDir%\Icons\www.autohotkey.com website favcon_48x48.ico
+menu, cfind, add, AHK Site Search via Google, ahksearchmenu
+menu, cfind, icon, AHK Site Search via Google, %A_ScriptDir%\Icons\www.autohotkey.com website favcon_48x48.ico
 menu, cfind, add, ; line -------------------------
 menu, cfind, add, Visit Website [If a URL is selected], gowebsite
 menu, cfind, icon, Visit Website [If a URL is Selected], %A_ScriptDir%\Icons\web-browser xfav_24x24.ico
@@ -294,8 +290,8 @@ menu, cfind, add, ; line ;-------------------------
 menu, cfind, add, Everything`, Find [Selected Text] Locally, Findwitheverything
 menu, cfind, icon, Everything`, Find [Selected Text] Locally, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
 menu, cfind, add, System Index`, Find with EveryThing 1.5a, evindex
-menu, cfind, icon,System Index`, Find with EveryThing 1.5a, %A_ScriptDir%\Icons\windowsindexingoptions_48x48.ico
-; menu, cfind, icon, System Index`, Find with EveryThing 1.5a, %A_ScriptDir%\Icons\office search find content everything -document-viewer_32x32.ico ; alt icon
+menu, cfind, icon,System Index`, Find with EveryThing 1.5a, %A_ScriptDir%\Icons\voidtools-07-Everything-SkyBlue.ico
+
 menu, cfind, add, ; line ;-------------------------
 menu, cfind, add, NP++`, Find in Files, findinfilesnpp
 menu, cfind, icon, NP++`, Find in Files, %A_ScriptDir%\Icons\Find in Files.ico
@@ -303,6 +299,9 @@ menu, cfind, add, NP++`, Find all in this Doc, findalllocalnpp
 menu, cfind, icon, NP++`, Find all in this Doc, %A_ScriptDir%\Icons\Find next.ico
 menu, cfind, add, Find in Files with AstroGrep, findastro
 menu, cfind, icon, Find in Files with AstroGrep, %A_ScriptDir%\Icons\astrogrep find search 256x256.ico
+menu, cfind, add, ; line ------------------------- todo rename?
+menu, cfind, add, Search in AHK Help File (Local), GetHelplocal
+menu, cfind, icon, Search in AHK Help File (Local), %A_ScriptDir%\Icons\chm help document question find hh_0_2.ico
 menu, cfind, add, ; line ;-------------------------
 menu, cfind, add, Look up on Dictionary.com && Thesaurus.com, Dictionarydotcom
 
@@ -356,13 +355,10 @@ menu, ctools, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
 
 
 menu, copen, add, -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] --, showopenmenu
-; if FileExist(dopus)
-; if FileExist("C:\Program Files\GPSoftware\Directory Opus\dopusrt.exe")
 if FileExist(dopus)
 	menu, copen, icon, -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] --, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico,,28
 else
 	menu, copen, icon, -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] --, explorer.exe,,28
-; menu, copen, icon, -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] --, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico,,27 ; alt og icon
 menu, copen, default, -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] --
 menu, copen, add, ; line ;-------------------------
 menu, copen, add, Open Folder, OpenDIRselection
@@ -370,13 +366,16 @@ menu, copen, icon, Open Folder, %A_ScriptDir%\Icons\folder file explorer imagere
 ; menu, copen, add, Open Folder v2 simple, openfoldersimple
 menu, copen, add, Run\Open File, RUNfromselection
 menu, copen, icon, Run\Open File, %A_ScriptDir%\Icons\JLicons_1_64x64.ico
-menu, copen, add, Copy File\Folder to Clipboard, COPYfromselection
-menu, copen, icon, Copy File\Folder to Clipboard, %A_ScriptDir%\Icons\importClipboard image photo picture _48x48.ico
-menu, copen, add, Edit in Text Editor, Edittxtfile
-if fileexist(Texteditor)
-	menu, copen, icon, Edit in Text Editor, %texteditor%
+if FileExist(dopus)
+	{
+		menu, copen, add, Copy File\Folder to Clipboard, COPYfromselection
+		menu, copen, icon, Copy File\Folder to Clipboard, %A_ScriptDir%\Icons\importClipboard image photo picture _48x48.ico
+	}
 else
-	menu, copen, icon, Edit in Text Editor, notepad.exe
+	{
+		menu, copen, add, Copy File\Folder to ..., COPYfromselection
+		menu, copen, icon, Copy File\Folder to ..., %A_ScriptDir%\Icons\min_copyTo_32x32.ico
+	}
 menu, copen, add, ; line ;-------------------------
 menu, copen, add, Explore Folder in Everything, EVpath
 menu, copen, icon, Explore Folder in Everything, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
@@ -384,30 +383,40 @@ menu, copen, add, Search File in Everything, EVfile
 menu, copen, icon, Search File in Everything, %A_ScriptDir%\Icons\voidtools-04-Everything-Green.ico
 
 menu, copen, add, ; line ;-------------------------
+
+menu, copen, add, Edit in Text Editor, Edittxtfile
+if fileexist(Texteditor)
+	menu, copen, icon, Edit in Text Editor, %texteditor%
+else
+	menu, copen, icon, Edit in Text Editor, notepad.exe
+
+menu, copen, add, Duplicate File as... "File Name -CopyDup.ext", makedup
+menu, copen, icon, Duplicate File as... "File Name -CopyDup.ext", %A_ScriptDir%\Icons\lc_duplicatepage_24x24.ico
 menu, copen, add, File Content to Clipboard (Text-Based Files), filetoclipboard
 menu, copen, icon, File Content to Clipboard (Text-Based Files), %A_ScriptDir%\Icons\binary text txt copy_48x48.ico
 ; menu, copen, icon, File Content to Clipboard (Text-Based Files), %A_ScriptDir%\Icons\filetype exe binary text txt copy 20_48x48.ico ;alt icon
-menu, copen, add, Copy File Names and Details of Folder to Clipboard, copydetails
-menu, copen, icon, Copy File Names and Details of Folder to Clipboard, %A_ScriptDir%\Icons\cmd_48x48.ico
+
 menu, copen, add, ; line ;-------------------------
-menu, copen, add, Duplicate File as... "File Name -CopyDup.ext", makedup
-menu, copen, icon, Duplicate File as... "File Name -CopyDup.ext", %A_ScriptDir%\Icons\lc_duplicatepage_24x24.ico
-menu, copen, add, Put File into a Subfolder (Fold will take Filename), movefiletofolder
-menu, copen, icon, Put File into a Subfolder (Fold will take Filename), %A_ScriptDir%\Icons\folder new add FLUENT_colored_165_64x64.ico
+menu, copen, add, Put File into Subfolder (Folder takes Filename), movefiletofolder
+menu, copen, icon, Put File into Subfolder (Folder takes Filename), %A_ScriptDir%\Icons\folder new add FLUENT_colored_165_64x64.ico
 menu, copen, add, Move File Up into it's Parent Folder, movefiletoparentfolder
 menu, copen, icon, Move File Up into it's Parent Folder, %A_ScriptDir%\Icons\folder arrow up action-brown-open_32x32.ico
+menu, copen, add, Copy File Names && Details of Folder to Clipboard, copydetails
+menu, copen, icon, Copy File Names && Details of Folder to Clipboard, %A_ScriptDir%\Icons\cmd_48x48.ico
 menu, copen, add, ; line ;-------------------------
 
-menu, copen, add, Jump to Key in RegEdit, RegJump 
+menu, copen, add, Jump to Key in RegEdit, RegJump
 menu, copen, icon, Jump to Key in RegEdit, %A_ScriptDir%\Icons\reg blocks app 256x256.ico
 ; menu, copen, icon, Jump to Key in RegEdit, regedit.exe
+
 menu, copen, add, ; line ;-------------------------
+
 menu, copen, add, Visit Website [If a URL is Selected], gowebsite
 menu, copen, icon, Visit Website [If a URL is Selected], %A_ScriptDir%\Icons\web-browser xfav_24x24.ico
 menu, copen, add, ; line ;-------------------------
-menu, copen, add, View Explore Folder Menu   **[Experimental]**,expmenu
-menu, copen, icon, View Explore Folder Menu   **[Experimental]**, %A_ScriptDir%\Icons\submenu JLicons_42_64x64.ico
-menu, copen, add, ; line ------------------------- 
+menu, copen, add, View Explore Folder Menu, expmenu
+menu, copen, icon, View Explore Folder Menu, %A_ScriptDir%\Icons\submenu JLicons_42_64x64.ico
+
 menu, copen, add, If NP++ Switch to Alt Open With Menu, alttxtnppmenu
 if fileexist(notepadpp)
 	menu, copen, icon, If NP++ Switch to Alt Open With Menu, %notepadpp%
@@ -415,9 +424,7 @@ else
 	menu, copen, icon, If NP++ Switch to Alt Open With Menu, notepad.exe
 
 
-; menu, copen, add, ; line ;------------------------- ; todo ↓ ↓ add slide out menus for whats selected
-; menu, copen, add, Explore Folder, :folders
-; menu, copen, add, %clipboard%, :folders
+
 
 ;---------------------------------------------------------------------------
 menu, gui, add, Save As`tCtrl + S, savestickyAS
@@ -429,9 +436,20 @@ menu, gui, add, Create New Temp Sticky`tCtrl + N, newsticky
 menu, gui, icon, Create New Temp Sticky`tCtrl + N, %A_ScriptDir%\Icons\sticky-note--plus_16x16.ico
 
 menu, gui, add, ; line ;-------------------------
-menu, gui, add, Open Quick Notes Dir`tCtrl + Shift + O, openquick
-menu, gui, icon, Open Quick Notes Dir`tCtrl + Shift + O, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
-menu, gui, add, ; line ;------------------------- 
+if FileExist(quicknotesdir)
+	{
+	menu, gui, add, Open Quick Notes Dir`tCtrl + Shift + O, openquick
+	if FileExist(dopus)
+		menu, gui, icon, Open Quick Notes Dir`tCtrl + Shift + O, %dopus%
+	else
+		menu, gui, icon, Open Quick Notes Dir`tCtrl + Shift + O, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
+	
+	menu, gui, add, ; line ;-------------------------
+	}
+else
+	{
+	; show nothing
+	}
 menu, gui, add, Close Temp Sticky`tCtrl + Esc, guidestory
 menu, gui, icon, Close Temp Sticky`tCtrl + Esc, %A_ScriptDir%\Icons\application-exit_32x32.ico
 menu, gui, add, ; line ;-------------------------
@@ -444,27 +462,24 @@ menu, gui, add, Pin \ Unpin to Top`tCtrl + P, pintotop
 ; menu, gui, icon, Pin \ Unpin to Top`tCtrl + P, %pinon%
 ; Menu, gui, add, %A_GuiX% %A_GuiY%, menureturn ;debug test
 
-
-; todo, populate menu, gui, add right click to gui, stickys
-
 ;---------------------------------------------------------------------------
 menu, cset, add, ---  Settings && About  ---, showsettingsmenu
 menu, cset, icon, ---  Settings && About  ---, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico,,28
 menu, cset, default, ---  Settings && About  ---
-menu, cset, add, ; line ------------------------- 
+menu, cset, add, ; line -------------------------
 Menu, cset, add, Toggle Live Preview && Auto Copy, ToggleLiveMenu
 if (LiveMenuEnabled)
 	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
 else
-Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
+	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
 ; Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico ; og alt icon
 
 
-Menu, cset, Add, Dark Mode | Light Mode, DMToggle ; this function is in the setting file
+Menu, cset, Add, Dark Mode | Light Mode, DMToggle 
 Menu, cset, icon, Dark Mode | Light Mode, %A_ScriptDir%\Icons\darkmodetoggleshell32_284_48x48.ico
 menu, cset, add, Mute Sound on Capslock Toggle, togglebeepsetting
 if (Beep_enabled)
-menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound__32x32.ico
+	menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound__32x32.ico
 else
 	menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound_mute__32x32.ico
 ; menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound_mute__32x32.ico ; og, alt icon
@@ -472,11 +487,11 @@ menu, cset, add, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+, shiftednu
 IF (ShiftedNumRow)
 	{
 	menu, cset, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
-}
+	}
 else
 	{
 	menu, cset, icon, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+, %A_ScriptDir%\Icons\hashtag! Comment xfav crunchbang_48x48.ico
-}
+	}
 menu, cset, add, Replace the NP++ Right Click Menu, ToggleReplaceNPPRightClick
 if (ReplaceNPPRightClick)
 	{
@@ -490,31 +505,34 @@ menu, cset, add, ; line ;-------------------------
 menu, cset, add, Run as Admin, runasadmin
 menu, cset, icon, Run as Admin, %A_ScriptDir%\Icons\admin imageres_1028.ico
 menu, cset, add, ; line ;-------------------------
-menu, cset, add, Open Quick Notes Dir, openquick
-menu, cset, icon, Open Quick Notes Dir, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
-menu, cset, add, ; line ;-------------------------
+if FileExist(quicknotesdir)
+	{
+	menu, cset, add, Open Quick Notes Dir, openquick
+	if FileExist(dopus)
+		menu, cset, icon, Open Quick Notes Dir, %dopus%
+		else
+		menu, cset, icon, Open Quick Notes Dir, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
+	menu, cset, add, ; line ;-------------------------
+	}
+else
+	{
+	; show nothing
+	}
 menu, cset, add, About Extended Caps Lock Menu, aboutcapswindow
 menu, cset, icon, About Extended Caps Lock Menu, %A_ScriptDir%\Icons\about question imageres win7_99_256x256.ico
 menu, cset, add, Visit Github Webpage, visitgithub
 menu, cset, icon, Visit Github Webpage, %A_ScriptDir%\Icons\github icon 256x256.ico
 
-
 menu, cset, add, ; line ;-------------------------
-MENU, cset, add, Debug Lines, lines
-menu, cset, icon, Debug Lines, %A_ScriptDir%\Icons\bug report FLUENT_colored_217_64x64.ico
 
 menu, cset, Add, Edit Main Script, editscript
-; menu, cset, icon, Edit Main Script, %A_ScriptDir%\Icons\notepad++_100.ico ; alt icon, old
-if FileExist(texteditor)
-	menu, cset, icon, Edit Main Script, %texteditor%
+if FileExist(Texteditor)
+	menu, cset, icon, Edit Main Script, %Texteditor%
 else
 	menu, cset, icon, Edit Main Script, notepad.exe
 
-; menu, cset, add, Edit Settings.ini File, editsettings
-; menu, cset, icon, Edit Settings.ini File, %A_ScriptDir%\Icons\ini alt xfav setting document prefs setupapi_19 256x256.ico
 menu, cset, add, Edit " %A_scriptname%-SETTINGS.ini " File, editsettings
 menu, cset, icon, Edit " %A_scriptname%-SETTINGS.ini " File, %A_ScriptDir%\Icons\ini alt xfav setting document prefs setupapi_19 256x256.ico
-menu, cset, icon, Edit Main Script, %A_ScriptDir%\Icons\notepad++_100.ico
 menu, cset, add, ; line ;-------------------------
 menu, cset, add, Reload Script          --         Ctrl + Shift + R, reload
 menu, cset, icon, Reload Script          --         Ctrl + Shift + R, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
@@ -524,16 +542,19 @@ menu, cset, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-
 ; menu, cset, add, Capslock OSD (On\Off), togglegui ; todo broken fix
 menu, cset, add, Suspend Hotkeys, suspendkeys
 menu, cset, icon, Suspend Hotkeys, %A_ScriptDir%\Icons\advert-block_64x64.ico
+; MENU, cset, add, Debug Lines, lines
+; menu, cset, icon, Debug Lines, %A_ScriptDir%\Icons\bug report FLUENT_colored_217_64x64.ico
 menu, cset, add, ; line ;-------------------------
-menu, cset, add, Quit\Exit, exitscript
-menu, cset, icon, Quit\Exit, %A_ScriptDir%\Icons\skull n bones emoji111.ico
+menu, cset, add, Quit \ Exit, exitscript
+menu, cset, icon, Quit \ Exit, %A_ScriptDir%\Icons\skull n bones emoji111.ico
 
 ;---------------------------------------------------------------------------
-
+trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
 menu, tray, nostandard
-menu, tray, icon, %A_ScriptDir%\Icons\keyboard-caps-lock-filled xfav arrow send move_256x256.ico
+menu, tray, icon, %trayicon%
+
 menu, tray, add, Show Extended Capslock Menu, Capsmenubutton
-menu , tray, icon, Show Extended Capslock Menu, %A_ScriptDir%\Icons\keyboard-caps-lock-filled xfav arrow send move_256x256.ico,,28
+menu , tray, icon, Show Extended Capslock Menu, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,28
 menu, tray,  default, Show Extended Capslock Menu
 menu, tray, add, ; line ;-------------------------
 menu, tray, add, Reload, reload
@@ -542,12 +563,12 @@ menu, tray, add, View Hotkeys, viewhotkeys
 menu, tray, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
 menu, tray, add, Suspend Hotkeys, suspendkeys
 menu, tray, icon, Suspend Hotkeys, %A_ScriptDir%\Icons\advert-block_64x64.ico
-MENU, tray, add, ; line ;-------------------------
+menu, tray, add, ; line ;-------------------------
 menu, tray, add, Settings && About, :cset
 menu, tray, icon, Settings && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
 MENU, tray, add, ; line ;-------------------------
-menu, tray, add, Quit\Exit, exitscript
-menu, tray, icon, Quit\Exit, %A_ScriptDir%\Icons\skull n bones emoji111.ico
+menu, tray, add, Quit \ Exit, exitscript
+menu, tray, icon, Quit \ Exit, %A_ScriptDir%\Icons\skull n bones emoji111.ico
 
 ; Menu, Tray, MainWindow
 ; menu, tray, add, ; line ;-------------------------
@@ -568,7 +589,7 @@ MenuCaseShow() ;; function
 	menu, case, add
     Menu, case, DeleteAll ; Clear and reinitialize the menu
     Menu, Case, Add, EXTENDED CAPSLOCK MENU  (Toggle Caps), ToggleCapsLock
-    Menu, Case, icon, EXTENDED CAPSLOCK MENU  (Toggle Caps), %A_ScriptDir%\Icons\keyboard-caps-lock-filled xfav arrow send move_256x256.ico,,27
+    Menu, Case, icon, EXTENDED CAPSLOCK MENU  (Toggle Caps), %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,27
     Menu, Case, Default, EXTENDED CAPSLOCK MENU  (Toggle Caps)
 	Menu, case, add, ; line ------------------------- menu, case, top line
 	
@@ -607,28 +628,26 @@ MenuCaseShow() ;; function
 }
     else
     {
-        MenuItemName := "Live Preview && Auto Copy is Disabled"
-        Menu, case, Add, %MenuItemName%, viewclip
-        Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\eye_close__32x32.ico
-		Menu, case, add, ; line -------------------------
+        ; MenuItemName := "Live Preview && Auto Copy is Disabled"
+        ; Menu, case, Add, %MenuItemName%, viewclip
+        ; Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\eye_close__32x32.ico
+		; Menu, case, add, ; line -------------------------
+		
 		; this section can be comment out to completely hide this static menu item when its off, it will\\can only appear when turn on
     }
-
-
 
 menu, case, add, Text Tools && Apps, :ctools
 menu, case, icon, Text Tools && Apps, %A_ScriptDir%\Icons\Pencil and Ruler__32x32.ico
 menu, case, add, Find\Search Selected Text..., :cfind
 menu, case, icon, Find\Search Selected Text..., %A_ScriptDir%\Icons\search find Windows 11 Icon 13_256x256.ico
 
-; todo, remove for std ed. Dopus ed only, ; todo try to get this work in explorer? Gag
 menu, case, add, Open\Run\Explore...     [ Files Menu ], :copen
 ; menu, case, icon, Open\Run\Explore...   ,
 menu, case, icon, Open\Run\Explore...     [ Files Menu ], %A_ScriptDir%\Icons\folder tree FLUENT_colored_051_64x64.ico
 
 menu, Case, Add ; line ;-------------------------
-menu, Case, Add, Wrap in "Quotes"                                     Ctrl + `", ClipQuote ; ;10 %A_Space% in menu
-menu, Case, icon, Wrap in "Quotes"                                     Ctrl + `", %A_ScriptDir%\Icons\format quote_24x24.ico ; "
+menu, Case, Add, Wrap in "&Quotes"                                     Ctrl + `", ClipQuote ; ;10 %A_Space% in menu
+menu, Case, icon, Wrap in "&Quotes"                                     Ctrl + `", %A_ScriptDir%\Icons\format quote_24x24.ico ; "
 menu, Case, add, `{..Curly &Brackets..`}`, On New Lines, wrapincbrackets
 menu, Case, icon, `{..Curly &Brackets..`}`, On New Lines, %A_ScriptDir%\Icons\coding code json filetype_24x24.ico
 ; menu, cform, add ; line  ;-------------------------
@@ -651,19 +670,14 @@ menu, Case, Add ; line ;-------------------------
 menu, Case, Add, Copy                                     Single Tap Capslock, basiccopy
 menu, Case, icon, Copy                                     Single Tap Capslock, %A_ScriptDir%\Icons\edit-copy_32x32.ico
 Menu, case, Add, + Copy (Add to Clipboard), appendclip
-; Menu, case, Add, Append\Add (+ Copy) to Clipboard, appendclip
 Menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard--plus_16x16.ico
-; menu, case, icon, Append\Add (+ Copy) to Clipboard, %A_ScriptDir%\Icons\copySpecial_48x48.ico ; alt icon
-menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard--plus_16x16.ico
+; menu, case, icon, + Copy (Add to Clipboard), %A_ScriptDir%\Icons\copySpecial_48x48.ico ; alt icon
 Menu, Case, add, Cut, basiccut
 menu, case, icon, Cut, %A_ScriptDir%\Icons\edit-cut_32x32.ico
 menu, case, add, Paste                                   Double Tap Capslock, basicpaste
 menu, case, icon, Paste                                   Double Tap Capslock, %A_ScriptDir%\Icons\edit-paste_256x256.ico
 MENU, case, ADD, Paste As Plain Text, pasteplain
 MENU, case, icon, Paste As Plain Text, %A_ScriptDir%\Icons\plaintextdoc_64x64.ico
-; menu, case, add, ; line ;-------------------------
-; Menu, case, Add, Ditto Clipboard, runditto
-; Menu, case, icon, Ditto Clipboard, %A_ScriptDir%\Icons\ditto quote clipboard 128x128.ico
 menu, case, add ; line ;-------------------------
 menu, case, add, Setting && About, :cset
 menu, case, icon, Setting && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
@@ -698,7 +712,7 @@ dopusdocsurl := "https://docs.dopus.com/doku.php?id=introduction"
 ; this section is not for editing, it only reference for the message box popup
 ; changing the keys here won't change them inside the script.
 
-hotkeys = 
+hotkeys =
 (
 -----[[[[ HOTKEYS ]]]]-----
 Extended CAPSLOCK KEY Functionality Using AutoHotkey:
@@ -712,11 +726,11 @@ Ctrl + Alt + F3 -- Alt Keyboard Hotkey to OPEN MENU
   Ctrl + Shift + F2 -- New Sticky Filled With Selection
   Ctrl + Alt + F2 -- New Empty Sticky Note
   Ctrl + Shift + R -- Reload Script
--------------------------------------------------- 
+--------------------------------------------------
 Alt + Capslock -- Toggle Capslock
 Ctrl + Capslock -- Toggle Caplock
 Shift + Capslock -- Switch between UPPERCASE & lowercase
--------------------------------------------------- 
+--------------------------------------------------
 --- Hotkeys for the Sticky Note GUI Windows ---
 Alt + M -- Show Sticky GUI Quick Menu
 Ctrl + S -- Save Sticky As
@@ -732,7 +746,7 @@ Ctrl + Shift + `" -- Paste Clipboard in Quotes
 	Ctrl + `" -- Put Quotes Around [*Selected Text*]
 Win + H -- Add Auto Correct Hot Strings ...
 		 ...(if include Auto Correct script is running)
--------------------------------------------------- 
+--------------------------------------------------
 ==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
 Right Click -- Can replace NP++ menu with this one. (optional)
 Ctrl + Space -- Open Live Folder Menu... [*Experimental*]
@@ -740,12 +754,12 @@ Ctrl + Space -- Open Live Folder Menu... [*Experimental*]
 	if nothing is selected it will show the folder of the Active file
 	+ this can also work in Everything 1.5a on a selected file
 	- this menu hotkey is turn off else where
-Ctrl + Alt + N -- Open Active File in Alternative Text Editor Menu
+Ctrl + Alt + N or F9 -- Open Active File in Alternative Text Editor Menu
 **************************************************
 
 TIP -- You can also click that Live Preview menu item at any time to see a message box of the text in your Clipboard, whether or not Live Preview is running.
 
-) 
+)
 ; "
 
 
@@ -757,27 +771,6 @@ return
 ;---------------------------------------------------------------------------
 ;;; end case menu, end capslock  menu, end date menu, case, end
 
-
-;---------------------- CAPS LOCK BANNER -----------------------------------------------------------
-;----------------------------------------------------------------------------------------------------
-/***
-        ; CCCCCCCCCCCCC               AAA               PPPPPPPPPPPPPPPPP      SSSSSSSSSSSSSSS lllllll                                      kkkkkkkk
-     ; CCC↑↑↑↑↑↑↑↑↑↑↑↑C              A↑↑↑A              P↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑P   SS↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑Sl↑↑↑↑↑l                                      k↑↑↑↑↑↑k
-   ; CC↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑C             A↑↑↑↑↑A             P↑↑↑↑↑↑PPPPPP↑↑↑↑↑P S↑↑↑↑↑SSSSSS↑↑↑↑↑↑Sl↑↑↑↑↑l                                      k↑↑↑↑↑↑k
-  ; C↑↑↑↑↑CCCCCCCC↑↑↑↑C            A↑↑↑↑↑↑↑A            PP↑↑↑↑↑P     P↑↑↑↑↑PS↑↑↑↑↑S     SSSSSSSl↑↑↑↑↑l                                      k↑↑↑↑↑↑k
- ; C↑↑↑↑↑C       CCCCCC           A↑↑↑↑↑↑↑↑↑A             P↑↑↑↑P     P↑↑↑↑↑PS↑↑↑↑↑S             l↑↑↑↑l    ooooooooooo       cccccccccccccccc k↑↑↑↑↑k    kkkkkkk
-; C↑↑↑↑↑C                        A↑↑↑↑↑A↑↑↑↑↑A            P↑↑↑↑P     P↑↑↑↑↑PS↑↑↑↑↑S             l↑↑↑↑l  oo↑↑↑↑↑↑↑↑↑↑↑oo   cc↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑c k↑↑↑↑↑k   k↑↑↑↑↑k
-; C↑↑↑↑↑C                       A↑↑↑↑↑A A↑↑↑↑↑A           P↑↑↑↑PPPPPP↑↑↑↑↑P  S↑↑↑↑SSSS          l↑↑↑↑l o↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑o c↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑c k↑↑↑↑↑k  k↑↑↑↑↑k
-; C↑↑↑↑↑C                      A↑↑↑↑↑A   A↑↑↑↑↑A          P↑↑↑↑↑↑↑↑↑↑↑↑↑PP    SS↑↑↑↑↑↑SSSSS     l↑↑↑↑l o↑↑↑↑↑ooooo↑↑↑↑↑oc↑↑↑↑↑↑↑cccccc↑↑↑↑↑c k↑↑↑↑↑k k↑↑↑↑↑k
-; C↑↑↑↑↑C                     A↑↑↑↑↑A     A↑↑↑↑↑A         P↑↑↑↑PPPPPPPPP        SSS↑↑↑↑↑↑↑↑SS   l↑↑↑↑l o↑↑↑↑o     o↑↑↑↑oc↑↑↑↑↑↑c     ccccccc k↑↑↑↑↑↑k↑↑↑↑↑k
-; C↑↑↑↑↑C                    A↑↑↑↑↑AAAAAAAAA↑↑↑↑↑A        P↑↑↑↑P                   SSSSSS↑↑↑↑S  l↑↑↑↑l o↑↑↑↑o     o↑↑↑↑oc↑↑↑↑↑c              k↑↑↑↑↑↑↑↑↑↑↑k
-; C↑↑↑↑↑C                   A↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑A       P↑↑↑↑P                        S↑↑↑↑↑S l↑↑↑↑l o↑↑↑↑o     o↑↑↑↑oc↑↑↑↑↑c              k↑↑↑↑↑↑↑↑↑↑↑k
- ; C↑↑↑↑↑C       CCCCCC    A↑↑↑↑↑AAAAAAAAAAAAA↑↑↑↑↑A      P↑↑↑↑P                        S↑↑↑↑↑S l↑↑↑↑l o↑↑↑↑o     o↑↑↑↑oc↑↑↑↑↑↑c     ccccccc k↑↑↑↑↑↑k↑↑↑↑↑k
-  ; C↑↑↑↑↑CCCCCCCC↑↑↑↑C   A↑↑↑↑↑A             A↑↑↑↑↑A   PP↑↑↑↑↑↑PP          SSSSSSS     S↑↑↑↑↑Sl↑↑↑↑↑↑lo↑↑↑↑↑ooooo↑↑↑↑↑oc↑↑↑↑↑↑↑cccccc↑↑↑↑↑ck↑↑↑↑↑↑k k↑↑↑↑↑k
-   ; CC↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑C  A↑↑↑↑↑A               A↑↑↑↑↑A  P↑↑↑↑↑↑↑↑P          S↑↑↑↑↑↑SSSSSS↑↑↑↑↑Sl↑↑↑↑↑↑lo↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑o c↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑ck↑↑↑↑↑↑k  k↑↑↑↑↑k
-     ; CCC↑↑↑↑↑↑↑↑↑↑↑↑C A↑↑↑↑↑A                 A↑↑↑↑↑A P↑↑↑↑↑↑↑↑P          S↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑SS l↑↑↑↑↑↑l oo↑↑↑↑↑↑↑↑↑↑↑oo   cc↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑ck↑↑↑↑↑↑k   k↑↑↑↑↑k
-        ; CCCCCCCCCCCCCAAAAAAA                   AAAAAAAPPPPPPPPPP           SSSSSSSSSSSSSSS   llllllll   ooooooooooo       cccccccccccccccckkkkkkkk    kkkkkkk
- */
 ;------------------------- CAPS KEY FUCNCTIONS--------CAPSLOCK-------------------------------------
 
 IfLive() ;; function ;; checks if Auto Copy is running
@@ -797,36 +790,34 @@ IfLive() ;; function ;; checks if Auto Copy is running
 
 CopyClipboardCLM() ;; Function
 {
-    global ClipSaved  ;Ensure global is used if ClipSaved is accessed elsewhere
+	global ClipSaved  ;Ensure global is used if ClipSaved is accessed elsewhere
 	Global filename, dir, ext, filestem, drive, lastfolder
 	global ClipSaved := ""
 	sleep 100
-    ClipSaved := ClipboardAll  ; Save the current clipboard contents
-    sleep 200 ; todo broken fix adjust time longer if needed
-    Clipboard := ""  ; Clear the clipboard
-    Sleep 50  ; Adjust the sleep time if needed
+	ClipSaved := ClipboardAll  ; Save the current clipboard contents
+	sleep 200 ; todo broken fix adjust time longer if needed
+	Clipboard := ""  ; Clear the clipboard
+	Sleep 50  ; Adjust the sleep time if needed
 	; WinGet, id, ID, A
-    ; WinGetClass, class, ahk_id %id%
-    ; if (class ~= "(Cabinet|Explore)WClass|Progman|dopus.lister")
-        ; Send {F2}
-    Sendinput, ^c ; Sendinput ^{vk43}  ; Send Ctrl+C COPY
-    ClipWait, 0.5 
+	; WinGetClass, class, ahk_id %id%
+	; if (class ~= "(Cabinet|Explore)WClass|Progman|dopus.lister")
+		; Send {F2}
+	Sendinput, ^c ; Sendinput ^{vk43}  ; Send Ctrl+C COPY
+	ClipWait, 0.5
 	if (ErrorLevel || Clipboard = "" || Clipboard = A_Tab || RegExMatch(Clipboard, "^\s+$"))  ; Check if clipboard is empty, a tab, or just whitespace
-    if ErrorLevel
-    {
-        TrayTip, Extended Caps Menu, Copy Failed!`nOr you did not have text selected.`nYour Previous Clipboard Content is Restored., 2, 18
+	if ErrorLevel
+	{
+		TrayTip, Extended Caps Menu, Copy Failed!`nOr you did not have text selected.`nYour Previous Clipboard Content is Restored., 2, 18
 		sleep 90
 		Clipboard := ClipSaved  ; Restore the clipboard
 		ClipSaved := ""  ; clear the variable
 		sleep 90
-        return
-    }
+		return
+	}
 }
 
 PasteClipboardCLM() ;; function
 {
-; sleep 3000
-	
     global ClipSaved
 	sleep 200
 			; WinGet, id, ID, A  ; Get the ID of the active window ; errorlevel checks
@@ -836,7 +827,7 @@ PasteClipboardCLM() ;; function
     ; if (class ~= "(Cabinet|Explore)WClass|Progman|dopus.lister")
         ; Send {F2}
     send, ^v ; Sendinput, ^{vk43} ;, Sendinput, ^v  ; Send Ctrl+V
-    Sleep 800  ; Give the system time to paste the clipboard content
+    Sleep 1000  ; Give the system time to paste the clipboard content
 	; RestoreClipboard()
     Clipboard := ClipSaved  ; {Restore the saved clipboard contents}
 	sleep 400
@@ -859,7 +850,7 @@ BackupClipboard() ;; Function
 Global ClipSaved
 Clipsaved := "" ; clear the last ClipSaved
 sleep 50
-ClipSaved := ClipboardAll ; save the current clipboard to memory 
+ClipSaved := ClipboardAll ; save the current clipboard to memory
 sleep 400
 Clipboard := "" ; empty the clipboard, ready to revive content
 sleep 50
@@ -909,9 +900,9 @@ sleep 100
 ; SplitPath, Clipboard, filename, dir, ext, filestem, drive
 }
 
-cleanupPATHstring() ;; function ; trims white space, removes single & double quotes, converts ahk dirvar, splits file path into parts, from the selected FILE PATH.
+cleanupPATHstring() ;; function ; trims white space, removes single & double quotes, converts ahk dir var, splits file path into parts, from the selected FILE PATH. // gocleanpath
 {
-Global ClipSaved, filename, dir, ext, filestem, drive, lastfolder, activefile
+Global ClipSaved, filename, dir, ext, filestem, drive, lastfolder, activefile, highlighted
 sleep 90
 Clipboard := RegExReplace(RegExReplace(Clipboard, "\r?\n"," "), "(^\s+|\s+$)") ; remove line breaks\returns
 sleep 90
@@ -929,16 +920,27 @@ If InStr(Clipboard, "`%A_ScriptDir`%") ; expand AHKs var
 		clipboard := StrReplace(Clipboard, "%A_ScriptDir%", A_ScriptDir)
 		dir := RegexReplace(clipboard, "\\[^\\]*$", "")
 	}
+; if InStr(Clipboard, "%"),,UseErrorLevel { ; Expand environment variables if present
 if InStr(Clipboard, "%") { ; Expand environment variables if present
+Clipboard := RegExReplace(Clipboard, "C:\\Users\\", "")
 Transform, Clipboard, Deref, %Clipboard%
+	if errorlevel
+		{
+		; tooltip, ERR! @ Line#  %A_LineNumber%`nAHK Couldn't Expand EnvVar.`n`nTrying to continue without it.
+		; sleep 1500
+		; tooltip
+		gosub split
+		}
 }
+split:
 SplitPath, Clipboard, filename, dir, ext, filestem, drive
 lastfolder := dir ;claude
 lastfolder := RegExReplace(lastfolder, ".*\\([^\\]+)\\?$", "$1")
 sleep 90
-
+; folder := RegExReplace(folder, "\\$") ; removes trailing \ from a dir path. From expmenu: clould be useful here ? or is the last folder regex already doing this?
 }
 
+/*
 cleanupsearchforweb:
 cleanupsearchforweb()
 return
@@ -960,18 +962,6 @@ global clipsaved
 Clipboard := ClipSaved
 return
 }
-
-
-/*
-basiccopy:
-SendInput, ^c ;Send ^{vk43} ;Ctrl C ;  Send {Ctrl down}c{Ctrl up}  ; Send ^{vk43}
-return
-basiccut:
-SendInput, ^x
-return
-basicpaste:
-Send ^{vk56} ;Ctrl V ; SendInput, ^v
-return
 */
 
 ;***** END ***************CLIPBOARD FUNCTIONS *************** END **********
@@ -1378,7 +1368,16 @@ sleep 90
 pasteclipboardclm()
 return
 
-
+ahknewline:
+IfLive()
+tmp := Clipboard
+sleep 20
+tmp = ``n%tmp%``n
+sleep 20
+clipboard := tmp
+sleep 200
+pasteclipboardclm()
+return
 
 RASpace:
 IfLive()
@@ -1466,7 +1465,7 @@ guicaps() ;; function, gui, OSD overlay
 	Gui, caps: +AlwaysOnTop +ToolWindow -SysMenu -Caption +LastFound
 	Gui, caps: Font, cffb900 s12 bold, WW Digital
 	Gui, caps: Color, af001d ; changes background color
-	Gui, caps: add, picture, xm w18 h18, %A_ScriptDir%\Icons\keyboard-caps-lock-filled xfav arrow send move_256x256.ico
+	Gui, caps: add, picture, xm w18 h18, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico
 	Gui, caps: Add, Text, X+M ,CAPS LOCK is ON `~`!`@`#`$`%`^&&*( `)`_`+`{ `}`|
 	SysGet, P, MonitorPrimary                           ; get primary monitor number
 	SysGet, Mon, MonitorWorkArea, % P                   ; get size of primary monitor
@@ -1503,7 +1502,7 @@ CreateStickyNote(FromClipboard := false) {
     ; Add controls
     Gui, sticky%StickyCount%: Add, picture, x10 y10 h24 w24 vpin gpintotop, %A_ScriptDir%\Icons\pin-off_26x26.ico
     Gui, sticky%StickyCount%: Add, button, x45 y10 h24 w224 vb1 gguimenubutton, Sticky &Menu (Alt + M)
-    Gui, sticky%StickyCount%: Add, Edit, wanttab x10 y45 w630 h280 vStickyText, %stickytext%
+    Gui, sticky%StickyCount%: Add, Edit, x10 y45 w630 h280 vStickyText +wanttab, %stickytext%
     
     GuiControl, Focus, stickytext
     Gui, sticky%StickyCount%: show,, AHK Temp Sticky Note #%StickyCount%
@@ -1540,7 +1539,7 @@ ahkstickygui() { ; Call this from a hotkey to create an empty sticky note
     CreateStickyNote(false)  ; Pass false for an empty sticky note
 }
 
-guimenubutton: ; todo add right click menu to sticky gui
+guimenubutton: 
     menu, gui, show
 return
 
@@ -1559,18 +1558,18 @@ return
 menucaseshow()
 return
 
-^n:: ; new empty stick note
+^n:: ;; new empty stick note
 gosub newsticky
 return
 
-^+O:: ; open quick notes dir
+^+O:: ;; open quick notes dir
 gosub openquick
 return
 
-^esc:: ; close sticky
+^esc:: ;; close sticky
 gosub guidestory
 return
-^p:: ; pin\unpin sticky to top
+^p:: ;; pin\unpin sticky to top
 global pin, pinoff, pinon, pinstartpic, StickyCount
 gui, submit, nohide
 gosub pintotop
@@ -1581,6 +1580,7 @@ savestickyquick() ;; function
 {
 global stickytext
 static stickyname
+global quicknotesdir
 WinGetTitle, activeWindowTitle, A
 if (InStr(activeWindowTitle, "AHK Temp Sticky Note"))
 	{
@@ -1589,7 +1589,8 @@ if (InStr(activeWindowTitle, "AHK Temp Sticky Note"))
     Gui, sticky%stickyNum%: Submit, NoHide ; Get the text from the active sticky window
     GuiControlGet, stickytext, sticky%stickyNum%:, StickyText
 
-	inputbox, stickyname, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will auto-save as a .txt file.`n`nIt will automatically be saved to`n%A_ScriptDir%\Extended Capslock Menu QUICK Notes\`n`nYou can go there quickly from the settings menu., ,  ,300 , ,
+
+	inputbox, stickyname, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will auto-save as a .txt file.`n`nIt will automatically be saved to`n%quicknotesdir%`n`nYou can go there quickly from the settings menu., ,  ,300 , ,
 	if (stickyName = ""){
 		tooltip, Canceled by user`nor Quick Note requires a name.
 		sleep 1500
@@ -1603,9 +1604,10 @@ if (InStr(activeWindowTitle, "AHK Temp Sticky Note"))
 		tooltip
 		return
 		}
-	FileCreateDir, Extended Capslock Menu QUICK Notes
+	if !FileExist(quicknotesdir)
+		FileCreateDir, %quicknotesdir%
 	sleep 750
-	fileappend,%Stickytext%,%A_ScriptDir%\Extended Capslock Menu QUICK Notes\%stickyname%.txt
+	fileappend,%Stickytext%,%quicknotesdir%\%stickyname%.txt
 	sleep 1000
 	}
 return
@@ -1644,34 +1646,6 @@ if (InStr(activeWindowTitle, "AHK Temp Sticky Note")) ; Check if the active wind
 	}
 return
 }
-
-/*
-; savestickyAS:
-savestickyAS() ;; Function
-{
-global stickytext
-static savepath
-gui, submit, nohide
-FileSelectFile, SavePath, S16, %A_MyDocuments%, Save Selected Text as a New Document, Text Files (*.txt) ; Prompt for where to save the file
-    if SavePath =  ; If no file was selected
-        {
-		tooltip, File Path Cannot Be Blank`nSave As Canceled.
-		sleep 1500
-		tooltip
-		Return
-		}
-    if !InStr(SavePath, ".")  ; If no '.' in the file name
-	{
-		SavePath := SavePath . ".txt"  ; Append .txt
-	}
-sleep 800
-FileAppend, %stickytext%, %SavePath%  ; Append clipboard contents to the selected file
-	sleep 1500
-return
-}
-*/
-
-
 
 guidestory: 
 global activeWindowTitle
@@ -1753,7 +1727,7 @@ return
 
 quicktxtfile() ;; function
 {
-Global ClipSaved
+Global ClipSaved, quicknotesdir
   iflive()
   if (Clipboard = "" || Clipboard = A_Tab || RegExMatch(Clipboard, "^\s+$"))
 		{
@@ -1762,7 +1736,7 @@ Global ClipSaved
 		restoreclipboard()
         return
 		}
-  inputbox, notename, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will auto-save as a .txt file`nIt will automatically be saved to`n%A_ScriptDir%\Extended Capslock Menu QUICK Notes\`n`nYou can go there quickly from the settings menu., , ,
+  inputbox, notename, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will auto-save as a .txt file`nIt will automatically be saved to`n%quicknotesdir%`n`nYou can go there quickly from the settings menu., , ,
   if (noteName = ""){
 	tooltip, Canceled
 	sleep 1500
@@ -1770,9 +1744,11 @@ Global ClipSaved
 	restoreclipboard()
 	return
 	}
-FileCreateDir, Extended Capslock Menu QUICK Notes
+; FileCreateDir, Extended Capslock Menu QUICK Notes
+if !FileExist(quicknotesdir)
+	FileCreateDir, %quicknotesdir%
 sleep 750
-fileappend,%Clipboard%,%A_ScriptDir%\Extended Capslock Menu QUICK Notes\%notename%.txt
+fileappend,%Clipboard%,%quicknotesdir%\%notename%.txt
 sleep 2500
 restoreclipboard()
 Sleep 250
@@ -1833,19 +1809,24 @@ global clipsaved
 		}
 return
 
-TextToSpeech:
-Global ClipSaved 
-	iflive()
+
+TextToSpeech: ; Start Text-to-Speech
+    Global ClipSaved, TTS_Voice
+    iflive()
     text := Clipboard
-	restoreclipboard()
-    if (text != "") ; Speak the text if it's not empty
-        SpeakText(text)
-    else
-       {
-		tooltip No text selected for Text-to-Speech.
-		sleep 2000
-		tooltip
-		}
+    sleep 300
+    restoreclipboard()
+    if (text != "") {
+        ; Create or reuse the TTS COM object
+        if !IsObject(TTS_Voice)
+            TTS_Voice := ComObjCreate("SAPI.SpVoice")
+        ; Speak asynchronously
+        TTS_Voice.Speak(text, 1)  ; The 1 flag means speak asynchronously
+    } else {
+        tooltip No text selected for Text-to-Speech.
+        sleep 2000
+        tooltip
+    }
 Return
 
 SpeakText(Text) { ;; function
@@ -1856,6 +1837,16 @@ SpeakText(Text) { ;; function
     ; Release the COM object
     voice := ""
 }
+
+StopSpeaking: ; Stop the TTS
+    Global TTS_Voice
+    if IsObject(TTS_Voice) {
+        TTS_Voice.Pause()  ; Pause speaking
+        TTS_Voice := ""    ; Release the COM object
+    }
+Return
+
+
 
 SaveClipboardAsTxt:
     FileSelectFile, SavePath, S16, %A_MyDocuments%, Save Clipboard As, Text Files (*.*) ; Prompt for where to save the file
@@ -1902,30 +1893,42 @@ Return
 ;************************* MENU, CFIND, FUNCTIONS **************************
 ;*************************************************************************** 
 ahksearchmenu:
-{
 ;; run, https://www.autohotkey.com/search/?q=%Find%
 		global ClipSaved
 		IfLive()
         if (Clipboard = "") { ; If the clipboard is empty, use the old clipboard content
             Clipboard := Clipsaved
         }
-		; sleep 200
-		; try Run, vivaldi.exe "--new-window"
-		; sleep 200
+
 		Run "http://www.google.com/search?q=%clipboard%+site:autohotkey.com"
 		sleep 200
-		; stringreplace, clipboard, clipboard, #,_, all
-		; sleep 200
-		; run, "https://www.autohotkey.com/docs/v1/lib/%clipboard%.htm"
-		; sleep 200
-		; stringreplace, clipboard, clipboard, _,,all
-		; sleep 200
-		; run, "https://www.autohotkey.com/docs/search.htm?q=%clipboard%&m=2"
-        ; Sleep 200
-		; run, "https://www.autohotkey.com/search/?q=%clipboard%"
+		run, "https://www.autohotkey.com/search/?q=%clipboard%"
+		sleep 200
         Clipboard := ClipSaved
-}
+		sleep 200
+
 return
+
+ahksearch() ;; function ;; todo clean up this double menu call, this one is not being used, here for ref
+{
+Global ClipSaved
+; = "https://www.google.com/search?q=site:ahkscript.org+$(Currentselection)"
+; = "https://www.google.com/search?q=site:ahkscript.org+$(Currentselection)"
+;; run, https://www.autohotkey.com/search/?q=%Find%
+        ClipSaved := ClipboardAll  ; Save the current clipboard content
+        Clipboard := ""  ; Clear the clipboard to prepare for new content
+sleep 175
+        Send, ^c
+        ClipWait  ; Wait for the clipboard to contain data
+        if (Clipboard = "") { ; If the clipboard is empty, use the old clipboard content
+            Clipboard := ClipSaved
+        }
+        ; Run, https://www.autohotkey.com/search/?q=%Clipboard%
+		run, "https://www.google.com/search?q=site:autohotkey.com+%Clipboard%"
+        Sleep 200
+        Clipboard := ClipSaved ; Restore the original clipboard content
+return
+}
 
 Dictionarydotcom:  ; added to caps\ccase menu
 IfLive()
@@ -1996,31 +1999,67 @@ return
 }
 
 
-;; todo clean up this double menu call
-ahksearch() ;; function
-{
+;--------------------------------------------------
+; HELPFILES := {"AutoHotkey.chm": "C:\\Program Files\\AutoHotkey\\AutoHotkey.chm"}
+
+; For k, v in HELPFILES
+; {
+;     Label := Func("GetHelp").Bind(v, StrReplace(A_Args[1], "#", "_"))
+;     Menu, Help, Add, % k, % Label
+;     Menu, Help, Icon, % k, %A_WinDir%\hh.exe
+; }
+; Menu, Help, Show
+gethelplocal:
 Global ClipSaved
-; = "https://www.google.com/search?q=site:ahkscript.org+$(Currentselection)"
-; = "https://www.google.com/search?q=site:ahkscript.org+$(Currentselection)"
-;; run, https://www.autohotkey.com/search/?q=%Find%
-        ClipSaved := ClipboardAll  ; Save the current clipboard content
-        Clipboard := ""  ; Clear the clipboard to prepare for new content
-sleep 175
-        Send, ^c
-        ClipWait  ; Wait for the clipboard to contain data
-        if (Clipboard = "") { ; If the clipboard is empty, use the old clipboard content
-            Clipboard := ClipSaved
-        }
-        ; Run, https://www.autohotkey.com/search/?q=%Clipboard%
-		run, "https://www.google.com/search?q=site:autohotkey.com+%Clipboard%"
-        Sleep 200
-        Clipboard := ClipSaved ; Restore the original clipboard content
-return
+iflive()
+sleep 30
+; keyword := Clipboard
+; sleep 30
+; RestoreClipboard()
+; sleep 30
+
+; GetHelp(GetHelpFile(), clipboard:=A_Args[1])
+GetHelp(GetHelpFile())
+; Return
+
+GetHelpFile() {
+    SplitPath, A_AhkPath, , OutDir
+    Return OutDir "\AutoHotkey.chm"
 }
 
+GetHelp(HelpFile) {
+    ; Run, %HelpFile%, , Max, ID
+	; Run, %HelpFile%, , , ID
+	IfWinExist, AutoHotkey Help
+		{
+		WinActivate, AutoHotkey Help
+		}
+	else
+		{
+		Run, %HelpFile%, , , ID
+
+		WinActivate, % "ahk_id " ID
+
+		}
+
+    Sleep, 200
+    Send, !s
+	sleep 20
+	Send, ^a
+    SendInput, {Raw}%clipboard%
+    Sleep, 100
+    Send, {Enter}
+    Send, {Enter}
+}
+
+sleep 800
+restoreclipboard()
+sleep 20
+return
+;--------------------------------------------------
 ;************************* END, MENU, CFIND, FUNCTIONS *********************
 ;*************************************************************************** 
-;; todo, move these to hotkeys or matching menu section
+
 
 
 dtMenuAction:
@@ -2163,11 +2202,12 @@ openfoldersimple() ;; Function ; xnote -not use here for ref
 	return
     }
 
-; ^+o:: ;open path from selection
+; ^+o:: ;;open path from selection
 ; copyclipboardCLM()
 ; sleep 75
 ; OpenDIRselection()
 ; return
+
 OpenDIRselection: ;;;;; () ;; Function
 Global ClipSaved, filename, dir, ext, filestem, drive, lastfolder
 iflive()
@@ -2218,7 +2258,7 @@ sleep 75
 		}
 return
 
-; ^!o:: ;run selected files, dir , websites
+; ^!o:: ;;run selected files, dir , websites
 ; copyclipboardclm()
 ; RUNfromselection: ;run
 ; RUNfromselection()
@@ -2320,8 +2360,8 @@ return
 
 
 
-; ^!+O:: ; copy file to clipboard from path selection
-; copyclipboardclm()
+; ^!+O:: ;; copy file to clipboard from path selection
+
 ; sleep 100
 COPYfromselection: ; copy file or directory to clipboard from path selection
 Global ClipSaved, filename, dir, ext, filestem, drive, lastfolder, activefile, filetoclip
@@ -2405,20 +2445,23 @@ Global ClipSaved, filename, dir, ext, filestem, drive, lastfolder, activefile, f
         return
     }
 return
+
 Edittxtfile:
+Global ClipSaved 
 iflive()
 Sleep, 30
 cleanupPATHstring()  
 dir := Clipboard
 FileGetAttrib, Attributes, %dir%
 if FileExist(Clipboard) {
-    if InStr(Attributes, "D") { ; Check if it's a directory
-        Tooltip, ERR! Line# %A_LineNumber%`nCan't Edit a Folder in a Text Editor
+    if InStr(Attributes, "D") { ; Check if it's a directory 
+		{
+        Tooltip, ERR! Line# %A_LineNumber%`nA Folder cannot be edited in a Text Editor
         Sleep, 2000
         Tooltip
         Sleep, 20
-        return
-    } else { ; it it's a file send to text editor
+        }
+    } else { ; it's a file send to text editor
         try {
             Run, %texteditor% "%Clipboard%"
         } catch {
@@ -2428,16 +2471,15 @@ if FileExist(Clipboard) {
             Tooltip, ERR! Line# %A_LineNumber%`nOops! Maybe you can't open that file in a Text Editor?
             Sleep, 1500
             Tooltip
-            return
         }
     }
 } else {
     Tooltip, ERR! Line# %A_LineNumber%`nFile Does Not Exist!
     Sleep, 1500
     Tooltip
-    return
 }
 RestoreClipboard()
+sleep 20
 return
 
 gowebsite:
@@ -2471,15 +2513,17 @@ sleep 90
 		}
 	else
 		{
-		ToolTip, Err. Incorrect URL Format
+		ToolTip, Err. Incorrect URL Format`nSending to google as is...
 		Sleep, 2000
 		ToolTip
+		run, http://www.google.com/search?q=%Clipboard%
 		}
 	 ; RegExMatch(Clipboard, "^(https?://)?(www\.)?[a-zA-Z0-9-]+\.(com|net|org|edu|gov|co\.uk|ca|de|fr|jp|au)") ;Full URL with Optional Protocol and Subdomain
 sleep 300
 restoreclipboard()
 sleep 20
 return
+
 LogError(Path) { ;; logerror function
 global clipsaved, filename, ext, filestem, dir, lastfolder
     if ErrorLevel
@@ -2614,7 +2658,7 @@ if (fileexist(clipboard))
 	}
 	else
 	{
-		tooltip, Err. Copying the content of the selected file failed.`nFile could not be found.
+		tooltip, Err. Copying the content of the selected file failed.`nFile could not be found or read.
 		sleep 2000
 		tooltip
 		sleep 175
@@ -2660,11 +2704,11 @@ sleep 10
 return
 
 makedup: ;; todo, I need to make a dir errorlevel check here
-Global ClipSaved,activefile,filename,dir,ext,filestem
+Global ClipSaved,activefile,filename,dir,ext,filestem,drive
 iflive()
 sleep 30
 cleanuppathstring()
-SplitPath, Clipboard, filename, dir, ext, filestem, drive
+
 if (FileExist(clipboard))
 	; {
 	; FileGetAttrib, Attributes, %Clipboard%
@@ -2697,12 +2741,13 @@ if (FileExist(clipboard))
 					sleep 500
 					tooltip, File Overwritten`,`n%dir%\%filestem%-CopyDup.%ext%
 					sleep 2000 
-					return
+					tooltip
+					goto finishdup
 				}
 			IfMsgBox no
-				return
+				goto finishdup
 			IfMsgBox timeout
-				return
+				goto finishdup
 			}
 		sleep 500
 	tooltip, New File Created`n%dir%\%filestem%-CopyDup.%ext%
@@ -2714,8 +2759,11 @@ if (FileExist(clipboard))
 	Sleep 2000
 	}
 tooltip
-sleep 10
+finishdup:
+
+sleep 500
 restoreclipboard()
+sleep 200
 return
 movefiletofolder() ;; function , menu, copen, function ; Create a new subfolder, add hightlighted file to it
 	; Else If ThisMenuItem =&Add File to Subfolder...
@@ -2795,54 +2843,31 @@ Findwitheverything: ; label-sub () ;; function ;selected text ;menu, cfind,
 global clipsaved
 	iflive()
 	sleep 90
-	try Run, %everything15a% -new-tab -s "%Clipboard%"
-	; try Run, %everything15a% -s "%Clipboard%"
+	try Run, %everything15a% -newtab -s "%Clipboard%"
 	sleep 800
 	restoreclipboard()
 	sleep 30
 return
-	
-	/*
-	runeverything()
-; gosub runeverything
-	sleep 100
-	; sendinput, ^t ; open new tab
-	; sleep 50
-	ControlSend, , ^{L} ; activates search bar
-	sleep 50
-	sendinput, ^a
-	sleep 50
-	sendraw, %clipboard%
-	sleep 200
-	restoreclipboard()
-	sleep 200
-; return
-	*/
 
 findastro:
+Global ClipSaved 
+
 iflive()
-sleep 90
-try run %astrogrep% /spath="c:" /stext="%clipboard%" /s 
-sleep 800
+sleep 100
+try run "%astrogrep%" /spath="C:\Users" /stext="%clipboard%" /s
+sleep 1000
+
 restoreclipboard()
 sleep 20
 return
+
 ; evindex: ;; label-gosub
 evindex: ; () ;; function ; todo - broken When ev is not installed?? add errorlevel exit
 global clipsaved
 Sleep 100
 iflive()
 sleep 200
-; gosub runeverything
-; try Run, %everything15a% -s* si:* "%Clipboard%" 
-try Run, %everything15a% -new-tab -s* si:* "%Clipboard%" 
-; runeverything()
-; sleep 300
-; sendinput, ^l
-; sleep 50
-; sendinput, ^a
-; sleep 50
-; sendraw, si*: "%Clipboard%"
+try Run, %everything15a% -newtab -s* si*: "%Clipboard%"
 sleep 300
 restoreclipboard()
 sleep 175
@@ -2858,38 +2883,8 @@ EVfile:
 	SplitPath, Clipboard, file, , , , 
 	try run %everything15a% -newtab -s "%file%"
 	sleep 800
-	; runeverything()
-	; sendinput, ^l
-	; sleep 20
-	; sendinput, ^a
-	; sleep 200
-	; sendraw, %file%
-	; sleep 800
 	restoreclipboard()
 return
-
-/*
- if InStr(Clipboard, "%")  ; If it contains environment variables ; todo, where did I take this out from? put back or oktd
-		{
-		runeverything()
-		; gosub runeverything
-		; WinWaitActive , ahk_class EVERYTHING, , 7, ,
-		; if errorlevel
-			; return
-		sendinput, ^l
-		sleep 20
-		sendinput, ^a
-		sleep 200
-		sendraw, "%filename%"
-		; sendraw, "%dir%"
-		}
-else
-{
-
-
-}
-
-*/
 
 ; EVpath() ;; function
 EVpath:
@@ -2898,7 +2893,6 @@ iflive()
 sleep 20
 cleanuppathstring()
 sleep 20
-; SplitPath, Clipboard, filename, dir, ext, filestem, drive ; Extract parts of the path
 	if InStr(Clipboard, "%")  ; If it contains environment variables
 		{
 		
@@ -2927,12 +2921,11 @@ sleep 20
 		else ; If it's a file
 		{
 		sleep 200
-		; try run %everything15a% -newtab -s "%dir%"
 		try Run, %everything15a% -newtab -s """"%dir%""""
 		}
 
 	}
-Sleep, 200
+Sleep, 300
 restoreclipboard()
 sleep 90
 return
@@ -2945,7 +2938,6 @@ if (class != "Notepad++")  ; Check if the active window is not Notepad++
 	tooltip, This active window is not Notepad++`nSearch Canceled
 	sleep 1500
 	tooltip
-	; restoreclipboard()
 	sleep 50
 	return
 	}
@@ -3165,77 +3157,6 @@ runtextgrab:
 try run, %textgrab%
 return
 
-/*
-; runtextgrab:
-; try run, %textgrab%
-; return
-
- ; ^+E::
-; runeverything:
-; runeverything()
-; return
-
-; runeverything()  Function
-; {
-; global
- ; SetTitleMatchMode, 2
-; IfWinExist, ahk_class EVERYTHING  Everything 1.5
-	; {
-	; WinActivate, ahk_class EVERYTHING  Everything 1.5
-	 ; WinWait, ahk_exe Everything64.exe
-	 ; soundbeep, 800,
-	 ; Sleep 200
-	 ; ControlSend, , ^{L} ;this activates the search bar if its not already selected
-	; }
-; ifwinnotexist, ahk_class EVERYTHING  ahk_exe Everything64.exe
-; {
-	; try Run, %everything15a%
-	; sleep 300
-; }
-; }
-
- ; ^+n::
-; runnotepadpp:
-; runnotepadpp()
-; return
-
-; runnotepadpp()  function
-; {
-; Global
- ; SetTitleMatchMode, 2
-; IfWinExist, ahk_class Notepad++
-	; {
-	; WinActivate, ahk_class Notepad++
-	; } else {
-		; try Run, %notepadpp%
-	; }
-; IfWinnotexist, ahk_class Notepad++
-	; try run, %notepadpp%
- ; return
-; }
-
- ; ^+D::
-; runDopus:
-; runDopus()
-; return
-
-; runDopus()  Function
-; {
-; Global
- ; SetTitleMatchMode, 2
-; IfWinExist, ahk_class dopus.lister
-	; {
-	; WinActivate, ahk_class dopus.lister
-	 ; soundbeep, 900,
-	; } else {
-	; try Run, %dopus%
-	; }
-; ifwinnotexist, ahk_class dopus.lister
-	; try run, %dopus%
-  ; return
-; }
-*/
-
 runditto: ; label
 ;; todo, dittobutton:
 ; send, ^!#v
@@ -3269,9 +3190,21 @@ return
 ; #If !(WinActive("ahk_exe dopus.exe") || WinActive("ahk_exe notepad.exe") || WinActive("ahk_exe calc.exe")) ;; if not multipule
 
 #If !(WinActive("ahk_exe dopus.exe"))  ; Exclude Directory Opus (dopus.exe) for following hotkeys
-    ~MButton::
-    menucaseshow()
-    return
+
+~MButton::
+menucaseshow()
+return
+
+; ^space::
+; gosub expmenu
+; return
+#If  ; End excluding dopus condition
+
+
+Esc:: ;Escape to stop speaking
+    Gosub StopSpeaking
+Return
+
 ^+r:: ;Reload Script
 reload:
 tooltip, %ScriptName%`nis Reloading...
@@ -3280,12 +3213,10 @@ tooltip
 SLEEP 30
 reload
 return
-#If  ; End excluding dopus condition
-^!f3:: ; alt hotkey
+
+^!f3:: ;; alt hotkey
 menucaseshow()
 RETURN
-
-
 
 $CapsLock::
     KeyWait CapsLock, T0.15
@@ -3322,20 +3253,29 @@ return
 showctxtmenu:
 menu, ctxt, show
 return
-; Toggle CapsLock state via the GUI function
-; *~CapsLock::
+showcformmenu:
+menu, cform, show
+return
+showcapsmenu:
+Capsmenubutton:
+menucaseshow()
+return
+
+
 !Capslock::
 ^CapsLock::
 ToggleCapsLock()
     ; CapsLockey(false, true)
 return
-^+':: ;paste clipboard text in "Quotes"
+
+^+':: ;;paste clipboard text in "Quotes"
 	saved := clipboard ; save clipboard contents
 	Send, "%clipboard%" ; send clipboard content with your characters around it
 	clipboard := saved ; restore clipboard
 	saved := () ; clear saved
 Return
-^':: ;'Put selected text in "Quotes"
+
+^':: ;;'Put selected text in "Quotes"
 ClipQuote:
 global clipsaved
 copyclipboardclm()
@@ -3346,7 +3286,6 @@ Sleep 300
 pasteclipboardclm()
 sleep 100
 return
-
 
 +CapsLock::    ; Switch between UPPERCASE & lowercase
   origClipboard=%clipboard%
@@ -3371,19 +3310,14 @@ sleep 200
   }
   clipboard=%origClipboard%
 return
-^!f2:: ; my own stickies
+
+^!f2:: ;; my own stickies
 newsticky:
-; ahkstickygui()
-; gosub ahkstickygui
 CreateStickyNote()
 return
 
-^+F2:: ;; new sticky from selection
+^+F2:: ;;; new sticky from selection
 CopyToStickyNote()
-return
-
-Capsmenubutton:
-menucaseshow()
 return
 
 ToggleCapsLock(){
@@ -3503,10 +3437,7 @@ sleep 1500
 tooltip
 return
 
-
-
-
-#If GetKeyState("CapsLock", "T") && ShiftedNumRow  ; Check the toggle state
+#If GetKeyState("CapsLock", "T") && ShiftedNumRow  ; Check the toggle state // shifted number row hotkeys with toggle
     `::+` ; Shifted Capslock
     1::+1 ; Shifted Capslock
     2::+2 ; Shifted Capslock
@@ -3527,7 +3458,7 @@ return
 
 
 /*
-!g:: ; alt Google Search
+!g:: ;; alt Google Search
 copyclipboardclm()
 sleep 200
 ; todo, create function, add this to other web searches ↓
@@ -3577,7 +3508,7 @@ return
 ListLinesButton() ;; Function
 {
 listLines
-sleep 400
+sleep 500
 WinMove, A, , 2035, 1281, 1080, 720
 return
 }
@@ -3638,19 +3569,19 @@ ToggleReplaceNPPRightClick: ;() {
     ; global ReplaceNPPRightClick
     ReplaceNPPRightClick := !ReplaceNPPRightClick ; Toggle the setting
 	menu, cset, togglecheck, Replace the NP++ Right Click Menu
-	if (ReplaceNPPRightClick)
+	if (ReplaceNPPRightClick) ;todo, double check this menutoggle in np++
 		{
-		; menu, cset, togglecheck, Replace the NP++ Right Click Menu
 		iniwrite, 1, %inifile%, ReplaceNPPRightClick, key
+		; menu, cset, togglecheck, Replace the NP++ Right Click Menu
 		tooltip, The Right Click menu of Notepad++`nhas been replaced with Extended Capslock Menu!`n`nUse with Caution`, sometimes NP++'s menu is still triggered.`nIt can cause errors at times.
-		sleep 2000
+		sleep 1500
 		}
 	else
 		{
-		; menu, cset, togglecheck, Replace the NP++ Right Click Menu
 		iniwrite, 0, %inifile%, ReplaceNPPRightClick, key
+		menu, cset, icon, Replace the NP++ Right Click Menu, %A_ScriptDir%\Icons\context menu icon.ico
 		Tooltip, Notepad++'s Right Click Menu has been Restored.
-		sleep 1000
+		sleep 500
 		}
 sleep 1500
 tooltip
@@ -3661,7 +3592,7 @@ run https://github.com/indigofairyx/Extended_Capslock_Context_Menu
 return
 
 openquick:
-	try run, %A_ScriptDir%\Extended Capslock Menu QUICK Notes\
+	try run, %quicknotesdir%
 		catch
 	msgbox,,Extended Capslock Menu,Your Quick Notes Folder was not found.`n`nTry saving some notes first.,7
 return
@@ -3672,6 +3603,8 @@ return
 
 suspendkeys:
 suspend
+menu, cset, ToggleCheck, Suspend Hotkeys
+menu, tray, ToggleCheck, Suspend Hotkeys
 tooltip, Hotkeys Paused
 sleep 2500
 tooltip
@@ -3748,7 +3681,7 @@ key=1
 
 
 
- Aboutcapswindow() ;; function
+Aboutcapswindow() ;; function
 {
 global
 aboutcapswindow := " ;"
@@ -3789,11 +3722,11 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 	- open Everything 1.5a, to explore the folder
 	- open Everything 1.5a, to search the filename
 	*+ open an alternative live folder to peek what else is there
-		* this features is a bit Experimental
 		* it has it own hotkey as well 'Ctrl' + 'Space'
 		* its limited to Notepad++ and Everything
 			* in Notepad++, if nothing is selected,
 			  it will show the Dir of the active file.
+			  
 ++ Other Features With Toggle Options ++
 	- light & dark mode toggle (DARK is default),
 	- sound beeps for capslock state change (ON by default)
@@ -3803,12 +3736,21 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 	*+ Replace Notepad++'s Right Click Menu with this one! (OFF by Default)
 	*+ Auto Copy & Live Preview Mode
 		* See Known Issues warning below.
-... And more ... to come ...
+		
+++++ ADDITONAL MENUS ++++
+
+A custom built Open With\In Alternative Text Editor Menu that works in NP++ (on the active file viewing) and in Everything 1.5a (when a file is selected).
+The Hotkey for this Menu is {F9}
+
+There's a handful of light-weight text editors that I play with... This menu can be made to work in other applications... 
+If you're an AHK enthusiast I recommend adding your own editors. 
+ 
+... And more ...
 ************************************************** 
 **************************************************
 **************************************************
 A note about the softwares used by Extended Caplock Menu...
-&& Stored Prefs in the 'Edit -SETTINGS.ini File'
+&& Stored Prefs in the 'Edit -SETTINGS.ini File' +!+!+
 **************************************************
 You can change a few defaults for the menu. Such as...,
 	*- Auto Copy & Live Preview (OFF by default),
@@ -3843,28 +3785,39 @@ This menu will try to launch, but not interact with these other great text tools
 The Alternative Text Editor Menu for Notepad++ will try to open the active file in...
 	* Notepad4
 	* Geany
-	* VS Code or Codium
+	* VS Code or VS Codium
 	* Scite 4 AHK
 	* AHK Studio
 	* MS Word
 	* MS Excel
 	* Markdown Monster - $hareware
-These are just the ones I use, if you know how, the 'alttxt' menu could be added to include other text editors From the '.ahk' script file.
+These are just the ones I use, if you know how, the 'alttxt' menu could be edited to include other text editors From the '.ahk' script file.
+
+**************************************************
 +!+!+!+!++!+!+!+!++!+!+!+!+
 (!IMPORTANT!)
  >>> ASSIGNING YOUR DEFAULT LOCATIONS FOR
  >>> THE OTHER SOFTWARE THIS MENU INTERACTS WITH.
- If you want to that is. The 3rd party software is Optional, more below.
+ If you want to that is. The 3rd party software(s) are Optional, more below.
 +!+!+!+!++!+!+!+!++!+!+!+!+
-The list of software used in the menu are referenced as variables from the '-SETTINGS.ini' file. They have to me updated to suite your system MANUALLY with a simple copy and paste. Use the 'Edit Settings.ini File' from the settings sub-menu as a quick shortcut to the file.
-They will try to run from the default install locations, as set in the .ini, IF you have them installed in a different location you NEED update them there. Paste the true path to your .exe's. If not updated or if not installed the 3rd party software menu functions just won't do anything. SO THEY ARE NOT REQUIRED. Thou, don't delete or leave a reference empty as it could cause annoying popup messages box about variables not being assigned from AHK. 
+**************************************************
+
+The list of software used in the menu are referenced as variables from the '-SETTINGS.ini' file. They have to be updated to suite your system MANUALLY with a simple copy and paste. Use the 'Edit Settings.ini File' from the settings sub-menu as a quick shortcut to the file.
+
+They will try to run from the default install locations, as set in the .ini, IF you have them installed in a different location you NEED update them there. Paste the true path to your .exe's, without quotes.
+
+If not updated or if not installed the 3rd party software menu functions just won't do anything. SO THEY ARE NOT REQUIRED. Thou, don't delete or leave a reference empty as it could cause annoying popup messages box about variables not being assigned from AHK.
+
 	For example, Ditto (a clipboard manager),
 	as custom portable install should be changed to...
-		ditto = X:\Portable Program Files\Ditto\ditto.exe 
+		ditto = X:\Portable Program Files\Ditto\ditto.exe
 	rather than the default...
 		C:\Program Files\Ditto\ditto.exe
+
 Now anywhere in the script you see Run, %ditto% - it will be run from the file path your have provided here.
+
 You can also set your favorite Default Text Editor here.
+
 If not set text files will try to open with Notepad++.exe.
 As I have preset it. If NP++ is not installed (at its default location),
 then it defaults windows own Notepad.exe.
@@ -3917,19 +3870,52 @@ It also doesn't interact well with the Search Results Window.
 
 You can still access NP++ own context menu with a 'Ctrl' + 'Right Click' or the 'AppsKey' on your keyboard.
 
-************************************************** 
-************************************************** 
+++++++++++++++++++++++++++++++++++++++++++++++++++
+ 
 
 )" 
 
 
 
 ; " changelog = change log =
-changelog := "
+changelog := " ;"
 (
 
-
+*************************************************************
 ************************* CHANGELOG ************************* 
+*************************************************************
+
+Final Release - I've spent a few months working on this script\app\menu.
+I'm loving it and use it daily now, for coding in AHK and General Tech Geek Fun, thou I think its about as ripe as I can muster. It works well for its simplicity. 
+This Version.2024.11.18 is the last release I'm producing for the github. 
+If anymore updates happens it will be fixes if I (or you) find any bugs, (post an issue).
+
+------ v.2024.11.18 ---------------------------
+
++ added searching selection in the local AutoHotKey.chm help file to the find\search menu!
+
++ added toggle checks to suspend hotkeys menu items, when OFF they show as checked
+
++ added live folder sub-menu for the Extended Capslock Menu QUICK Notes to Notepad++'s alternative menu
+
++ added a hotkey, {Escape}, to Stop Speaking for the Text to Speech tool.
+
++ expanded the Explore Popup Menu to also work in Everything 1.5a with the {Ctrl} + {Space} Hotkey, also, fixed clipboard not restoring from the explore popup menu, again
+
++ New hotkey added, {F9}, for to show the Open In Alt Editor Menu in NP++ & Everything 1.5a even faster, also added error level checks for folders and large files
+
++ added quick select numbers to the Code Formatting menu, as well as some more icons
+
++ fixed an issue when right click outside of NP++ while its  still active showing this menu rather than menu that should be appearing
+
++ added Dynamic icons that change for Directory Opus users on any Open Dir items.
+
+= the live preview menu item now only appears when auto copy mode is turned on via the settings menu
+
+= fixed a syntax error when searching the system index via Everything 1.5a
+= fixed typos causing errors when trying to run the geany text editor
+= fixed a syntax error for opening Astrogrep via the CLI with a search term
+- removed the google hotkey, Alt + G (its still in the script if you want to uncomment it)
 
 ------ v.2024.11.06 ---------------------------
 
@@ -3950,9 +3936,9 @@ changelog := "
 
 + fixed the clipboard not being restored when using the 'Ctrl' + 'Space' hotkey\menu item for the explore folder popup menu
 
-+ fixed the handling of window `%Environment Vars`% in file paths. e.g. '%systemroot%\notepad.exe' ""`%localappdata`%"" `%userprofile`%\desktop file:///C:/Users/`%username`%/Downloads/
++ fixed the handling of window `%Environment Vars`% in file paths. e.g. '%systemroot%\notepad.exe' ""`%localappdata`%"" `%userprofile`%\desktop 
 
-+ a couple icon updates with more dynamic icons to match your textediter = if set in the `-SETTING.ini`
++ a couple icon updates with more dynamic icons to match your Text Editor = if set in the `-SETTING.ini` 
 
 ------ v.2024.11.04 ---------------------------
 
@@ -4035,10 +4021,12 @@ Fix to Save As on Sticky notes, now auto appends '.txt' to a file if user left t
 	Ctrl + Alt + F2 = New Empty Temp Stick
 	Ctrl + Alt + F3 = Alt hot to show Extended Capslock Menu
 
------- v.2024.10.15 ------
-++ BUG FIX - fixed an error in the Restore Clipboard function !!
+------ v.2024.10.15 -------------------------------
 
------- v.2024.10.13 ------ 
+++ IMPORTANT BUG FIX - fixed an error in the Restore Clipboard function !!
+
+------ v.2024.10.13 -------------------------------
+
 + added Live Preview with Auto Copy when the menu is launched
 + added a Settings sub-menu
 + added a settings file for mapping 3rd party software (when note installed in their default locations) & changing a few default toggle options
@@ -4099,6 +4087,7 @@ this option can be toggled on\off
 
 )"
 ;"
+
 gui, capsa: color, 171717, 090909
 
 gui, capsa: font, cffb900
@@ -4139,7 +4128,6 @@ guicontrol, focus, Close
 
 gui, capsa: +Border +Resize -MaximizeBox ; +Dpiscale
 gui, capsa: show,, Extended CAPS Menu - About
-
 
 } 
 
@@ -4231,46 +4219,91 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 ;***************************************************************************
 
 
+; #IfWinActive ahk_exe Notepad4.exe
+; ^space::
+; gosub expmenu
+; return
 
+; f9::
+; ^!n:: ;np++, open active file in alt editor
+; gosub alttxtnppmenu
+; return
+
+; rbutton::
+; if (ReplaceNPPRightClick)
+    ; {
+	; KeyWait, RButton, T0.5  ; Wait for the button to be released, with a 500ms delay
+	; menucaseshow() ; Show custom menu
+	; }
+; else
+    ; sendinput, {rbutton}
+; return
+
+; ^rbutton::
+; sendinput, {appskey}
+; return
+; #ifwinactive ;; END notepad4
 
 
 #IfWinActive ahk_class EVERYTHING
 ^Space::
+if (LiveMenuEnabled)
+	CopyClipboardCLM()
 gosub expmenu
 return
-#IfWinActive
 
-#IfWinActive ahk_class Notepad++
+F9:: ;;alt hotkey for open in alt editor npp menu & Everything1.5a
+copyclipboardCLM()
+Activefile := Clipboard
+restoreclipboard()
+gosub alttxtuseclip
+return
+#IfWinActive ;; END everything
+
+
+MouseIsOver(WinTitle) {  ;; Function
+    MouseGetPos,,, Win
+    return WinExist(WinTitle . " ahk_id " . Win)
+}
+
+; #IfWinActive ahk_class Notepad++
+#IfWinActive ahk_exe Notepad++.exe
 ^space::
+if (LiveMenuEnabled)
+	CopyClipboardCLM()
 gosub expmenu
 return
 
-^!n:: ;np++, open active file in alt editor
+f9:: ;;alt hotkey for open in alt editor npp menu
+^!n:: ;;np++, open active file in alt editor
 gosub alttxtnppmenu
 return
 
 rbutton::
-if (ReplaceNPPRightClick)
+if ReplaceNPPRightClick && MouseIsOver("ahk_exe notepad++.exe")
     {
 	KeyWait, RButton, T0.5  ; Wait for the button to be released, with a 500ms delay
 	menucaseshow() ; Show custom menu
 	}
 else
     sendinput, {rbutton}
-return
+return 
 
 ^rbutton::
 sendinput, {appskey}
 return
-#IfWinActive
+#IfWinActive  ;; END NOTEPAD++ KEYS
 
+;---------------------------------------------------------------------------
 
+;; MENU, EXP, START
 ; expmenu: ;todo add context options via approach to label
 ; Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved
 ; if (A_ThisHotkey = "^space") ; double clause if (A_ThisHotkey = "^Space" && WinActive("ahk_class EVERYTHING"))
 	; {
-		; tooltip you used Ctrl + space hotkey
-		; sleep 900
+	 ; WinGetClass, class, A
+		; tooltip you used Ctrl + space hotkey`n`nActive Window class =  %class%
+		; sleep 1500
 		; tooltip
 	; }
 ; if (A_ThisMenuItem = "View Explore Folder Menu   **[Experimental]**")
@@ -4279,52 +4312,55 @@ return
 		; sleep 900
 		; tooltip
 	; }
+	
+;---------------------------------------------------------------------------
+	
 
 expmenu:
 Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved
 
-; Get current window title
-WinGetTitle, filename, A
+WinGetTitle, filename, A ; Get current window title, extract doc name from it
 filename := RegexReplace(filename, "^\*", "")
 filename := RegexReplace(filename, " - Notepad\+\+( \[Administrator\])?$", "")
 folder := RegexReplace(filename, "\\[^\\]*$", "")
-
-
+; folder := RegExReplace(folder, "\\$") ; removed trailing " \ "
+;; check if copied text contains a folder path.
 iflive()
-sleep 10
+; CopyClipboardCLM()
+sleep 100
 cleanuppathstring()
-
+sleep 100
 highlighted := clipboard
+sleep 100
 RestoreClipboard() ; Store clipboard content and restore original clipboard immediately
-sleep 75  ; Give time for clipboard to restore
+sleep 555  ; Give time for clipboard to restore
 
+expmenuuseclip:
 ; Process the highlighted path
 if FileExist(highlighted) {
-    if InStr(FileExist(highlighted), "D") {
-        ; It's a directory
+    if InStr(FileExist(highlighted), "D") { ; It's a directory
         folder := highlighted
-    } else {
-        ; It's a file
+    } else { ; It's a file
         SplitPath, highlighted, filestem, folder, ext, drive
     }
-    
-    ; Remove trailing backslash to prevent menu breaks
-    folder := RegExReplace(folder, "\\$")
+folder := RegExReplace(folder, "\\$") ; Remove trailing backslash to prevent menu errors
 } else {
-    ; If highlighted content is not valid, use window title path
-    folder := folder ? folder : ""
+    folder := folder ? folder : "" ; If highlighted content is not valid, use window title path
     folder := RegExReplace(folder, "\\$")
 }
-
-; Show the folder menu
+if !FileExist(folder)
+	{
+	tooltip Directory Not Found!`n%folder%`n`nExplore Popup Menu Canceled`nERR! Line#  %A_LineNumber%`n`n
+	sleep 2500
+	tooltip
+	return
+	}
 sleep 50
-Gosub, ShowFolder
+Gosub, ShowFolder ; Show the folder menu
 Return
 
-
 ShowFolder:
-; restoreclipboard()
-Menu, Folders, Add, ; line ;------------------------- 
+Menu, Folders, Add, ; start building menu.
 Menu, Folders, Deleteall
 itemCount := 0
 Menu, Folders, Add, Open this Folder, openfolder
@@ -4333,11 +4369,11 @@ if FileExist(dopus)
 else
 	Menu, Folders, Icon, Open this Folder, explorer.exe,,24
 Menu, Folders, Default, Open this Folder
-menu, folders, add, Copy Path: "%folder%", copyfolderspath
-menu, folders, icon, Copy Path: "%folder%", %A_ScriptDir%\Icons\folder_go__32x32.ico
+menu, folders, add, Copy Path:  %folder%, copyfolderspath
+menu, folders, icon, Copy Path:  %folder%, %A_ScriptDir%\Icons\Clipboard_64x64.ico
 menu, folders, add, ; line ------------------------- 
-Menu, Folders, Add, .., FolderClicked 
-Menu, Folders, Icon, .., %A_ScriptDir%\Icons\arrow go-up_32x32.ico 
+Menu, Folders, Add, .. Go Up .., FolderClicked
+Menu, Folders, Icon, .. Go Up .., %A_ScriptDir%\Icons\arrow go-up_32x32.ico
 menu, folders, add, ; line -------------------------
 
 ; icons set 1
@@ -4347,10 +4383,12 @@ menu, folders, add, ; line -------------------------
 		if attributes contains H,S  ; Skip hidden and system folders
 			continue
 		Menu, Folders, Add, %A_LoopFileName%, FolderClicked
+		
 		Menu, Folders, Icon, %A_LoopFileName%, % GetFileIcon(A_LoopFileFullPath)
 		itemCount++
 	} 
-menu, folders, add
+	
+menu, folders, add, ; line ;------------------------- 
 
  Loop, %folder%\*, 0
 	{
@@ -4367,7 +4405,9 @@ if (itemCount = 0) {
 }
 
 Menu, Folders, Show, %A_CaretX%, %A_CaretY%
-Return
+Return 
+
+
 
 ; icon set 1
  GetFileIcon(File) {
@@ -4385,7 +4425,7 @@ DoNothing:
 Return
 
 FolderClicked:
-    if (A_ThisMenuItem = "..") {  ; Check if ".." was clicked to go up one level
+    if (A_ThisMenuItem = ".. Go Up ..") {  ; Check if ".." was clicked to go up one level
         if InStr(folder, "\") { ; Remove trailing slash if present
             StringTrimRight, folder, folder, 1
         }
@@ -4405,7 +4445,7 @@ Return
 openfolder:
 run, %folder%
 if ErrorLevel {
-    Tooltip, Error. Folder not found.
+    Tooltip, ERR! @ Line# %A_LineNumber%`nFolder not found.
     Sleep 2000
     Tooltip
 }
@@ -4413,9 +4453,9 @@ return
 
 copyfolderspath:
 clipboard := ""
-sleep 20
+sleep 40
 clipboard := folder
-clipwait,1
+clipwait,0.5
 return
 
 RUNfile:
@@ -4465,8 +4505,84 @@ sleep 50
 Clipboard := ClipSaved
 sleep 200
 return
+;; MENU, EXP, END
+;--------------------------------------------------------------------------- 
+;***************************************************************************
+;---------------------------------------------------------------------------
+;; START LIVE QUICK NOTES DIR SUBMENU
+topmenu:
+; topmenu = %A_ScriptDir%\Extended Capslock Menu QUICK Notes
+topmenu = %quicknotesdir%
+if !FileExist(topmenu)
+	return
+Menu, %TopMenu%, Add
+Menu, %TopMenu%, deleteall
+Menu, %TopMenu%, Add, Open Quick Docs Folder, openquick
+if FileExist(dopus)
+	Menu, %TopMenu%, icon, Open Quick Docs Folder, %dopus%
+else
+	Menu, %TopMenu%, icon, Open Quick Docs Folder, explorer.exe
+
+Menu, %TopMenu%, Add, ;line ;------------------------- 
+
+LastMenu := TopMenu
+Loop Files, %TopMenu%\*.*, DFR  ; Recurse into subfolders.
+{
+    If InStr(A_LoopFileAttrib, "H") or InStr(A_LoopFileAttrib, "S")
+        Continue ; Skip any file that is H or S (System).
+
+    Menu, %A_LoopFileDir%, Add, %A_LoopFileName% , quicksubAction
+	
+	IconPath := GetFileIcon(A_LoopFileFullPath)
+	Menu, %A_LoopFileDir%, Icon, %A_LoopFileName%, %IconPath%
+	
+    If (A_LoopFileDir != LastMenu) and (LastMenu != TopMenu)
+    {
+	; MsgBox %TopMenu% %LastMenu% ; debug
+        AddMenu(LastMenu)
+    }
+    ; Save menu name
+    LastMenu := A_LoopFileDir
+}
+
+AddMenu(LastMenu)
+; Menu, %TopMenu%, Show  ; Don't need to show the menu here as its being built as a submenu
+Return
 
 
+quicksubAction:
+; Run, % A_ThisMenu . "\" . A_ThisMenuItem
+if % ext = "ahk"
+	{
+	try Run %texteditor% "%A_thismenu%\%A_ThisMenuItem%"
+	catch
+	run notepad.exe "%A_thismenu%\%A_ThisMenuItem%"
+	sleep 30
+	Return
+	}
+else if % ext = "ico"
+	{
+	try Run %xnviewmp% "%A_thismenu%\%A_ThisMenuItem%"
+		catch
+	try Run "%A_thismenu%\%A_ThisMenuItem%"
+	sleep 30
+	Return
+	}
+else
+	try run, "%A_thismenu%\%A_ThisMenuItem%"
+	catch
+	try run, %texteditor% "%A_thismenu%\%A_ThisMenuItem%"
+	catch
+	run, nopepad.exe "%A_thismenu%\%A_ThisMenuItem%"
+Return
+
+AddMenu(MenuName) ;; function
+{
+    SplitPath, MenuName , DirName, OutDir, OutExtension, OutNameNoExt, OutDrive
+    Menu, %OutDir%, Add, %DirName%, :%MenuName%
+}
+;--------------------------------------------------------------------------- 
+; MENU, ALTTXT, START
 alttxtnppmenu:
 Global ClipSaved,ActiveFile,filename,dir,ext,filestem,texteditor
 WinGetTitle ActiveFile, A
@@ -4481,7 +4597,10 @@ WinGetTitle ActiveFile, A
 			IfMsgBox Cancel
 				return
 			IfMsgBox Yes
+				{
+				sleep 250
 				send, ^s
+				}
 		}
 sleep 40
 ActiveFile := RegexReplace(ActiveFile, "^\*", "")
@@ -4497,14 +4616,72 @@ sleep 40
 		}
 	sleep 40
 ; folder := RegexReplace(ActiveFile, "\\[^\\]*$", "")
+alttxtuseclip:
 dir := RegexReplace(ActiveFile, "\\[^\\]*$", "")
 	sleep 40
-splitpath, ActiveFile, filename,dir,ext,filestem
+splitpath, ActiveFile, filename,dir,ext,filestem,drive
 sleep 30
-; backupclipboard()
-; sleep 30
-; send, ^s
-; sleep 400
+FileGetAttrib, Attributes, %Activefile%
+        ; if (InStr(Attributes, "D"))  ; If it's a directory
+			; {
+				; tooltip, You cannot open a directory with this menu.
+				; sleep 2000
+				; tooltip
+				; return
+			; }
+		FileGetAttrib, Attributes, %Activefile%
+        if (InStr(Attributes, "D"))  ; If it's a directory
+			{
+				menu, alttxt, add
+				menu, alttxt, deleteall
+
+				menu, alttxt, add, -Open... " %filename% "  ...With?, altmenualttxtshow
+				menu, alttxt, icon, -Open... " %filename% "  ...With?, %A_ScriptDir%\Icons\document text edit rename FLUENT_colored_453_64x64.ico,,28
+
+				menu, alttxt, default, -Open... " %filename% "  ...With?
+				menu, alttxt, add, ; line ;-------------------------
+				menu, alttxt, add, This menu cannot open a folder in a text editor, altmenualttxtshow
+				menu, alttxt, icon ,  This menu cannot open a folder in a text editor, %A_ScriptDir%\Icons\attention aero warning_64x64.ico,,28
+				menu, alttxt, add, ; line -------------------------
+					
+				menu, alttxt, add, Copy Folder Path to Clipboard, altcopypath
+				menu, alttxt, icon, Copy Folder Path to Clipboard, %A_ScriptDir%\Icons\document copy f filename FLUENT_colored_387_64x64.ico
+
+				menu, alttxt, add, Copy Folder Name to Clipboard, altcopyname
+				menu, alttxt, icon, Copy Folder Name to Clipboard, %A_ScriptDir%\Icons\document copy n FLUENT_colored_385_64x64.ico
+				menu, alttxt, add, ; line ------------------------- 
+				Menu, alttxt, add, Search this Name in Everything, altevfile
+				Menu, alttxt, icon, Search this Name in Everything, %A_ScriptDir%\Icons\voidtools-04-Everything-Green.ico
+				menu, alttxt, add, Explore This Folder in Everything, altevexp
+				menu, alttxt, icon, Explore This Folder in Everything, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
+				menu, alttxt, add, ; line -------------------------
+
+				; menu, alttxt, add, Open Folder, alttxtopenfolderalt2
+				if FileExist(dopus)
+					{
+					menu, alttxt, add, Open Folder in Dopus, alttxtopenfolderalt2
+					menu, alttxt, icon, Open Folder in Dopus, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico,,28
+					}
+				else
+					{
+					menu, alttxt, Add, Open Folder in Explorer, explorer.exe,,28
+					menu, alttxt, icon, Open Folder in Explorer, explorer.exe,,28
+					}
+					
+				menu, alttxt, show
+					return
+			}
+FileGetSize, FS, %ActiveFile%, M
+; msgbox %fs%
+	; if (FS > 150)
+		; {
+		; MsgBox, 262145, Large File Warning, The selected file is over %fs% MB.`n`nAre you sure you want to open it in a text editor?`n`nOK --> To Continue..., 7
+		; ifMsgBox cancel
+			; return
+		; ifmsgbox timeout
+			; return
+		; }
+
 menu, alttxt, add
 menu, alttxt, deleteall
 
@@ -4513,43 +4690,78 @@ menu, alttxt, icon, -Open... " %filename% "  ...With?, %A_ScriptDir%\Icons\docum
 
 menu, alttxt, default, -Open... " %filename% "  ...With?
 menu, alttxt, add, ; line ;------------------------- 
-; menu, alttxt, add, Open in Default Text Editor`, If Set [ %texteditor% ], altoidefaulttexteditor
+if (FS > 150)
+	{
+		menu, alttxt, add, ATTENTION!!!  --  This file is large! > %fs% MB., altmenualttxtshow
+		menu, alttxt, icon ,  ATTENTION!!!  --  This file is large! > %fs% MB., %A_ScriptDir%\Icons\attention aero warning_64x64.ico,,32
+		menu, alttxt, add, ; line -------------------------
+	}
 menu, alttxt, add, Open in Default Text Editor`, (If Set`, Otherwise Notepad), altoidefaulttexteditor
 if FileExist(texteditor)
     menu, alttxt, icon, Open in Default Text Editor`, (If Set`, Otherwise Notepad), %texteditor%
 else
     menu, alttxt, icon, Open in Default Text Editor`, (If Set`, Otherwise Notepad), notepad.exe
 menu, alttxt, add, ; line -------------------------
+
 menu, alttxt, add, Notepad++ in new Window, altoinppnewwindow
 if FileExist(notepadpp)
 	menu, alttxt, icon, Notepad++ in new Window, %notepadpp%
 else
 menu, alttxt, icon, Notepad++ in new Window, %A_ScriptDir%\Icons\notepad++_100.ico
 menu, alttxt, add, Notepad4, altoinotepad4
-menu, alttxt, icon, Notepad4, %A_ScriptDir%\Icons\notepad4 256x256.ico
+if FileExist(notepad4)
+menu, alttxt, icon, Notepad4, %notepad4%
+	
+else
+	menu, alttxt, icon, Notepad4, %A_ScriptDir%\Icons\notepad4 256x256.ico
+
 menu, alttxt, add, Scite 4 AHK, altoiscite
+if fileexist(scite)
+menu, alttxt, icon, Scite 4 AHK, %scite%	
+else
 menu, alttxt, icon, Scite 4 AHK, %A_ScriptDir%\Icons\SciTE_icon_256x256.png
+
 menu, alttxt, add, AHK Studio, altoiahkstudio
 menu, alttxt, icon, AHK Studio, %A_ScriptDir%\Icons\AHKStudio.ico
+
 menu, alttxt, add, VS Code, altoivscode
-menu, alttxt, icon, VS Code, %A_ScriptDir%\Icons\codium logo 256x256.ico
+if FileExist(vscode)
+	menu, alttxt, icon, VS Code, %vscode%
+else
+	menu, alttxt, icon, VS Code, %A_ScriptDir%\Icons\vscode.ico
+; menu, alttxt, icon, VS Code, %A_ScriptDir%\Icons\codium logo 256x256.ico ; alt icon
 ; menu, alttxt, icon, VS Code, %A_ScriptDir%\Icons\vscode.ico ; alt icon
+
 menu, alttxt, add, Geany, altoigeany
-menu, alttxt, icon, Geany, %A_ScriptDir%\Icons\geanytexteditor256x256.ico
+if fileexist(geany)
+	menu, alttxt, icon, Geany, %geany%
+else
+	menu, alttxt, icon, Geany, %A_ScriptDir%\Icons\geanytexteditor256x256.ico
+
 ; menu, alttxt, add, Notepad++, altoinpp
 ; menu, alttxt, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
 
-menu, alttxt, add, ; line ;------------------------- 
+menu, alttxt, add, ; line ;-------------------------
 menu, alttxt, add, Word, altoiword
-menu, alttxt, icon, Word, %A_ScriptDir%\Icons\ms-word_64x64.ico
+if FileExist(word)
+	menu, alttxt, icon, Word, %word%
+else
+	menu, alttxt, icon, Word, %A_ScriptDir%\Icons\ms-word_64x64.ico
+
 menu, alttxt, add, Excel, altoiexcel
-menu, alttxt, icon, Excel, %A_ScriptDir%\Icons\ms-excel_64x64.ico
-menu, alttxt, add, ; line ;------------------------- 
-; menu, alttxt, add, Obsidian, altoiobsidian
-; menu, alttxt, icon, Obsidian, %A_ScriptDir%\Icons\obsidian logo 256x256.ico
+if fileexist(excel)
+	menu, alttxt, icon, Excel, %excel%
+else
+	menu, alttxt, icon, Excel, %A_ScriptDir%\Icons\ms-excel_64x64.ico
+menu, alttxt, add, ; line ;-------------------------
+
+; menu, alttxt, add, Obsidian, altoiobsidian ;;IGNORE 4 SHARE
+; menu, alttxt, icon, Obsidian, %A_ScriptDir%\Icons\obsidian logo 256x256.ico ;;IGNORE 4 SHARE
+
 menu, alttxt, add, Markdown Monster, altoimarkdownmonster
 menu, alttxt, icon, Markdown Monster, %A_ScriptDir%\Icons\MarkdownMonster logo 256x256.ico
-menu, alttxt, add, ; line ;------------------------- 
+
+menu, alttxt, add, ; line ;-------------------------
 menu, alttxt, add, -- Other Quick File Options -- (Also About), aboutalttxtmenu
 menu, alttxt, icon, -- Other Quick File Options -- (Also About), %A_ScriptDir%\Icons\about question imageres win7_99_256x256.ico
 menu, alttxt, add, ; line ;-------------------------
@@ -4560,11 +4772,25 @@ menu, alttxt, icon, Copy Full File Path to Clipboard, %A_ScriptDir%\Icons\docume
 
 menu, alttxt, add, Copy File Name to Clipboard, altcopyname
 menu, alttxt, icon, Copy File Name to Clipboard, %A_ScriptDir%\Icons\document copy n FLUENT_colored_385_64x64.ico
+menu, alttxt, add, ; line ------------------------- 
 Menu, alttxt, add, Search this Doc in Everything, altevfile
 Menu, alttxt, icon, Search this Doc in Everything, %A_ScriptDir%\Icons\voidtools-04-Everything-Green.ico
 menu, alttxt, add, Explore This Folder in Everything, altevexp
 menu, alttxt, icon, Explore This Folder in Everything, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
-menu, alttxt, add, ; line ;------------------------- 
+menu, alttxt, add, ; line -------------------------
+
+if FileExist(quicknotesdir)
+	{
+	gosub topmenu  ; build live menu item
+	Menu, alttxt, add, Quick Notes Dir, :%topmenu%
+	Menu, alttxt, icon, Quick Notes Dir, %A_ScriptDir%\Icons\folder_go__32x32.ico
+	menu, alttxt, add, ; line ;-------------------------
+	}
+else
+	{
+	; show nothing 
+	}
+
 
 menu, alttxt, add, Open Folder, alttxtopenfolderalt2
 if FileExist(dopus)
@@ -4572,14 +4798,9 @@ if FileExist(dopus)
 else
 	menu, alttxt, icon, Open Folder, explorer.exe,,28
 sleep 30
-; sleep 100
-; msgbox,VAR CHECK - FILE CHECK - SPLITPATH CHECK - ERROR CHECK`nthis script: %A_ScriptName%`nline#: %A_LineNumber%`n`nthis label: %A_ThisLabel%`nthis func: %A_ThisFunc%`n`nActiveFile: %activefile%`nfilename: %filename%`ndir: %dir%`next: %ext%`nfilestem: %filestem%`n`naltogether-dir\fs-ext:`n%dir%\%Filestem%.%ext%`n`nclipboard: %clipboard%`n`nclipsaved: %clipsaved%`ntmp: %tmp%`n`nline#: %A_LineNumber%
-; clipboard = %ActiveFile%
-; sleep 50
 menu, alttxt, show
-; sleep 50
-; sleep 300
 return
+
 aboutalttxtmenu:
 msgbox, This is a custom made open with menu.`nThese are a few of the Text Editors I like to play with.`nThere are many others!`n`nIf you're Familiar with AHK I recommend editing and running the '.ahk' to add you're own favorite editors here.
 return
@@ -4786,7 +5007,7 @@ return
 oigeany:
 getfileinfo()
 sleep 90
-try run, %gean% "%clipboard%",, useerrorlevel
+try run, %geany% "%clipboard%",, useerrorlevel
 if errorlevel
 	return
 sleep 500
@@ -4794,7 +5015,7 @@ restoreclipboard()
 return
 
 altoigeany:
-try run, %gean% "%activefile%",, useerrorlevel
+try run, %geany% "%activefile%",, useerrorlevel
 if errorlevel
 	return
 sleep 100
@@ -4838,5 +5059,4 @@ return
 altmenualttxtshow:
 menu, alttxt, show
 return
-
 

@@ -5,7 +5,7 @@
 
 ;!!!!!!!!!!!! IMPORTANT! THIS FILE MUST BE ENCODED WITH UTF8+BOM !!!!!!!!!!!!!!;
 
-ScriptVersion := "v.2024.11.18"
+ScriptVersion := "v.2024.11.23"
 
 ScriptName := "Extended CaplsLock Menu" 
 
@@ -144,9 +144,9 @@ TextMenuDate(List)
 TextMenuDate(TextOptions)
 {
 global
-menu, dtmenu, add, --- Insert Date && Time ---, showdtmenu
-menu, dtmenu, icon, --- Insert Date && Time ---, %A_ScriptDir%\Icons\ico_alpha_Clock_32x32.ico,,28
-menu, dtmenu, default, --- Insert Date && Time ---
+menu, dtmenu, add, < ----- Insert Date && Time ----- >, showdtmenu
+menu, dtmenu, icon, < ----- Insert Date && Time ----- >, %A_ScriptDir%\Icons\ico_alpha_Clock_32x32.ico,,28
+menu, dtmenu, default, < ----- Insert Date && Time ----- >
 menu, dtmenu, add, ; line ;-------------------------
 	 StringSplit, MenuItems, TextOptions , |
 	 Loop %MenuItems0%
@@ -198,9 +198,9 @@ TextMenuDate(List)
 ;---------------------------------------------------------------------------
 
 ;--------------------------------------------------------------------------- 
-menu, ctxt, add, --- Modify Text && Case ---, showctxtmenu
-menu, ctxt, icon, --- Modify Text && Case ---, %A_ScriptDir%\Icons\richtext_editor__32x32.ico,,28
-menu, ctxt, default, --- Modify Text && Case ---,
+menu, ctxt, add, < ---- Modify Text && Case ---- >, showctxtmenu
+menu, ctxt, icon, < ---- Modify Text && Case ---- >, %A_ScriptDir%\Icons\richtext_editor__32x32.ico,,28
+menu, ctxt, default, < ---- Modify Text && Case ---- >,
 menu, ctxt, add, ; line -------------------------
 menu, ctxt, Add, UPPERCASE, Upper
 menu, ctxt, icon, UPPERCASE, %A_ScriptDir%\Icons\Upper case.ico
@@ -261,13 +261,13 @@ menu, cform, Add, 9 <kbd>`K<`/kbd>, dopusK
 menu, cform, icon, 9 <kbd>`K<`/kbd>, %A_ScriptDir%\Icons\xml code_128x128.ico
 menu, cform, add, 0 `<`!-- xml Comment --`>, wrapinxmlcomment
 menu, cform, add, A ``nAHK new Line``n, ahknewline
-menu, cform, icon, A ``nAHK new Line``n, C:\xsysicons\icons extracted from software\more gen Icons 24x24\083_key return enter keyboard capt_24x24.ico
+menu, cform, icon, A ``nAHK new Line``n, %A_ScriptDir%\Icons\083_key return enter keyboard capt_24x24.ico
 
 
 ;---------------------------------------------------------------------------
 
-menu, cfind, add, --- Web Searches ---, showfindmenu
-menu, cfind, icon, --- Web Searches ---, %A_ScriptDir%\Icons\web www internet globe 26 64x64.ico,,27
+menu, cfind, add, < ------ Web Searches ------ >, showfindmenu
+menu, cfind, icon, < ------ Web Searches ------ >, %A_ScriptDir%\Icons\web www internet globe 26 64x64.ico,,28
 menu, cfind, add, ; line ;-------------------------
 menu, cfind, add, Google This, googlethis
 menu, cfind, icon, Google This, %A_ScriptDir%\Icons\google_96x96.ico
@@ -284,8 +284,8 @@ menu, cfind, add, ; line -------------------------
 menu, cfind, add, Visit Website [If a URL is selected], gowebsite
 menu, cfind, icon, Visit Website [If a URL is Selected], %A_ScriptDir%\Icons\web-browser xfav_24x24.ico
 menu, cfind, add, ; line ;-------------------------
-menu, Cfind, add, --- Local Searches ---, showfindmenu
-menu, Cfind, icon, --- Local Searches ---, %A_ScriptDir%\Icons\computer_48x48.ico,,27
+menu, Cfind, add, < ------ Local Searches ------ >, showfindmenu
+menu, Cfind, icon, < ------ Local Searches ------ >, %A_ScriptDir%\Icons\computer_48x48.ico,,28
 menu, cfind, add, ; line ;-------------------------
 menu, cfind, add, Everything`, Find [Selected Text] Locally, Findwitheverything
 menu, cfind, icon, Everything`, Find [Selected Text] Locally, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
@@ -307,9 +307,9 @@ menu, cfind, add, Look up on Dictionary.com && Thesaurus.com, Dictionarydotcom
 
 ;---------------------------------------------------------------------------
 
-menu, ctools, add, --- Text Tools ---, showtoolsmenu
-menu, ctools, icon, --- Text Tools ---, %A_ScriptDir%\Icons\Pencil and Ruler__32x32.ico,,28
-menu, ctools, default, --- Text Tools ---
+menu, ctools, add, < ------ Text Tools ------ >, showtoolsmenu
+menu, ctools, icon, < ------ Text Tools ------ >, %A_ScriptDir%\Icons\Pencil and Ruler__32x32.ico,,28
+menu, ctools, default, < ------ Text Tools ------ >
 menu, ctools, add, ; line ------------------ -------
 menu, ctools, add, Save Selection To New Document, newtxtfile
 menu, ctools, icon, Save Selection To New Document, %A_ScriptDir%\Icons\document new add FLUENT_colored_239_64x64.ico
@@ -337,8 +337,8 @@ menu, ctools, add, ;line ;-------------------------
 menu, ctools, add, Read [*Selected Text*] Out Loud, TextToSpeech
 menu, ctools, icon, Read [*Selected Text*] Out Loud, %A_ScriptDir%\Icons\loudspeaker_emoji_64x64.ico
 menu, ctools, add, ; line ;-------------------------
-menu, ctools, add, --- Software Launchers (?About) ---, aboutsoftwareL
-menu, ctools, icon, --- Software Launchers (?About) ---, %A_ScriptDir%\Icons\Apps_software_48x48.ico,,24
+menu, ctools, add, < --- Software Launchers (?About) --- >, aboutsoftwareL
+menu, ctools, icon, < --- Software Launchers (?About) --- >, %A_ScriptDir%\Icons\Apps_software_48x48.ico,,24
 menu, ctools, add, ; line ;-------------------------
 MENU, ctools, add, Run AHK Auto Correct (Included), abc
 MENU, ctools, icon, Run AHK Auto Correct (Included), %A_ScriptDir%\Icons\autocorrect_icon_32x32.ico
@@ -463,9 +463,9 @@ menu, gui, add, Pin \ Unpin to Top`tCtrl + P, pintotop
 ; Menu, gui, add, %A_GuiX% %A_GuiY%, menureturn ;debug test
 
 ;---------------------------------------------------------------------------
-menu, cset, add, ---  Settings && About  ---, showsettingsmenu
-menu, cset, icon, ---  Settings && About  ---, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico,,28
-menu, cset, default, ---  Settings && About  ---
+menu, cset, add, < ------ Settings && About ------ >, showsettingsmenu
+menu, cset, icon, < ------ Settings && About ------ >, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico,,28
+menu, cset, default, < ------ Settings && About ------ >
 menu, cset, add, ; line -------------------------
 Menu, cset, add, Toggle Live Preview && Auto Copy, ToggleLiveMenu
 if (LiveMenuEnabled)
@@ -554,8 +554,11 @@ menu, tray, nostandard
 menu, tray, icon, %trayicon%
 
 menu, tray, add, Show Extended Capslock Menu, Capsmenubutton
-menu , tray, icon, Show Extended Capslock Menu, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,28
+menu , tray, icon, Show Extended Capslock Menu, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,32
 menu, tray,  default, Show Extended Capslock Menu
+menu, tray, add, ; line ;-------------------------
+menu, tray, add, About Extended Caps Lock Menu, aboutcapswindow
+menu, tray, icon, About Extended Caps Lock Menu, %A_ScriptDir%\Icons\about question imageres win7_99_256x256.ico
 menu, tray, add, ; line ;-------------------------
 menu, tray, add, Reload, reload
 menu, tray, icon, Reload, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
@@ -681,6 +684,7 @@ MENU, case, icon, Paste As Plain Text, %A_ScriptDir%\Icons\plaintextdoc_64x64.ic
 menu, case, add ; line ;-------------------------
 menu, case, add, Setting && About, :cset
 menu, case, icon, Setting && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
+menu, case, add, ; line -------------------------
 menu, case, add, Close This Menu, CloseMenu
 menu, case, icon, Close This Menu, %A_ScriptDir%\Icons\aero Close_24x24-32b.ico
 
@@ -1545,15 +1549,15 @@ return
 
 ;; gui, sticky, hotkeys, gui sticky hotkeys ;*************************
 #IfWinActive AHK Temp Sticky Note #
-^s:: ; save sticky as doc
+^s:: ;; save sticky as doc
 savestickyAS()
 return
 
-^+s:: ; quick save sticky as .txt
+^+s:: ;; quick save sticky as .txt
 savestickyquick()
 return
 
-~rbutton:: ; show capslock menu on stickys
+~rbutton:: ;; show capslock menu on stickys
 ;; Note: Since Edit controls have their own context menu, a right-click in one of them will not launch GuiContextMenu. // workaround 
 menucaseshow()
 return
@@ -2287,7 +2291,7 @@ IfInString, Attributes, D
 		 Run, explorer.exe /select`,"%clipboard%"
 		sleep 400
 		restoreclipboard()
-		sleep 90
+		sleep 300
 		Return
 		}
 ;open\\run files by ext
@@ -2298,7 +2302,7 @@ IfInString, Attributes, D
 		run notepad.exe "%clipboard%"
 		sleep 400
 		restoreclipboard()
-		sleep 90
+		sleep 300
 		Return
 		}
 	else if % ext = "ico" 
@@ -2308,7 +2312,7 @@ IfInString, Attributes, D
 		try Run "%clipboard%"
 		sleep 400
 		restoreclipboard()
-		sleep 30
+		sleep 300
 		Return
 		}
 	else if % ext = "exe" 
@@ -2323,7 +2327,7 @@ IfInString, Attributes, D
 				}
 		sleep 400
 		restoreclipboard()
-		sleep 30
+		sleep 300
 		return
 		}
 	else
@@ -2338,7 +2342,7 @@ IfInString, Attributes, D
 				}
 		sleep 100
 		restoreclipboard()
-		sleep 30
+		sleep 300
 		return
 		}
 
@@ -2355,7 +2359,7 @@ IfInString, Attributes, D
 		; }
 sleep 200
 restoreclipboard()
-sleep 30
+sleep 300
 return
 
 
@@ -3179,7 +3183,7 @@ try run %ditto% /Open
 return
 
 abc:
-try run, %A_ScriptDir%\AutoCorrect\AutoCorrect_2.0.ahk
+try run, %A_ScriptDir%\AutoCorrect\AutoCorrect_2.0_ECLM.ahk
 return
 ;************************* END, MENU, APPSKEY ******************************
 
@@ -3889,6 +3893,12 @@ Final Release - I've spent a few months working on this script\app\menu.
 I'm loving it and use it daily now, for coding in AHK and General Tech Geek Fun, thou I think its about as ripe as I can muster. It works well for its simplicity. 
 This Version.2024.11.18 is the last release I'm producing for the github. 
 If anymore updates happens it will be fixes if I (or you) find any bugs, (post an issue).
+
+------ v.2024.11.23 ---------------------------
+
+= Fixed an icon error from last update
+= Fixed a launch error for the included Auto-Correct Spelling Script
+= A few cosmetic menu headings updates
 
 ------ v.2024.11.18 ---------------------------
 
@@ -5059,4 +5069,6 @@ return
 altmenualttxtshow:
 menu, alttxt, show
 return
+
+
 

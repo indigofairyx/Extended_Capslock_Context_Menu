@@ -6,7 +6,7 @@
  	 ; Run *RunAs "%A_ScriptFullPath%"
 
 
-ScriptVersion := "v.2024.12.03"
+ScriptVersion := "v.2024.12.19"
 
 ScriptName := "Extended CaplsLock Menu" 
 
@@ -36,8 +36,9 @@ inifile := A_ScriptDir "\" A_ScriptName "-SETTINGS.ini"
 global inifile
 if !FileExist(inifile) {
     ; Retrieve the default settings and write to the INI file
-    defaultIniSettings := GetDefaultIniSettings()
-    FileAppend, %defaultIniSettings%, %inifile%
+	gosub makeini
+    ; defaultIniSettings := GetDefaultIniSettings()
+    ; FileAppend, %defaultIniSettings%, %inifile%
     Sleep 750
     ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
     Sleep 2000
@@ -101,7 +102,9 @@ EnvGet, LocalAppData, LocalAppData
 ; MsgBox, %A_UserName%'s Local directory is located at: %LocalAppData%
 
 GLOBAL idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, pIContextMenu3, WPOld ; windows shell menu
-; Global filename,dir,ext,filestem,drive,folder,lastfolder,filetoclip,highlighted
+
+
+Global filename,dir,filestem,drive,folder,lastfolder,filetoclip,highlighted ; used by exp popup menu, alt editor menu, and copen menu items
 
 trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
 global trayicon
@@ -128,8 +131,8 @@ quicknotesdir = %A_ScriptDir%\Extended Capslock Menu QUICK Notes
 global ext
 ext := ""
 global control = "" ;; right click over np++
-Global ActiveFile
-saved := 0 ;; for F9, menu, alttxt, error check for unsaved files
+Global ActiveFile ; alt editor menu
+saved := 0 ;; for F9, menu, alttxt, error check for unsaved files when launched outside of np++, e.g. vscode
 
 SetCapsLockState, off
 ;///////////////////////////////////////////////////////////////////////////
@@ -307,11 +310,11 @@ menu, cfind, icon, NP++`, Find in Files, %A_ScriptDir%\Icons\Find in Files.ico
 ; menu, cfind, icon, NP++`, Find all in this Doc, %A_ScriptDir%\Icons\Find next.ico
 menu, cfind, add, Find in Files with AstroGrep, findastro
 menu, cfind, icon, Find in Files with AstroGrep, %A_ScriptDir%\Icons\astrogrep find search 256x256.ico
-; menu, cfind, add, Find in Files with dnGREP, finddngrep
-; if fileexist(dngrep)
-; menu, cfind, icon, Find in Files with dnGREP, %dngrep%
-; else
-; menu, cfind, icon, Find in Files with dnGREP, %A_ScriptDir%\Icons\dnGrep 256x256.ico
+menu, cfind, add, Find in Files with dnGREP, finddngrep
+if fileexist(dngrep)
+menu, cfind, icon, Find in Files with dnGREP, %dngrep%
+else
+menu, cfind, icon, Find in Files with dnGREP, %A_ScriptDir%\Icons\dnGrep 256x256.ico
 menu, cfind, add, ; line ------------------------- todo rename?
 menu, cfind, add, Search in AHK Help File (Local), ahkhelplocal
 menu, cfind, icon, Search in AHK Help File (Local), %A_ScriptDir%\Icons\chm help document question find hh_0_2.ico
@@ -363,7 +366,11 @@ menu, ctools, add, Text Grab, runtextgrab
 menu, ctools, icon, Text Grab, %A_ScriptDir%\Icons\text grab v4 128x128.ico
 menu, ctools, add, Notepad++, runnotepadpp
 menu, ctools, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
-
+if !FileExist(dopus)
+	{
+	menu, ctools, add, Directory Opus, rundopus
+	menu, ctools, icon, Directory Opus, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico
+	}
 ; --------------------------------------------------------------------------
 
 
@@ -394,11 +401,11 @@ menu, copen, add, Explore Folder in Everything, EVpath
 menu, copen, icon, Explore Folder in Everything, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
 menu, copen, add, Search File in Everything, EVfile
 menu, copen, icon, Search File in Everything, %A_ScriptDir%\Icons\voidtools-04-Everything-Green.ico
-; Menu, copen, add, Load Path into dnGREP for Searching, dngreploadpath
-; if fileexist(dngrep)
-; menu, copen, icon, Load Path into dnGREP for Searching, %dngrep%
-; else
-; menu, copen, icon, Load Path into dnGREP for Searching, %A_ScriptDir%\Icons\dnGrep 256x256.ico
+Menu, copen, add, Load Path into dnGREP for Searching, dngreploadpath
+if fileexist(dngrep)
+menu, copen, icon, Load Path into dnGREP for Searching, %dngrep%
+else
+menu, copen, icon, Load Path into dnGREP for Searching, %A_ScriptDir%\Icons\dnGrep 256x256.ico
 
 menu, copen, add, ; line ;-------------------------
 
@@ -561,11 +568,16 @@ menu, cset, icon, Visit Github Webpage, %A_ScriptDir%\Icons\github icon 256x256.
 
 menu, cset, add, ; line ;-------------------------
 
+; if A_IsCompiled != 1
+; {
 menu, cset, Add, Edit Main Script, editscript
 if FileExist(Texteditor)
 	menu, cset, icon, Edit Main Script, %Texteditor%
 else
-	menu, cset, icon, Edit Main Script, notepad.exe
+	menu, cset, icon, Edit Main Script, notepad.exe 
+; }
+
+
 
 menu, cset, add, Edit " %A_scriptname%-SETTINGS.ini " File, editsettings
 menu, cset, icon, Edit " %A_scriptname%-SETTINGS.ini " File, %A_ScriptDir%\Icons\ini alt xfav setting document prefs setupapi_19 256x256.ico
@@ -580,8 +592,8 @@ menu, cset, icon, Suspend Hotkeys, %A_ScriptDir%\Icons\advert-block_64x64.ico
 ; MENU, cset, add, Debug Lines, lines
 ; menu, cset, icon, Debug Lines, %A_ScriptDir%\Icons\bug report FLUENT_colored_217_64x64.ico
 menu, cset, add, ; line ;-------------------------
-menu, cset, add, Quit \ Exit, exitscript
-menu, cset, icon, Quit \ Exit, %A_ScriptDir%\Icons\skull n bones emoji111.ico
+menu, cset, add, Quit \ Exit  -----  Ctrl + Alt + Esc, exitscript
+menu, cset, icon, Quit \ Exit  -----  Ctrl + Alt + Esc, %A_ScriptDir%\Icons\skull n bones emoji111.ico
 
 ;---------------------------------------------------------------------------
 trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
@@ -595,6 +607,7 @@ menu, tray, add, ; line ;-------------------------
 menu, tray, add, About Extended Caps Lock Menu, aboutcapswindow
 menu, tray, icon, About Extended Caps Lock Menu, %A_ScriptDir%\Icons\about question imageres win7_99_256x256.ico
 menu, tray, add, ; line ;-------------------------
+
 menu, tray, add, Reload, reload
 menu, tray, icon, Reload, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
 menu, tray, add, View Hotkeys, viewhotkeys
@@ -605,8 +618,8 @@ menu, tray, add, ; line ;-------------------------
 menu, tray, add, Settings && About, :cset
 menu, tray, icon, Settings && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
 MENU, tray, add, ; line ;-------------------------
-menu, tray, add, Quit \ Exit, exitscript
-menu, tray, icon, Quit \ Exit, %A_ScriptDir%\Icons\skull n bones emoji111.ico
+menu, tray, add, Quit \ Exit  -----  Ctrl + Alt + Esc, exitscript
+menu, tray, icon, Quit \ Exit  -----  Ctrl + Alt + Esc, %A_ScriptDir%\Icons\skull n bones emoji111.ico
 
 ; Menu, Tray, MainWindow
 ; menu, tray, add, ; line ;-------------------------
@@ -746,6 +759,7 @@ xnviewmpurl := "https://www.xnview.com/en/xnviewmp/"
 dopusforumurl := "https://resource.dopus.com/"
 doupushomepageurl := "https://www.gpsoft.com.au"
 dopusdocsurl := "https://docs.dopus.com/doku.php?id=introduction"
+dngrepurl := "https://dngrep.github.io"
 
 ;***************************************************************************
 ;************************* HOTKEYS *****************************************
@@ -767,6 +781,7 @@ Ctrl + Alt + F3 -- Alt Keyboard Hotkey to OPEN MENU
   Ctrl + Shift + F2 -- New Sticky Filled With Selection
   Ctrl + Alt + F2 -- New Empty Sticky Note
   Ctrl + Shift + R -- Reload Script
+  Ctrl + Alt + Esc -- Quit \ Exit Script
 --------------------------------------------------
 Alt + Capslock -- Toggle Capslock
 Ctrl + Capslock -- Toggle Caplock
@@ -784,22 +799,20 @@ Ctrl + ESC -- Close Stick without saving
 
          -----+++ OTHER HOTKEYS +++-----
 Ctrl + Shift + `" -- Paste Clipboard in Quotes
-	Ctrl + `" -- Put Quotes Around [*Selected Text*]
+	Ctrl + `" -- Put Quotes Around [`"Selected Text"]
 Win + H -- Add Auto Correct Hot Strings ...
 		 ...(if include Auto Correct script is running)
 --------------------------------------------------
+
 ==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
 Right Click -- Can replace NP++ menu with this one. (optional)
-Ctrl + Space -- Open Live Folder Menu... [*Experimental*]
+Ctrl + Space -- Open Live Folder Menu...
 	if a [* C:\Filepath.txt *] is selected it show's that files folder
 	if nothing is selected it will show the folder of the Active file
-	+ this can also work in Everything 1.5a on a selected file
+	+ this can also work in Everything 1.5a on a selected file, it will show that files folder
 	- this menu hotkey is turn off else where
 Ctrl + Alt + N or F9 -- Open Active File in Alternative Text Editor Menu
 **************************************************
-
-TIP -- You can also click that Live Preview menu item at any time to see a message box of the text in your Clipboard, whether or not Live Preview is running.
-
 )
 ; "
 
@@ -880,7 +893,7 @@ RestoreClipboard() ;; function
 global Clipsaved
 sleep 100
 Clipboard := ClipSaved
-sleep 500
+sleep 1000
 ClipSaved := ""  ; Clear the variable
 ; return
 }
@@ -2242,8 +2255,8 @@ openfoldersimple() ;; Function ; xnote -not use here for ref
             ; else
                 ; Run explorer.exe "%path1%"
 ;return
-   ; } 
-;-------------------------
+    ; }
+;--------------------------------------------------
 
 
 
@@ -2571,7 +2584,7 @@ LogError(Path) { ;; logerror function
 global clipsaved, filename, ext, filestem, dir, lastfolder
     if ErrorLevel
     {
-    FileAppend, % "*`n+-=START=-+`nError Info...`nTime: " A_Now "`n@ Line: " A_LineNumber "`nClipboard := " Clipboard "`n`nWhich Hotkey: " A_ThisHotkey "`nThis Label: " A_ThisLabel "`nWhich Menu: " A_ThisMenu "`nWhich Menu Item: " A_ThisMenuItem "`nMenu Pos: " A_ThisMenuItemPos "`nFull Menu text...`nmenu`, " A_thismenu "`, Add`, " A_ThisMenuItem "`, " A_ThisLabel "`n`nVars listed.....`nFilename: " filename "`nExt: " ext "`nFilestem: " filestem "`nDir: " dir "`nParent-LastFolder: " lastfolder "`n`nEvent Info: " A_EventInfo "`nLast Error: " A_LastError "`nThis Func: " A_ThisFunc "`n+-=END=-+`n", %A_ScriptDir%\%A_scriptname%- ERROR LOG.txt
+    FileAppend, % "*`n+-=START=-+`nError Info...`nTime: " A_Now "`n@ Line: " A_LineNumber "`nClipboard := " Clipboard "`n`nWhich Hotkey: " A_ThisHotkey "`nThis Label: " A_ThisLabel "`nWhich Menu: " A_ThisMenu "`nWhich Menu Item: " A_ThisMenuItem "`nMenu Pos: " A_ThisMenuItemPos "`nFull Menu text...`nmenu`, " A_thismenu "`, Add`, " A_ThisMenuItem "`, " A_ThisLabel "`n`nVars listed.....`nFilename: " filename "`nExt: " ext "`nFilestem: " filestem "`nDir: " dir "`nParent-LastFolder: " lastfolder "`n`nEvent Info: " A_EventInfo "`nLast Error: " A_LastError "`nThis Func: " A_ThisFunc "`n+-=END=-+`n", %A_ScriptDir%\%A_scriptname%- ERROR LOG.txt,UTF-8
 	sleep 500
     Return
     }
@@ -2847,23 +2860,24 @@ return
 
 
 
+evnotinstalled:
+if !FileExist(everything15a)
+	{
+	MsgBox, 262209, ECLM - App Launcher, Everything 1.5a cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, %everythingurl%
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		return
+	}
+return
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-Findwitheverything: ; label-sub () ;; function ;selected text ;menu, cfind,
-; Findwitheverything() ;; function ;selected text
-; {
+Findwitheverything:
+if !FileExist(everything15a)
+	goto evnotinstalled
 global clipsaved
 	iflive()
 	sleep 90
@@ -2874,6 +2888,16 @@ global clipsaved
 return
 
 findastro:
+if !FileExist(astrogrep)
+	{
+	MsgBox, 262209, ECLM - App Launcher, Astrogrep cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, %astrogrepurl%
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		return
+	}
 Global ClipSaved 
 
 iflive()
@@ -2887,18 +2911,38 @@ return
 
 
 finddngrep:
+if !FileExist(dngrep)
+	{
+	MsgBox, 262209, ECLM - App Launcher, dnGrep cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, %dngrepurl%
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		return
+	}
 Global ClipSaved 
 iflive()
 sleep 100
 try run %dngrep% /f "%userprofile%\Documents" /s "%clipboard%" /st PlainText
 sleep 1000
-WinGet, ActiveProcess, ProcessName, A
-fileappend,`n@`n`nTime Stamp: %A_Hour%:%A_Min% - %A_LongDate%`nFrom Script: %A_ScriptName%`nActive Winodw: ahk_exe %activeprocess%`n`nIs a Func: %A_ThisFunc%`nIs a Label: %A_Thislabel%`nLine #: %A_LineNumber%`n`nFull Menu Item:`nMenu`, %A_thismenu%`, Add`, %A_ThisMenuItem%`, %A_ThisLabel%`nHotkey: %A_ThisHotKey%`n`nVar Sent & Comment:`n`%clipboard`% %clipboard% `n// ECLM to dnGREP `n,%history%,UTF-8
+
 sleep 500
 restoreclipboard()
 sleep 200
 return
+
 dngreploadpath:
+if !FileExist(dngrep)
+	{
+	MsgBox, 262209, ECLM - App Launcher, dnGrep cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, %dngrepurl%
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		return
+	}
 Global ClipSaved 
 iflive()
 sleep 30
@@ -2910,12 +2954,14 @@ RestoreClipboard()
 sleep 200
 return
 
-evindex: ; () ;; function ; todo - broken When ev is not installed?? add errorlevel exit
+evindex: 
+if !FileExist(everything15a)
+	goto evnotinstalled
 global clipsaved
 Sleep 100
 iflive()
 sleep 200
-try Run, %everything15a% -newtab -s* si*: """"%Clipboard%""""
+try Run, %everything15a% -newtab -s* si*: "%Clipboard%"
 sleep 300
 restoreclipboard()
 sleep 175
@@ -2923,6 +2969,9 @@ return
 
 
 EVfile:
+if !FileExist(everything15a)
+	goto evnotinstalled
+	
 	global Clipsaved
 	iflive()
 	sleep 30
@@ -2934,8 +2983,11 @@ EVfile:
 	restoreclipboard()
 return
 
-; EVpath() ;; function
+
 EVpath:
+if !FileExist(everything15a)
+	goto evnotinstalled
+	
 global Clipsaved, filename, dir, ext, filename, drive
 iflive()
 sleep 20
@@ -3153,33 +3205,41 @@ runnotepadpp: ;; label
     }
 Return
 
-runDopus() ;; function
-{
-Global dopus  ; Make sure to declare the VARIABLE as global
-    IfWinExist, ahk_class dopus.lister ; ahk_exe dopus.exe
-    {
-        WinActivate, ahk_class dopus.lister
-    }
-    Else
-    {
-        try Run, %dopus%
-    }
-winwaitactive, ahk_class dopus.lister, , 7 ; - Notepad++
-if errorlevel
-	{
-	; Tooltip, Could not run Notepad++`nSearch Canceled
-	tooltip, %dopus%`n...could not be launched`nSearch Canceled.
-	sleep 1500
-	tooltip
-	restoreclipboard()
-	sleep 250
-	return
-	}
-; return
-}
+; runDopus() ;; function
+; {
+; Global dopus  ; Make sure to declare the VARIABLE as global
+    ; IfWinExist, ahk_class dopus.lister ; ahk_exe dopus.exe
+    ; {
+        ; WinActivate, ahk_class dopus.lister
+    ; }
+    ; Else
+    ; {
+        ; try Run, %dopus%
+    ; }
+; winwaitactive, ahk_class dopus.lister, , 7 ; - Notepad++
+; if errorlevel
+	; {
+	; tooltip, %dopus%`n...could not be launched`nSearch Canceled.
+	; sleep 1500
+	; tooltip
+	; restoreclipboard()
+	; sleep 250
+	; return
+	; }
+; }
 
 ; ^+D::
-runDopus: ;; label
+runDopus:
+if !FileExist(dopus)
+		{
+		MsgBox, 262209, ECLM - App Launcher, Directory Opus cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it.`n`nDopus is the only paid software featured on this menu. It's a wonderful over-powered customizable file manager replacement.`nIt has a Free Trail. if you like it you can us this promo code for a 15`% off... ' CW4D0S289B4K ', 30
+		IfMsgBox Ok
+			run, %doupushomepageurl%
+		IfMsgBox timeout
+			Return
+		IfMsgBox Cancel
+			Return
+		}
     Global dopus  ; Make sure to declare the VARIABLE as global
     IfWinExist, ahk_class dopus.lister
     {
@@ -3191,23 +3251,52 @@ runDopus: ;; label
     }
 return
 
-runtextify: ; label
+runtextify:
+
+if !FileExist(textify)
+	{
+	MsgBox, 262209, ECLM - App Launcher, Ditto.exe cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, %textifyurl%
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		Return
+	}
 try run, Textify.exe
-; catch
-; try run, "C:\Users\%A_UserName%\AppData\Local\Programs\Textify\Textify.exe"
+catch
+try run, "C:\Users\%A_UserName%\AppData\Local\Programs\Textify\Textify.exe"
 catch
 try run, %textify%
-; catch
-; try run, "%textify%"
 return
 
 runtextgrab:
+if !FileExist(textgrab)
+	{
+	MsgBox, 262209, ECLM - App Launcher, Text Grab cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, %textgraburl%
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		Return
+	}
 try run, %textgrab%
 return
 
-runditto: ; label
+runditto:
 ;; todo, dittobutton:
 ; send, ^!#v
+if !FileExist(ditto)
+	{
+	MsgBox, 262209, ECLM - App Launcher, Ditto.exe cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, https://ditto-cp.sourceforge.io ;%dittourl%
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		Return
+	}
 ifwinnotexist, ahk_exe Ditto.exe ; ("ahk_exe Ditto.exe")
 {
 try run %ditto%
@@ -3283,7 +3372,9 @@ $CapsLock:: ;; E CapsLock Menu!!!
     KeyWait CapsLock
 return
 
-^esc:: ;; exit ECLM
+^!esc:: ;; exit ECLM
+exitapp
+return
 ;///////////////////////////////////////////////////////////////////////////
 
 ;; gui, sticky, hotkeys, gui sticky hotkeys, gui hotkeys *************************
@@ -3600,8 +3691,9 @@ if FileExist(inifile)
 	}
 	else
 	{
-	defaultIniSettings := GetDefaultIniSettings()
-    FileAppend, %defaultIniSettings%, %inifile%
+	gosub makeini
+	; defaultIniSettings := GetDefaultIniSettings()
+    ; FileAppend, %defaultIniSettings%, %inifile%
     Sleep 750
     ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
     Sleep 2000
@@ -3615,17 +3707,36 @@ return
 
 
 editscript:
-try run %texteditor% "%filePath%"
-catch
-run, notepad.exe "%filePath%" 
+if A_IsCompiled != 1
+	{
+		try run %texteditor% "%filePath%"
+		catch
+		run, notepad.exe "%filePath%" 
+		return
+	}
+if !FileExist(A_ScriptDir . "\" . "Extended Capslock Menu.ahk")
+	{
+		tooltip ERR!The source code file could not be found!
+		sleep 2000
+		tooltip
+		return	
+	}
+
+MsgBox, 4145, Edit ECLM Script, You are currently running the Compiled.EXE of Extented Capslock Menu which cannot be edited.`n`nThe soucre code is included alongside the '.exe'. That will open open in a text editor instead.`n`nAny changes made in the '.ahk' will not be seen by the '.exe' unless you Re-Compile the script first and run the new '.exe' rather than this one.,60
+IfMsgBox Ok
+	{
+	try run %texteditor% "%A_ScriptDir%\Extended Capslock Menu.ahk"
+	catch
+	run, notepad.exe "%A_ScriptDir%\Extended Capslock Menu.ahk"
+	}
+IfMsgBox Cancel
+	Return
+IfMsgBox timeout
+	Return
 return
 
-ToggleGUI: ; todo, broken, fix
-    CapsLockey(toggle := true)  ; Call the function to toggle the GUI
-Return
-
 ShiftedNumRow:
-    ShiftedNumRow := !ShiftedNumRow  ; Toggle the state
+    ShiftedNumRow := !ShiftedNumRow
     if (ShiftedNumRow)
         {
 		ToolTip, Shifted # Row is Enabled`n`~`!`@`#`$`%`^`&`*`(`)`_`+`{`}`|
@@ -3639,19 +3750,18 @@ ShiftedNumRow:
 		iniwrite, 0, %inifile%, ShiftedNumRow, key
 		}
     Sleep, 1500
-    ToolTip  ; Clear the tooltip
+    ToolTip
 Return
 
-ToggleReplaceNPPRightClick: ;() {
-    ; global ReplaceNPPRightClick
-    ReplaceNPPRightClick := !ReplaceNPPRightClick ; Toggle the setting
+ToggleReplaceNPPRightClick: 
+    ReplaceNPPRightClick := !ReplaceNPPRightClick
 	menu, cset, togglecheck, Replace the NP++ Right Click Menu
-	if (ReplaceNPPRightClick) ;todo, double check this menutoggle in np++
+	if (ReplaceNPPRightClick)
 		{
 		iniwrite, 1, %inifile%, ReplaceNPPRightClick, key
 		; menu, cset, togglecheck, Replace the NP++ Right Click Menu
 		tooltip, The Right Click menu of Notepad++`nhas been replaced with Extended Capslock Menu!`n`nUse with Caution`, sometimes NP++'s menu is still triggered.`nIt can cause errors at times.
-		sleep 1500
+		sleep 1000
 		}
 	else
 		{
@@ -3663,7 +3773,7 @@ ToggleReplaceNPPRightClick: ;() {
 sleep 1500
 tooltip
 return
-; }
+
 visitgithub:
 run https://github.com/indigofairyx/Extended_Capslock_Context_Menu
 return
@@ -3711,6 +3821,52 @@ return
 runasadmin:
  If !A_IsAdmin
  	 Run *RunAs "%A_ScriptFullPath%"
+return
+
+makeini:
+fileappend,
+(
+[Programs]
+Texteditor = C:\Program Files\Notepad++\notepad++.exe
+
+ahkstudio = C:\Program Files Portable\AHK Studio V2\AHK-Studio V2.ahk
+astrogrep = C:\Program Files (x86)\AstroGrep\AstroGrep.exe
+bcompare = C:\Program Files\Beyond Compare 5\BCompare.exe
+ditto = C:\Program Files\Ditto\Ditto.exe
+dngrep = C:\Program Files\dnGrep\dnGREP.exe
+dopus = C:\Program Files\GPSoftware\Directory Opus\dopus.exe
+dopusrt = C:\Program Files\GPSoftware\Directory Opus\dopusrt.exe
+everything15a = C:\Program Files\Everything 1.5a\Everything64.exe
+excel = C:\Program Files (x86)\Microsoft Office\root\Office16\EXCEL.EXE
+geany = C:\Program Files\Geany\bin\geany.exe
+markdownmonster = C:\Program Files\Markdown Monster\MarkdownMonster.exe
+notepad4 = C:\Program Files Portable\Notepad4\Notepad4.exe
+notepadpp = C:\Program Files\Notepad++\notepad++.exe
+obsidian = C:\Users\%A_Username%\AppData\Local\Programs\obsidian\Obsidian.exe
+obsidianshell = C:\Program Files Portable\ObsidianShell\ObsidianShell.CLI.exe
+scite = C:\Program Files\AutoHotkey\SciTE\SciTE.exe
+sharex = C:\Program Files\ShareX\ShareX.exe
+textgrab = C:\Program Files\Text-Grab\Text-Grab.exe
+textify = C:\Users\%A_username%\AppData\Local\Programs\Textify\Textify.exe
+vscode = C:\Users\%A_Username%\AppData\Local\Programs\Microsoft VS Code\code.exe
+VSCodium = C:\Program Files Portable\vscodium-portable\VSCodium.exe
+word = C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE
+xnviewmp = C:\Program Files\XnViewMP\xnviewmp.exe
+
+
+[Beep_Enabled]
+key=1
+[LiveMenuEnabled]
+key=0
+[ShiftedNumRow]
+key=0
+[ReplaceNPPRightClick]
+key=0
+[DarkMode]
+key=1
+[OSD]
+key=1
+), %inifile%
 return
 
 
@@ -3856,6 +4012,7 @@ There is a free 60 day trail you try. Should you enjoy it
 This menu tries to interact directly with the following programs...
 	* Everything 1.5a
 	* AstroGrep
+	* dnGrep
 	* Notepad++
 	*$ Directory Opus
 This menu will try to launch, but not interact with these other great text tools...
@@ -3966,10 +4123,21 @@ changelog := " ;"
 ************************* CHANGELOG ************************* 
 *************************************************************
 
-Final Release - I've spent a few months working on this script\app\menu.
-I'm loving it and use it daily now, for coding in AHK and General Tech Geek Fun, thou I think its about as ripe as I can muster. It works well for its simplicity. 
-This Version.2024.11.18 is the last release I'm producing for the github. 
-If anymore updates happens it will be fixes if I (or you) find any bugs, (post an issue).
+
+------ v.2024.12.19 ---------------------------
+
+=+ fixed a syntax error when sending a system index search to Everything
++ fixed\updated the `Ctrl` + `Space` hotkey for the explorer popup menu in everything 1.5a. -- In a recent update they added this hotkey as a default to their search bar. Its functionality is now kept in the search bar, when launched from the results panel it will show this menu :-)
+
++ added a info message box to the Edit Script menu item when chosen from the compiled version of the menu
+
++ added message boxes to tools\launchers menu for 3rd party programs. When they are not found as installed the box tells you and provides a faster link to that software website. **still have todo this to the alt editor menu
+
++ added\replacing dnGrep over astrogrep as a find in files software. 
+
++ Added  a hot to Quit\Exit App, `Ctrl` + `Alt` + `Esc`
+
+= improved variable expansion when creating settings.ini file 
 
 ------ v.2024.12.03 ---------------------------
 
@@ -4185,7 +4353,8 @@ this option can be toggled on\off
 + can now save as other types of text based formats (e.g. .ahk, .css, etc) rather then strictly .txt files
 + added errorlevel escapes to stop the script when copying attempts fail
 
-)" ;"
+)"
+;"
 
 gui, capsa: color, 171717, 090909
 
@@ -4212,13 +4381,13 @@ gui, capsa: add, picture, xm w36 h36, %A_ScriptDir%\Icons\code spark xfav functi
 gui, capsa: add, text, x+m cA0BADE, There are a few pieces of software I use that built into this menu.`nAll free except one. Links are below.`nIf the link is ***marked with*** it means...`nThe menu interacts with this software for searchers or file operations.`nThe unmarked links are only quick launcher that open software, like the start menu.`n`nHeres a list of links to them if you want some awesome software.
 
 gui, capsa: Add, Link, xm, <a href="https://github.com/sabrogden/Ditto">Ditto - Clipboard Manager</a>
-
 gui, capsa: Add, Link, xm, <a href="https://ramensoftware.com/textify">Textify - Lets you copy text out of message boxes and guis</a>
 gui, capsa: Add, Link, xm, <a href="https://github.com/TheJoeFin/Text-Grab/">Text Grab - Amazing OCR tool</a>
 gui, capsa: Add, Link, xm, <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">An AHK Global Auto Correct Script - This is already included here.</a>
 gui, capsa: Add, Link, xm, <a href="https://github.com/notepad-plus-plus/notepad-plus-plus">***Notepad++*** - You never know.</a>
 gui, capsa: Add, Link, xm, <a href="https://www.voidtools.com/forum/viewtopic.php?t=9787">***Everything v1.5a*** - Powerful local search tool</a>
-gui, capsa: add, link, xm, <a Herf="https://astrogrep.sourceforge.net/features/">***AstroGrep*** - A great tool for searching text inside files.</a>
+gui, capsa: add, link, xm, <a Herf="https://astrogrep.sourceforge.net/features/">***AstroGrep*** - A good tool for searching text inside files.</a>
+gui, capsa: add, link, xm, <a Herf="https://dngrep.github.io">***dnGrep*** - A top of the lin  tool for searching text inside files.</a>
 gui, capsa: Add, Link, xm, <a href="https://www.gpsoft.com.au">***Directory Opus*** - The most  powerful File Explorer Replacement - Alternative.</a>
 gui, capsa: add, text, xm, Dirctory Opus is the only Paid $oftware on this menu. Its well Worth IT!
 gui, capsa: add, text, xm, (Press Space to Close)
@@ -4317,6 +4486,8 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 ;********* END *************MENU, CSET, FUNCTION ************ END **********
 ;***************************************************************************
 
+;///////////////////////////////////////////////////////////////////////////
+; #if hotkeys ififif
 
 ; #IfWinActive ahk_exe Notepad4.exe
 ; ^space::
@@ -4344,11 +4515,71 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 ; #ifwinactive ;; END notepad4
 
 
-#IfWinActive ahk_class Everything64.exe
+#IfWinActive ahk_exe Everything64.exe
+/*
+; the old quick & easy way to feed the exp menu, this medotd was broken by an update from EV when they started using this hot for as a default action in the edit1 box, which is great addition to EV. created a new work around below...
+; ^Space::
+; if (LiveMenuEnabled)
+	; CopyClipboardCLM()
+	
+; CopyClipboardCLM()
+; gosub expmenu
+; return
+;; so this has been driving me crazy and I figured out that when in thumbnails view with tooltip in list view they always show and when a tooltip is visible it breaks getting the hidden text from the selected\highlighted item. when I mouse away, so the tooltip is gone ad hit the hotkey again it will see the hidden text and capture the path.  12-19-2024 update: I went to post about this issue on EVs forum... And now this issue seems to be fixed. For now.
+*/
+
 ^Space::
-if (LiveMenuEnabled)
-	CopyClipboardCLM()
-gosub expmenu
+Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved, texteditor, activefile
+
+ControlGetFocus, ActiveControl, ahk_exe Everything64.exe
+
+; WinGet, activecontrol, ControlList , ahk_exe Everything64.exe
+; msgbox, %activecontrol%
+; if (Activecontrol = "SysListView321") ;; was using this before, and it works unless there's a tooltip showing, KEEP this, can hopefully use it again
+
+if (ActiveControl = "Edit1")
+	{
+		send, ^{space}
+	; msgbox, u in sub1
+		return
+	}
+else if (Activecontrol = "SysListView321")
+	{
+	/*
+		CopyClipboardCLM()
+		highlighted := Clipboard
+		sleep 20
+		restoreclipboard()
+		msgbox, u in sub2`n hl: %highlighted% `n`n // the clipboard was used here.
+		goto expmenuuseclip
+		*/
+
+; evgetselected:
+DetectHiddenText, on 
+WinGetText, highlighted, ahk_exe everything64.exe
+RegExMatch(highlighted, "m)^(.*)$", highlighted) ;; match first line of captured string
+
+sleep 200
+if !RegExMatch(highlighted, ".*\\([^\\]+)\\?$", "$1") ; match a file path in captured hidden text, if no file is seen try coping the file to extract the path instead, this is a work around method for when EVs tooltip cause errors by obscuring the hidden text this menu id searching for.
+	{
+		; tooltip Everything is running thou nothing is highlighted.
+		; sleep 1500
+		; tooltip
+		Global ClipSaved 
+		CopyClipboardCLM()
+		highlighted := Clipboard
+		SplitPath, highlighted, , folder, , , 
+		sleep 20
+		restoreclipboard()
+		sleep 555
+		; msgbox, u in sub4 %highlighted% `n folder: %folder%`n`n// the clipboard was used here
+		goto expmenuuseclip
+	}
+sleep 50
+SplitPath, highlighted, , folder, , , 
+		; msgbox, u in sub3 %highlighted% `n folder: %folder%`n`n//the clipboard is not being used here 
+gosub expmenuuseclip
+}
 return
 
 ; F9:: ;;alt hotkey for open in alt editor npp menu & Everything1.5a
@@ -4360,6 +4591,8 @@ return
 #IfWinActive ;; END everything
 ;///////////////////////////////////////////////////////////////////////////
 
+;///////////////////////////////////////////////////////////////////////////
+; if notepad
 ; #IfWinActive ahk_class Notepad++
 #IfWinActive ahk_exe Notepad++.exe
 ^space::
@@ -4387,10 +4620,11 @@ return
 ; sendinput, {appskey}
 ; return
 #IfWinActive  ;; END NOTEPAD++ KEYS
+;///////////////////////////////////////////////////////////////////////////
 
 
 MouseIsOver(WinTitle) {  ;; Function
-; global control
+global
     MouseGetPos,,,Win,Control
     return WinExist(WinTitle . " ahk_id " . Win . Control)
 }
@@ -4415,7 +4649,7 @@ MouseIsOver(WinTitle) {  ;; Function
 	; }
 	
 ;---------------------------------------------------------------------------
-	
+
 
 expmenu:
 Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved
@@ -4460,9 +4694,14 @@ Gosub, ShowFolder ; Show the folder menu
 Return
 
 ShowFolder:
+
+	; if InStr(folder, "&") ; todo...
+			; folder := RegExReplace(folder, "&", "&&")
+
 Menu, Folders, Add, ; start building menu.
 Menu, Folders, Deleteall
 itemCount := 0
+
 Menu, Folders, Add, Open this Folder, openfolder
 if FileExist(dopus)
 	Menu, Folders, Icon, Open this Folder, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico,,24
@@ -4719,11 +4958,11 @@ sleep 40
 		{
 		ActiveFile := RegexReplace(ActiveFile, " - Notepad\+\+", "")
 		}
-	sleep 20
+	sleep 40
 ; folder := RegexReplace(ActiveFile, "\\[^\\]*$", "")
 alttxtuseclip:
 dir := RegexReplace(ActiveFile, "\\[^\\]*$", "")
-	sleep 20
+	sleep 40
 splitpath, ActiveFile, filename,dir,ext,filestem,drive
 sleep 30
 	FileGetAttrib, Attributes, %Activefile%
@@ -4803,7 +5042,7 @@ if (saved = 1)
 		menu, alttxt, icon, * This Doc has Unsaved Changes! ~Click to Save~,  %A_ScriptDir%\Icons\attention aero warning_64x64.ico,,28
 		menu, alttxt, add, ; line -------------------------
 	}
-if (FS > 150)
+if (FS > 50)
 	{
 		menu, alttxt, add, ATTENTION!!!  --  This file is large! > %fs% MB., altmenualttxtshow
 		menu, alttxt, icon ,  ATTENTION!!!  --  This file is large! > %fs% MB., %A_ScriptDir%\Icons\attention aero warning_64x64.ico,,32
@@ -4824,7 +5063,6 @@ menu, alttxt, icon, Notepad++ in new Window, %A_ScriptDir%\Icons\notepad++_100.i
 menu, alttxt, add, Notepad4, altoinotepad4
 if FileExist(notepad4)
 menu, alttxt, icon, Notepad4, %notepad4%
-	
 else
 	menu, alttxt, icon, Notepad4, %A_ScriptDir%\Icons\notepad4 256x256.ico
 
@@ -4918,12 +5156,26 @@ aboutalttxtmenu:
 msgbox, This is a custom made open with menu.`nThese are a few of the Text Editors I like to play with.`nThere are many others!`n`nIf you're Familiar with AHK I recommend editing and running the '.ahk' to add you're own favorite editors here.
 return
 
+
+
+savefilereopenmenu: 
+sleep 500
+send, ^s
+sleep 500
+saved := 0
+gosub alttxtnppmenu
+return
+
 altevexp:
+if !FileExist(everything15a)
+	goto evnotinstalled
 try run %everything15a% -newtab -s """"%dir%""""
 return
 
 altEVfile:
-try run %everything15a% -new-tab -s "%filename%"
+if !FileExist(everything15a)
+	goto evnotinstalled
+try run %everything15a% -newtab -s "%filename%"
 return
 
 alttxtopenfolder:
@@ -4944,15 +5196,15 @@ Run, explorer.exe /select`, "%activefile%"
 sleep 500
 return
 
-oinpp:
-getfileinfo()
-sleep 90
-try run, %notepadpp% "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oinpp:
+; getfileinfo()
+; sleep 90
+; try run, %notepadpp% "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoinpp:
 try run, %notepadpp% "%activefile%",, useerrorlevel
@@ -4961,16 +5213,15 @@ if errorlevel
 sleep 500
 return
 
-oinppnewwindow:
-getfileinfo()
-sleep 90
-try run, %notepadpp% -multiInst "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 1000
-; send key to close all tabs? Todo or can do
-restoreclipboard()
-return
+; oinppnewwindow:
+; getfileinfo()
+; sleep 90
+; try run, %notepadpp% -multiInst "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 1000 ; send key to close all tabs? Todo or can do
+; restoreclipboard()
+; return
 
 altoinppnewwindow:
 try run, %notepadpp% -multiInst "%activefile%",, useerrorlevel
@@ -4980,15 +5231,15 @@ sleep 1000
 ; send key to close all tabs? Todo or can do
 return
 
-oinotepad4:
-getfileinfo()
-sleep 90
-try run, "%notepad4%" "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oinotepad4:
+; getfileinfo()
+; sleep 90
+; try run, "%notepad4%" "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoinotepad4:
 try run, "%notepad4%" "%activefile%",, useerrorlevel
@@ -4997,15 +5248,15 @@ if errorlevel
 sleep 100
 return
 
-oiexcel:
-getfileinfo()
-sleep 90
-try run, %excel% "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oiexcel:
+; getfileinfo()
+; sleep 90
+; try run, %excel% "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoiexcel:
 try run, %excel% "%activefile%",, useerrorlevel
@@ -5014,15 +5265,15 @@ if errorlevel
 sleep 100
 return
 
-oiword:
-getfileinfo()
-sleep 90
-try run, %word% "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oiword:
+; getfileinfo()
+; sleep 90
+; try run, %word% "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoiword:
 try run, %word% "%activefile%",, useerrorlevel
@@ -5031,14 +5282,14 @@ if errorlevel
 sleep 100
 return
 
-oimarkdownmonster:
-getfileinfo()
-try run, %MarkdownMonster% "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oimarkdownmonster:
+; getfileinfo()
+; try run, %MarkdownMonster% "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoimarkdownmonster:
 try run, %MarkdownMonster% "%filename%",, useerrorlevel
@@ -5047,15 +5298,15 @@ if errorlevel
 sleep 100
 return
 
-oiobsidian:
-getfileinfo()
-sleep 90
-try run, %ObsidianShell% "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oiobsidian:
+; getfileinfo()
+; sleep 90
+; try run, %ObsidianShell% "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoiobsidian:
 try run, %ObsidianShell% "%filename%",, useerrorlevel
@@ -5064,15 +5315,15 @@ if errorlevel
 sleep 100
 return
 
-oiahkstudio:
-getfileinfo()
-sleep 90
-try run, %ahkstudio% "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oiahkstudio:
+; getfileinfo()
+; sleep 90
+; try run, %ahkstudio% "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoiahkstudio:
 try run, %ahkstudio% "%activefile%",, useerrorlevel
@@ -5081,15 +5332,15 @@ try run, %ahkstudio% "%activefile%",, useerrorlevel
 sleep 100
 return
 
-oiscite:
-getfileinfo()
-sleep 90
-try Run, %scite% "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oiscite:
+; getfileinfo()
+; sleep 90
+; try Run, %scite% "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoiscite:
 try Run, %scite% "%activefile%",, useerrorlevel
@@ -5098,17 +5349,17 @@ if errorlevel
 sleep 100
 return
 
-oivscode:
-getfileinfo()
-sleep 90
-try run, "%VSCode%" "%clipboard%"
-catch
-try run, "%VSCodium%" "%clipboard%",, useerrorlevel
-if errorlevel
-	return
-sleep 500
-restoreclipboard()
-return
+; oivscode:
+; getfileinfo()
+; sleep 90
+; try run, "%VSCode%" "%clipboard%"
+; catch
+; try run, "%VSCodium%" "%clipboard%",, useerrorlevel
+; if errorlevel
+	; return
+; sleep 500
+; restoreclipboard()
+; return
 
 altoivscode:
 try run, "%VSCode%" "%activefile%"

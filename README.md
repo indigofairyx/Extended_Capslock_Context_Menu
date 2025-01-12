@@ -16,48 +16,70 @@ Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_
 # Hotkeys
 
 ## Extended CAPSLOCK KEY Functionality Using AutoHotkey:
-	+ `Capslock`, Single Tap, COPY
-	+ `Capslock`, Double Tap, PASTE
-	+ `Capslock`, HOLD, Show Extended Capslock Menu
+`Capslock`, Single Tap, COPY
+`Capslock`, Double Tap, PASTE
+`Capslock`, HOLD, Show Extended Capslock Menu
 
 `Middle Mouse Button` -- Alt Mouse Hotkey to OPEN MENU
+
 `Ctrl` + `Alt` + `F3` -- Alt Keyboard Hotkey to OPEN MENU
 
+
   `Ctrl` + `Shift` + `F2` -- New Sticky Filled With Selection
+  
   `Ctrl` + `Alt` + `F2` -- New Empty Sticky Note
+  
   `Ctrl` + `Shift` + R -- Reload Script
   
 --------------------------------------------------
 
 `Alt` + `Capslock` -- Toggle Capslock
+
 `Ctrl` + `Capslock` -- Toggle Caplock
+
 `Shift` + `Capslock` -- Switch between UPPERCASE & lowercase
 
 --------------------------------------------------
+
 ### --- Hotkeys for the Sticky Note GUI Windows ---
+
 `Alt` + `M` -- Show Sticky GUI Quick Menu
+
 `Ctrl` + `S` -- Save Sticky As
+
 `Ctrl` + `Shift` + `S` -- Quick Save As '.txt'
+
 `Ctrl` + `N` -- Create New Empty Temp Sticky
+
 `Ctrl` + `P` -- Pin Sticky To Top
+
 `Ctrl` + `Shift` + `O` -- Open Quick Notes Folder
+
 `Ctrl` + `ESC` -- Close Stick without saving
+
 **************************************************
 
 ### ----+++ OTHER HOTKEYS +++-----
+
 `Ctrl` + `Shift` + `"` -- Paste Current Clipboard in "Quotes"
-	`Ctrl` + `"` -- Put Quotes Around \[\*"Selected Text"\*]
+
+`Ctrl` + `"` -- Put Quotes Around \[\*"Selected Text"\*]
+ 
 `Win` + `H` -- Add Auto Correct Hot Strings ...
 		 ...(if include Auto Correct script is running)
 		 
 --------------------------------------------------
+
 ## ==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
+
 `Right Click` -- Can replace NP++ menu with this one. (optional)
+
 `Ctrl` + `Space` -- Open Live Folder Menu...
 	if a \[* C:\Filepath.txt \*] is selected it show's that files folder
 	if nothing is selected it will show the folder of the Active file
 	+ this can also work in Everything 1.5a on a selected file
 	- this menu hotkey is turn off else where
+ 
 `Ctrl` + `Alt` + `N` or `F9` -- Open Active File in Alternative Text Editor Menu
 
 ***

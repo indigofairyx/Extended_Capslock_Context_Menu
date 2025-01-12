@@ -9,6 +9,73 @@ Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_
 
 
 # About Extended Capslock Menu
+
+This Extended Capslock Menu is a expanded context menu, written with AutoHotkey.
+Its made for working\playing with text.
+
+With this menu, after *[SELECTING SOME TEXT]* and then picking a menu item, the text will be copied to your clipboard (with your previous clipboard item preserved) so you can...
+
+	+ search the web or local computer (using free software),
+	+ save selected text to a New Text Document(s),
+	+ added some simple & quick code formatting around text (e.g. .md, .xml, .ahk),
+	+ modify text & cOnVeRt cAsE,
+	+ create temp stickies,
+	+ append\add new text to your existing clipboard,
+	+ save the text content of your clipboard to a new document,
+	+ paste rich text as plane text,
+	+ shows a GUI above the system try when your caps lock is toggled on,
+	+ run apps,
+	+ the basic cut, copy, paste,
+	+ insert the date and time,
+	+ shift your number row when capslock is ON, e.g.
+		`1234567890-=[]\
+		~!@#$%^&*()_+{}|
+
+
+From the 'Open\Run\Explore...     [ Files Menu ]' , you can ...
+... When a Folder\File Path, Url, or Regkey path is [*SELECTED*]
+e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
+
+	- Open a folder
+	- Run\Open the file without navigating to it.
+	*- Copy the file\folder to your clipboard
+		*Requires Directory Opus.
+			for windows explorer users it
+			opens a 'Copy To..' dialogue.
+	- copy the Content of a text-base file to you clipboard without opening it
+	- copy directory details via the CMD prompt
+	- make a Duplicate File Copy, adding a ' -CopyDup.ext' suffix
+	- move a file, into it own sub-folder, or up into its parent folder
+	- open RegEdit, to the select key
+	- open a website from a none-hyperlinked text
+	- open Everything 1.5a, to explore the folder
+	- open Everything 1.5a, to search the filename
+	- open the Windows Context Menu
+	*+ open an alternative live folder to peek what else is there
+		* it has it own hotkey as well 'Ctrl' + 'Space'
+		* its limited to Notepad++ and Everything
+			* in Notepad++, if nothing is selected,
+			  it will show the Dir of the active file.
+
+++ Other Features With Toggle Options ++
+	- light & dark mode toggle (DARK is default),
+	- sound beeps for capslock state change (ON by default)
+	- shifted number row, when caps on, (OFF by default)
+		`1234567890-=
+		~!@#$%^&*()_+
+	*+ Replace Notepad++'s Right Click Menu with this one! (OFF by Default)
+	*+ Auto Copy & Live Preview Mode
+		* See Known Issues warning below.
+++++ ADDITONAL MENUS ++++
+
+A custom built Open With\In Alternative Text Editor Menu that works in NP++ (on the active file viewing) and in Everything 1.5a (when a file is selected).
+The Hotkey for this Menu is {F9}
+There's a handful of light-weight text editors that I play with... This menu can be made to work in other applications...
+If you're an AHK enthusiast I recommend adding your own editors.
+... And more ...
+
+
+
 ![Extended_Capslock_Menu_2024-10-14_01-08-54AM_880x1527](https://github.com/user-attachments/assets/033ab52f-60ff-44c8-96ff-9ce3bd26de8f)
 
 ![Extended_Capslock_Menu_2024-10-14_01-09-45AM_544x672](https://github.com/user-attachments/assets/a458c45f-6844-45fa-a1b0-03feb308c3a1)

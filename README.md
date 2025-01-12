@@ -19,6 +19,7 @@ With this menu, after *[SELECTING SOME TEXT]* and then picking a menu item, the 
 	+ save selected text to a New Text Document(s),
 	+ added some simple & quick code formatting around text (e.g. .md, .xml, .ahk),
 	+ modify text & cOnVeRt cAsE,
+ 	+ convert between 12345 numbers && symbols %$#@!
 	+ create temp stickies,
 	+ append\add new text to your existing clipboard,
 	+ save the text content of your clipboard to a new document,
@@ -54,10 +55,11 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 	*+ open an alternative live folder to peek what else is there
 		* it has it own hotkey as well 'Ctrl' + 'Space'
 		* its limited to Notepad++ and Everything
-			* in Notepad++, if nothing is selected,
-			  it will show the Dir of the active file.
+		* in Notepad++, if nothing is selected,
+		  it will show the Dir of the active file.
 
 ++ Other Features With Toggle Options ++
+
 	+ light & dark mode toggle (DARK is default),
 	+ sound beeps for capslock state change (ON by default)
 	+ shifted number row, when caps on, (OFF by default)
@@ -74,15 +76,12 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 	+ If you're an AHK enthusiast I recommend adding your own editors.
 
 
-... And more !!! ... Check Out the Releases pages for detail of other Features & Fixes as they were added.
+### ... And more !!! ... Check Out the Releases pages for detail of other Features & Fixes & Screenshots as they were added.
 
-
-
-![Extended_Capslock_Menu_2024-10-14_01-08-54AM_880x1527](https://github.com/user-attachments/assets/033ab52f-60ff-44c8-96ff-9ce3bd26de8f)
-
-![Extended_Capslock_Menu_2024-10-14_01-09-45AM_544x672](https://github.com/user-attachments/assets/a458c45f-6844-45fa-a1b0-03feb308c3a1)
 
 # Hotkeys
+***
+
 
 ## Extended CAPSLOCK KEY Functionality Using AutoHotkey:
 `Capslock`, Single Tap, COPY
@@ -154,10 +153,14 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 ***
 
 
-## Screenshots
+# Screenshots
+***
+
+![Extended_Capslock_Menu_2024-10-14_01-08-54AM_880x1527](https://github.com/user-attachments/assets/033ab52f-60ff-44c8-96ff-9ce3bd26de8f)
+
+![Extended_Capslock_Menu_2024-10-14_01-09-45AM_544x672](https://github.com/user-attachments/assets/a458c45f-6844-45fa-a1b0-03feb308c3a1)
 
 ![menu date time LIGHT MODE notepad++_786x695](https://github.com/user-attachments/assets/e41cd97d-df7b-4358-97e1-e9fa3ea443ab)
-
 
 ![menu find notepad++_909x747](https://github.com/user-attachments/assets/f4f975f5-c17a-487a-ba15-985adb041ecf)
 

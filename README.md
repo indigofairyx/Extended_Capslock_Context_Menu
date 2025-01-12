@@ -7,6 +7,8 @@ Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_
 
 **NOTE!!!** *This script needs to run from the folder its zipped in, or the icons will be missing and it will error out.*
 
+![notepad++_2024-11-03_12-33-06AM_960x660](https://github.com/user-attachments/assets/787b8ccf-cc80-4655-8fb0-dcfdaad91ee4)
+
 
 # About Extended Capslock Menu
 

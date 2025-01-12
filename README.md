@@ -13,56 +13,54 @@ Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_
 
 ![Extended_Capslock_Menu_2024-10-14_01-09-45AM_544x672](https://github.com/user-attachments/assets/a458c45f-6844-45fa-a1b0-03feb308c3a1)
 
-## Hotkeys
+# Hotkeys
 
-```autohotkey
+## Extended CAPSLOCK KEY Functionality Using AutoHotkey:
+	+ `Capslock`, Single Tap, COPY
+	+ `Capslock`, Double Tap, PASTE
+	+ `Capslock`, HOLD, Show Extended Capslock Menu
 
------[[[[ HOTKEYS ]]]]-----
-Extended CAPSLOCK KEY Functionality Using AutoHotkey:
-	+ Capslock, Single Tap, COPY
-	+ Capslock, Double Tap, PASTE
-	+ Capslock, HOLD, Show Extended Capslock Menu
+`Middle Mouse Button` -- Alt Mouse Hotkey to OPEN MENU
+`Ctrl` + `Alt` + `F3` -- Alt Keyboard Hotkey to OPEN MENU
 
-Middle Mouse Button -- Alt Mouse Hotkey to OPEN MENU
-Ctrl + Alt + F3 -- Alt Keyboard Hotkey to OPEN MENU
+  `Ctrl` + `Shift` + `F2` -- New Sticky Filled With Selection
+  `Ctrl` + `Alt` + `F2` -- New Empty Sticky Note
+  `Ctrl` + `Shift` + R -- Reload Script
+  
+--------------------------------------------------
 
-  Ctrl + Shift + F2 -- New Sticky Filled With Selection
-  Ctrl + Alt + F2 -- New Empty Sticky Note
-  Ctrl + Shift + R -- Reload Script
--------------------------------------------------- 
-Alt + Capslock -- Toggle Capslock
-Ctrl + Capslock -- Toggle Caplock
-Shift + Capslock -- Switch between UPPERCASE & lowercase
--------------------------------------------------- 
---- Hotkeys for the Sticky Note GUI Windows ---
-Alt + M -- Show Sticky GUI Quick Menu
-Ctrl + S -- Save Sticky As
-Ctrl + Shift + S -- Quick Save As '.txt'
-Ctrl + N -- Create New Empty Temp Sticky
-Ctrl + P -- Pin Sticky To Top
-Ctrl + Shift + O -- Open Quick Notes Folder
-Ctrl + ESC -- Close Stick without saving
+`Alt` + `Capslock` -- Toggle Capslock
+`Ctrl` + `Capslock` -- Toggle Caplock
+`Shift` + `Capslock` -- Switch between UPPERCASE & lowercase
+
+--------------------------------------------------
+### --- Hotkeys for the Sticky Note GUI Windows ---
+`Alt` + `M` -- Show Sticky GUI Quick Menu
+`Ctrl` + `S` -- Save Sticky As
+`Ctrl` + `Shift` + `S` -- Quick Save As '.txt'
+`Ctrl` + `N` -- Create New Empty Temp Sticky
+`Ctrl` + `P` -- Pin Sticky To Top
+`Ctrl` + `Shift` + `O` -- Open Quick Notes Folder
+`Ctrl` + `ESC` -- Close Stick without saving
 **************************************************
 
-         -----+++ OTHER HOTKEYS +++-----
-Ctrl + Shift + `" -- Paste Clipboard in Quotes
-	Ctrl + `" -- Put Quotes Around [*Selected Text*]
-Win + H -- Add Auto Correct Hot Strings ...
+### ----+++ OTHER HOTKEYS +++-----
+`Ctrl` + `Shift` + `"` -- Paste Current Clipboard in "Quotes"
+	`Ctrl` + `"` -- Put Quotes Around \[\*"Selected Text"\*]
+`Win` + `H` -- Add Auto Correct Hot Strings ...
 		 ...(if include Auto Correct script is running)
--------------------------------------------------- 
-==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
-Right Click -- Can replace NP++ menu with this one. (optional)
-Ctrl + Space -- Open Live Folder Menu... [*Experimental*]
-	if a [* C:\Filepath.txt *] is selected it show's that files folder
+		 
+--------------------------------------------------
+## ==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
+`Right Click` -- Can replace NP++ menu with this one. (optional)
+`Ctrl` + `Space` -- Open Live Folder Menu...
+	if a \[* C:\Filepath.txt \*] is selected it show's that files folder
 	if nothing is selected it will show the folder of the Active file
 	+ this can also work in Everything 1.5a on a selected file
 	- this menu hotkey is turn off else where
-Ctrl + Alt + N -- Open Active File in Alternative Text Editor Menu
-**************************************************
+`Ctrl` + `Alt` + `N` or `F9` -- Open Active File in Alternative Text Editor Menu
 
-TIP -- You can also click that Live Preview menu item at any time to see a message box of the text in your Clipboard, whether or not Live Preview is running.
-
-```
+***
 
 
 ## Screenshots

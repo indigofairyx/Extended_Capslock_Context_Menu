@@ -84,20 +84,22 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 
 
 ## Extended CAPSLOCK KEY Functionality Using AutoHotkey:
-`Capslock`, Single Tap, COPY
-`Capslock`, Double Tap, PASTE
-`Capslock`, HOLD, Show Extended Capslock Menu
+
+`Capslock`, Single Tap, **COPY**
+
+`Capslock`, Double Tap, **PASTE**
+
+`Capslock`, ***HOLD, Show Extended Capslock Menu***
 
 `Middle Mouse Button` -- Alt Mouse Hotkey to OPEN MENU
 
 `Ctrl` + `Alt` + `F3` -- Alt Keyboard Hotkey to OPEN MENU
 
-
-  `Ctrl` + `Shift` + `F2` -- New Sticky Filled With Selection
+`Ctrl` + `Shift` + `F2` -- New Sticky Filled With Selection
   
-  `Ctrl` + `Alt` + `F2` -- New Empty Sticky Note
+`Ctrl` + `Alt` + `F2` -- New Empty Sticky Note
   
-  `Ctrl` + `Shift` + R -- Reload Script
+`Ctrl` + `Shift` + R -- Reload Script
   
 --------------------------------------------------
 

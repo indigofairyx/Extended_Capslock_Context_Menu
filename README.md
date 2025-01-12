@@ -58,21 +58,23 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 			  it will show the Dir of the active file.
 
 ++ Other Features With Toggle Options ++
-	- light & dark mode toggle (DARK is default),
-	- sound beeps for capslock state change (ON by default)
-	- shifted number row, when caps on, (OFF by default)
-		`1234567890-=
-		~!@#$%^&*()_+
-	*+ Replace Notepad++'s Right Click Menu with this one! (OFF by Default)
-	*+ Auto Copy & Live Preview Mode
-		* See Known Issues warning below.
+	+ light & dark mode toggle (DARK is default),
+	+ sound beeps for capslock state change (ON by default)
+	+ shifted number row, when caps on, (OFF by default)
+		+ `1234567890-=
+		+ ~!@#$%^&*()_+
+	+ *+ Replace Notepad++'s Right Click Menu with this one! (OFF by Default)
+	+ *+ Auto Copy & Live Preview Mode
+
 ++++ ADDITONAL MENUS ++++
 
-A custom built Open With\In Alternative Text Editor Menu that works in NP++ (on the active file viewing) and in Everything 1.5a (when a file is selected).
-The Hotkey for this Menu is {F9}
-There's a handful of light-weight text editors that I play with... This menu can be made to work in other applications...
-If you're an AHK enthusiast I recommend adding your own editors.
-... And more ...
+	+ A custom built Open With\In Alternative Text Editor Menu that works in NP++ (on the active file viewing) and in Everything 1.5a (when a file is selected).
+	+ The Hotkey for this Menu is {F9}
+	+ There's a handful of light-weight text editors that I play with... This menu can be made to work in other applications...
+	+ If you're an AHK enthusiast I recommend adding your own editors.
+
+
+... And more !!! ... Check Out the Releases pages for detail of other Features & Fixes as they were added.
 
 
 

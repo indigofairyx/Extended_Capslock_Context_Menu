@@ -24,19 +24,19 @@ if !FileExist(inifile)
 		ToolTip
 		Sleep 200
 	}
-if fileExist(inifile)
-{
-	fileread, inicheck, %inifile%
-	if (inicheck = "")
-		{
-		gosub makeini
-		sleep 1000
-		ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
-		Sleep 2000
-		ToolTip
-		sleep 200
-		}
-	}
+; if fileExist(inifile)
+; {
+	; fileread, inicheck, %inifile%
+	; if (inicheck = "")
+		; {
+		; gosub makeini
+		; sleep 1000
+		; ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
+		; Sleep 2000
+		; ToolTip
+		; sleep 200
+		; }
+; }
 
 
 

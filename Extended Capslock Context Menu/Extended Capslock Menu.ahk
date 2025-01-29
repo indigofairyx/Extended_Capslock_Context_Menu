@@ -3610,7 +3610,8 @@ $CapsLock:: ;; E CapsLock Menu!!!
     {
         KeyWait CapsLock, D T0.15
         if ErrorLevel
-            CopyClipboardCLM() ; Single Tap, COPY
+            ; CopyClipboardCLM() ; Single Tap, COPY
+			Send ^c ; Single Tap, COPY
         else
             Send ^v ; Double Tap, Paste clipboard content
     }
@@ -4602,14 +4603,13 @@ changelog := " ;"
 (
 
 
-
------- v.2025.01.12 --------------------------- v.2025.01.27
+------ v.2025.01.28 ---------------------------
 
 +++ Improved \ Shortened the copy time when using a single tap on the Capslock key to copy !!!
 
 +++ Added the ability to set global hotkeys that be added, changed & saved in the .INI for most menu items
 
-+++ added a Dynamic sleep function into the the RestoreClipBoard Fuctions for better handling of the clipboard being restored correctly
++++ added a Dynamic sleep function into the the RestoreClipBoard Functions for better handling of the clipboard being restored correctly
 
 + added DPI-Awareness DllCall to fix the context menu show in the wrong spot on multi-montier setup with mixed DPIs.
 
@@ -4625,7 +4625,7 @@ changelog := " ;"
 
 + added Convert file:///C:/file.url to standard Path to code menu
 
-+ added improvements\expansion to file:///C:/file.url Handleing
++ added improvements\expansion to file:///C:/file.url Handling
 
 + added ( Script is Running as ADMIN ) notification to settings menu when script is elevated
 
@@ -4637,6 +4637,8 @@ changelog := " ;"
 
 + added the ability to check github for updates from the about window
 + added Quick Clip Board Editor to the Tools Menu
+
+
 ------ v.2024.12.19 ---------------------------
 
 =+ fixed a syntax error when sending a system index search to Everything

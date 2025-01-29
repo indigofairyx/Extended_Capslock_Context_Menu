@@ -1,70 +1,62 @@
+
+;--------------------------------------------------
 ;!!!!!!!!!!!! IMPORTANT! THIS FILE MUST BE ENCODED WITH UTF8+BOM !!!!!!!!!!!!!!;
+;--------------------------------------------------
 
-;;;;; !NOTE! This Script is not set to run as admin, if you'd like it to regularly, delete the " ; " at the front of the next two lines, changing it here will override the toggle in the settings menu.
+ScriptVersion := "v.2025.01.28"
+ScriptName := "Extended CapsLock Menu" 
+global scriptversion
+global scriptname
 
- ; If !A_IsAdmin
- 	 ; Run *RunAs "%A_ScriptFullPath%"
+SetWorkingDir %A_ScriptDir%
+filePath := A_ScriptFullPath
+
+inifile := A_ScriptDir "\" A_ScriptName "-SETTINGS.ini"
+global inifile
+
+if !FileExist(inifile)
+	{
+		; Creates a new ini file if its not found .
+		gosub makeini
+		Sleep 1000
+		ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
+		Sleep 2000
+		ToolTip
+		Sleep 200
+	}
+if fileExist(inifile)
+{
+	fileread, inicheck, %inifile%
+	if (inicheck = "")
+		{
+		gosub makeini
+		sleep 1000
+		ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
+		Sleep 2000
+		ToolTip
+		sleep 200
+		}
+	}
 
 
-ScriptVersion := "v.2024.12.19"
-
-ScriptName := "Extended CaplsLock Menu" 
 
 ; #warn  ; enable warning to assist with detecting common errors
-
-
 #warn useenv, off
 #Persistent
 #SingleInstance, Force
 #InstallKeybdHook
 #InstallMouseHook
-
-SetWorkingDir,%A_ScriptDir%
-filePath := A_ScriptFullPath
-
 #MaxThreads 255
 SetBatchLines -1  ; Run the script at maximum speed.
 SetWinDelay, -1  ; go quick
 SetKeyDelay, 0, 0 	;Smallest possible delay from directives.ahk test
 SetMouseDelay, 0 
 Process, Priority,, R ;Runs Script at High process priority for best performance
-
 CoordMode, Mouse, Screen
 SendMode Input
 
-inifile := A_ScriptDir "\" A_ScriptName "-SETTINGS.ini"
-global inifile
-if !FileExist(inifile) {
-    ; Retrieve the default settings and write to the INI file
-	gosub makeini
-    ; defaultIniSettings := GetDefaultIniSettings()
-    ; FileAppend, %defaultIniSettings%, %inifile%
-    Sleep 750
-    ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
-    Sleep 2000
-    ToolTip
-    Sleep 200
-}
-
-IniRead, ProgramSection, %inifile%, Programs
-if (ProgramSection = "ERROR") {
-    MsgBox, Could not read the Programs section from the INI file.
-    return
-}
-Loop, Parse, ProgramSection, `n, `r
-{
-    ; Each line should be in the format Key=Value
-    StringSplit, KeyValue, A_LoopField, =
-    ; Use indirect assignment for globals
-    ; global
-    VarName := KeyValue1  ; Name of the variable from the INI key
-    VarValue := KeyValue2 ; Value of the variable from the INI value
-    %VarName% := VarValue ; Assign dynamically
-}
-; MsgBox, % "Path to Notepad++: " notepadpp
-; MsgBox, % "Path to Notepad4: " notepad4
-; MsgBox, % "Path to Directory Opus: " dopus
-; MsgBox, % "Path to Directory rt: " dopusrt
+ReadProgramsfromIni()
+ReadHotkeysFromIni()
 
 ; default to 0 ( false - off ) ; default to 1 ( true - on )
 IniRead, LiveMenuEnabled, %inifile%, LiveMenuEnabled, key, 0
@@ -77,6 +69,8 @@ global ShiftedNumRow
 global OSD
 global Beep_enabled
 global CAPSGuiToggle
+global DarkMode
+global LiveMenuEnabled
 
 if (DarkMode)
 		{
@@ -88,7 +82,8 @@ if (DarkMode)
 			DarkMode := false
 			MenuDark(3) ; Set to ForceLight
 		}
-		
+
+;--------------------------------------------------
 
 ;; todo, figure out which EnvGet's I dont need, clean this list out.
 envget, userprofile, userprofile
@@ -101,11 +96,17 @@ EnvGet, LocalAppData, LocalAppData
 ; MsgBox, Program files are in: %OutputVar%
 ; MsgBox, %A_UserName%'s Local directory is located at: %LocalAppData%
 
-GLOBAL idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, pIContextMenu3, WPOld ; windows shell menu
+;--------------------------------------------------
+
+GLOBAL idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, pIContextMenu3, WPOld ; for windows shell menu
 
 
-Global filename,dir,filestem,drive,folder,lastfolder,filetoclip,highlighted ; used by exp popup menu, alt editor menu, and copen menu items
+Global filename,dir,filestem,drive,folder,lastfolder,filetoclip,highlighted,attributes ; used by exp popup menu, alt editor menu, copen menu and EV menu items 
+; Attributes := ""
 
+IconsDir := A_ScriptDir . "\Icons" ; Path to the Icons folder
+global iconsdir
+markiconsdirasreadonly()
 trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
 global trayicon
 iconerror = %A_ScriptDir%\icons\view error_192x192.ico
@@ -118,7 +119,13 @@ Global pinstartpic := 1  ; Variable for pin state
 Global pin   			; var for sticky notes
 Global StickyText := ""  ; Variable for sticky note text
 Global StickyCount := 0  ; Global counter for sticky notes, GUI item
-
+;; elements for the about gui
+global iniload
+; global inicontent := ""
+; FileRead, inicontent, %inifile%
+global TabChange ; elements for the about gui
+global selectedtab ; elements for the about gui
+global searchPos := 1 ;; gui search box
 Global ClipSaved
 Global ClipSaved := ""   ; Variable to store saved clipboard content
 Global clipcontent       ; Dynamic live menu item from clipboard
@@ -128,17 +135,28 @@ Global TTS_Voice := ""  ; Global variable to hold the TTS COM object
 Global texteditor
 global quicknotesdir
 quicknotesdir = %A_ScriptDir%\Extended Capslock Menu QUICK Notes
-global ext
+Global ext
 ext := ""
 global control = "" ;; right click over np++
 Global ActiveFile ; alt editor menu
 saved := 0 ;; for F9, menu, alttxt, error check for unsaved files when launched outside of np++, e.g. vscode
+global targetID := "" 
+SetCapsLockState, off ;; start with caps lock keep turned off to keep it in sync with OSD
 
-SetCapsLockState, off
+;///////////////////////////////////////////////////////////////////////////
+ ;; checks for updates via githubs releases page
+ GitHubAPI := "https://api.github.com/repos/indigofairyx/Extended_Capslock_Context_Menu/releases/latest"
+ GitHubVersionFile := "https://raw.githubusercontent.com/indigofairyx/Extended_Capslock_Context_Menu/refs/heads/main/Extended%20Capslock%20Context%20Menu/version.txt" ; URL to the version file in your GitHub repo
+ ; global GitHubVersionFile
+ Tempupdatecheck := A_Temp . "\ECLMversion.txt" ; Temporary file to store the downloaded version
+ ; global tempupdatecheck
+ localversioncheck = %a_scriptdir%\version.txt
+ if FileExist(localversioncheck)
+	 FileSetAttrib, +H, %localversioncheck%
 ;///////////////////////////////////////////////////////////////////////////
 ;---------------------------------------------------------------------------
 this := "" ; swap at, text, func
-div := "" ;swap at, text, func
+div := "" ; swap at, text, func
 ;---------------------------------------------------------------------------
 { ; items for menu, dtmenu,
 StartTime := A_TickCount
@@ -172,40 +190,40 @@ menu, dtmenu, add, ; line ;-------------------------
 }
 
 DateFormats(Date)
-{
-global
-FormatTime, OutputVar , %Date%, h:mm tt ;12 hour clock
-List := OutputVar
-FormatTime, OutputVar , %Date%, HH:mm tt ;24 hour clock
-List := List . "|" . OutputVar
-FormatTime, OutputVar , %Date%, ShortDate ; 9/5/2015
-List := List . "|" . OutputVar
-FormatTime, OutputVar , %Date%, MM/dd/yy ; 09/05/2015
-List := List . "|" . OutputVar
-FormatTime, OutputVar , %Date%, MMMM d, yyyy ; August 26, 2024
-List := List . "|" . OutputVar
-FormatTime, OutputVar , %Date%, LongDate ; Monday, August 26, 2024
-List := List . "|" . OutputVar
-FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, h:mm tt  ; Friday, September 6, 2024, 9:46 PM
-List := List . "|" . OutputVar
-FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, hh:mm:ss tt ; Friday, September 6, 2024, 09:46:41 PM
-List := List . "|" . OutputVar
-FormatTime, OutputVar, %Date%, %A_now% ; 20240826165553
-List := List . "|" . OutputVar
-FormatTime, OutputVar, %Date%, dddd ; Monday
-List := List . "|" . OutputVar
-FormatTime, OutputVar, %Date%, MMMM ; August
-List := List . "|" . OutputVar
-Return List
-}
+	{
+	global
+	FormatTime, OutputVar , %Date%, h:mm tt ;12 hour clock
+	List := OutputVar
+	FormatTime, OutputVar , %Date%, HH:mm tt ;24 hour clock
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar , %Date%, ShortDate ; 9/5/2015
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar , %Date%, MM/dd/yy ; 09/05/2015
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar , %Date%, MMMM d, yyyy ; August 26, 2024
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar , %Date%, LongDate ; Monday, August 26, 2024
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, h:mm tt  ; Friday, September 6, 2024, 9:46 PM
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar, %Date%, dddd, MMMM d, yyyy, hh:mm:ss tt ; Friday, September 6, 2024, 09:46:41 PM
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar, %Date%, %A_now% ; 20240826165553
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar, %Date%, dddd ; Monday
+	List := List . "|" . OutputVar
+	FormatTime, OutputVar, %Date%, MMMM ; August
+	List := List . "|" . OutputVar
+	Return List
+	}
 dtmenurefresh() ;; Function
-{
-global
-Menu, dtmenu, DeleteAll
-Date := A_Now
-List := DateFormats(A_Now)
-TextMenuDate(List)
-}
+	{
+		global
+		Menu, dtmenu, DeleteAll
+		Date := A_Now
+		List := DateFormats(A_Now)
+		TextMenuDate(List)
+	}
 ;---------------------------------------------------------------------------
 
 ;--------------------------------------------------------------------------- 
@@ -224,6 +242,7 @@ menu, ctxt, add, ; line ;-------------------------
 menu, ctxt, add, Reverse - esreveR,  Reverse
 menu, ctxt, icon, Reverse - esreveR,  %A_ScriptDir%\Icons\action-text-direction-rtl_48x48.ico
 Menu, ctxt, Add, iNVERT cASE - Invert Case, Invert
+menu, ctxt, add, Convert Numbers<&&>Symbols`, 123$`%^<->!@#456, convertsymbols
 menu, ctxt, add, ; line ;-------------------------
 Menu, ctxt, Add, PascalCase, Pascal
 Menu, ctxt, Add, camelCase, camel
@@ -240,7 +259,7 @@ Menu, ctxt, Add, Space to Under_Score, addunderscore
 menu, ctxt, add, Remove_Underscore to Space, removeunderscore
 Menu, ctxt, Add, Space to Dash-Case, adddash
 menu, ctxt, add, Remove-Dash to Space, removedash
-menu, ctxt, add, ; line ;-------------------------
+menu, ctxt, add, ; line ;-------------------------n
 menu, ctxt, add, Sort `> 0-9`,A-Z, sorttext
 menu, ctxt, icon, Sort `> 0-9`,A-Z, %A_ScriptDir%\Icons\sort_descending__32x32.ico
 menu, ctxt, add, ; line ;-------------------------
@@ -273,6 +292,13 @@ menu, cform, icon, 9 <kbd>`K<`/kbd>, %A_ScriptDir%\Icons\xml code_128x128.ico
 menu, cform, add, 0 `<`!-- xml Comment --`>, wrapinxmlcomment
 menu, cform, add, A ``nAHK new Line``n, ahknewline
 menu, cform, icon, A ``nAHK new Line``n, %A_ScriptDir%\Icons\083_key return enter keyboard capt_24x24.ico
+menu, cform, add, B Expand `%A_ScriptDir`%, expandscriptdir
+; menu, cform, icon, B Expand `%A_ScriptDir`%, 
+menu, cform, add, C Encode XML, Encodexml
+; menu, cform, icon,
+menu, cform, add, D Decode XML, decodexml
+; menu, cform, icon,
+menu, cform, add, E Covert file:\\\url to Std Path, convertfileurl
 
 
 ;---------------------------------------------------------------------------
@@ -336,9 +362,9 @@ menu, ctools, icon, Copy Selected to New Np++ Document, %A_ScriptDir%\Icons\docu
 menu, ctools, add, ; line ;-------------------------
 menu, ctools, add, Save Clipboard to New Document, SaveClipboardAsTxt
 menu, ctools, icon, Save Clipboard to New Document, %A_ScriptDir%\Icons\clipboard save b_xedit_48x48.ico
-menu, ctools, add, View Clipboard, viewclip
-menu, ctools, icon, View Clipboard, %A_ScriptDir%\Icons\QAP-preview_pane_c_26x26.ico
-; menu, ctools, icon, View Clipboard, %A_ScriptDir%\Icons\message Magic Box.ico ; alt icon
+menu, ctools, add, View Clipboard Text, viewclip
+menu, ctools, icon, View Clipboard Text, %A_ScriptDir%\Icons\QAP-preview_pane_c_26x26.ico
+; menu, ctools, icon, View Clipboard Text, %A_ScriptDir%\Icons\message Magic Box.ico ; alt icon
 menu, ctools, add, Clear Clipboard, clearclip
 ; menu, ctools, icon, Clear Clipboard, %A_ScriptDir%\Icons\Clean_fluentColored_64x64.ico ; alt icon
 menu, ctools, icon, Clear Clipboard, %A_ScriptDir%\Icons\clean_clear_clipboard_empty_xedit3_32x32.ico
@@ -360,12 +386,26 @@ MENU, ctools, add, Run AHK Auto Correct (Included), abc
 MENU, ctools, icon, Run AHK Auto Correct (Included), %A_ScriptDir%\Icons\autocorrect_icon_32x32.ico
 menu, ctools, add, Ditto Clipboard, runditto
 menu, ctools, icon, Ditto Clipboard, %A_ScriptDir%\Icons\ditto quote clipboard 128x128.ico
+if FileExist(qce)
+{
+Menu, ctools, add, Quick Clipboard Editor, runQCE
+Menu, ctools, icon, Quick Clipboard Editor, %qce%
+}
+else
+{
+Menu, ctools, add, Quick Clipboard Editor  -- Not Installed ?, runQCE
+Menu, ctools, icon, Quick Clipboard Editor  -- Not Installed ?, %A_ScriptDir%\Icons\clipboard JLicons_52_64x64.ico
+}
+
 menu, ctools, add, Textify, runtextify
 menu, ctools, icon, Textify, %A_ScriptDir%\Icons\textify 128x128.ico
 menu, ctools, add, Text Grab, runtextgrab
 menu, ctools, icon, Text Grab, %A_ScriptDir%\Icons\text grab v4 128x128.ico
 menu, ctools, add, Notepad++, runnotepadpp
 menu, ctools, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
+; menu, ctools, add, Quick Clipboard Editor, runQCE
+; if fileExist(qce)
+	; menu, ctools, icon, Quick Clipboard Editor, %qce%
 if !FileExist(dopus)
 	{
 	menu, ctools, add, Directory Opus, rundopus
@@ -373,13 +413,22 @@ if !FileExist(dopus)
 	}
 ; --------------------------------------------------------------------------
 
-
+/*
+;; cleaned up, menu name too long\wide
 menu, copen, add, < -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] -- >, showopenmenu
 if FileExist(dopus)
 	menu, copen, icon, < -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] -- >, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico,,28
 else
 	menu, copen, icon, < -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] -- >, explorer.exe,,28
 menu, copen, default, < -- IF a C:\Directory`, C:\Filepath.txt`, Url`, or RegKey is [*SELECTED*] -- >
+*/
+menu, copen, add, < --- IF Files\Dirs is [*Selected*] Menu --- >, showopenmenu
+if FileExist(dopus)
+	menu, copen, icon, < --- IF Files\Dirs is [*Selected*] Menu --- >, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico,,28
+else
+	menu, copen, icon, < --- IF Files\Dirs is [*Selected*] Menu --- >, explorer.exe,,28
+menu, copen, default, < --- IF Files\Dirs is [*Selected*] Menu --- >
+
 menu, copen, add, ; line ;-------------------------
 menu, copen, add, Open Folder, OpenDIRselection
 menu, copen, icon, Open Folder, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
@@ -545,8 +594,16 @@ else
 	menu, cset, icon, Replace the NP++ Right Click Menu, %A_ScriptDir%\Icons\context menu icon.ico
 	}
 menu, cset, add, ; line ;-------------------------
-menu, cset, add, Run as Admin, runasadmin
-menu, cset, icon, Run as Admin, %A_ScriptDir%\Icons\admin imageres_1028.ico
+if !(a_isadmin)
+	{
+	menu, cset, add, Run as Admin, runasadmin
+	menu, cset, icon, Run as Admin, %A_ScriptDir%\Icons\admin imageres_1028.ico
+	}
+else
+	{
+	Menu, cset, add, Script is Running as ADMIN, runasadmin
+	menu, cset, icon, Script is Running as ADMIN, %A_ScriptDir%\Icons\admin attention win11 imageres_107.ico
+	}
 menu, cset, add, ; line ;-------------------------
 if FileExist(quicknotesdir)
 	{
@@ -579,8 +636,8 @@ else
 
 
 
-menu, cset, add, Edit " %A_scriptname%-SETTINGS.ini " File, editsettings
-menu, cset, icon, Edit " %A_scriptname%-SETTINGS.ini " File, %A_ScriptDir%\Icons\ini alt xfav setting document prefs setupapi_19 256x256.ico
+menu, cset, add, Edit " -SETTINGS.ini " File, editsettings
+menu, cset, icon, Edit " -SETTINGS.ini " File, %A_ScriptDir%\Icons\ini alt xfav setting document prefs setupapi_19 256x256.ico
 menu, cset, add, ; line ;-------------------------
 menu, cset, add, Reload Script          --         Ctrl + Shift + R, reload
 menu, cset, icon, Reload Script          --         Ctrl + Shift + R, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
@@ -597,6 +654,7 @@ menu, cset, icon, Quit \ Exit  -----  Ctrl + Alt + Esc, %A_ScriptDir%\Icons\skul
 
 ;---------------------------------------------------------------------------
 trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
+Menu, Tray, UseErrorLevel
 menu, tray, nostandard
 menu, tray, icon, %trayicon%
 
@@ -634,7 +692,9 @@ menu, tray, icon, Quit \ Exit  -----  Ctrl + Alt + Esc, %A_ScriptDir%\Icons\skul
 
 MenuCaseShow() ;; function
 {
-    global LiveMenuEnabled
+    global LiveMenuEnabled, targetID, xinc, mylibmenu
+    targetID := ""  
+	winget, targetID, ID, A ;; get the active window ID over which the menu is shown, sometime the window can become deactivited this can be used to re-activate the window before pastes
     dtmenurefresh()
     sleep 10
 	menu, case, add
@@ -692,16 +752,16 @@ menu, case, icon, Text Tools && Apps, %A_ScriptDir%\Icons\Pencil and Ruler__32x3
 menu, case, add, Find\Search Selected Text..., :cfind
 menu, case, icon, Find\Search Selected Text..., %A_ScriptDir%\Icons\search find Windows 11 Icon 13_256x256.ico
 
-menu, case, add, Open\Run\Explore...     [ Files Menu ], :copen
+menu, case, add, Open\Run\Explore\Files..., :copen
 ; menu, case, icon, Open\Run\Explore...   ,
-menu, case, icon, Open\Run\Explore...     [ Files Menu ], %A_ScriptDir%\Icons\folder tree FLUENT_colored_051_64x64.ico
+menu, case, icon, Open\Run\Explore\Files..., %A_ScriptDir%\Icons\folder tree FLUENT_colored_051_64x64.ico
 
 menu, Case, Add ; line ;-------------------------
 menu, Case, Add, Wrap in "&Quotes"                                     Ctrl + `", ClipQuote ; ;10 %A_Space% in menu
 menu, Case, icon, Wrap in "&Quotes"                                     Ctrl + `", %A_ScriptDir%\Icons\format quote_24x24.ico ; "
 menu, Case, add, `{..Curly &Brackets..`}`, On New Lines, wrapincbrackets
 menu, Case, icon, `{..Curly &Brackets..`}`, On New Lines, %A_ScriptDir%\Icons\coding code json filetype_24x24.ico
-; menu, cform, add ; line  ;-------------------------
+
 
 menu, case, add, Code Formatting....., :cform
 menu, case, icon, Code Formatting....., %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
@@ -732,8 +792,8 @@ menu, case, icon, Paste                                   Double Tap Capslock, %
 MENU, case, ADD, Paste As Plain Text, pasteplain
 MENU, case, icon, Paste As Plain Text, %A_ScriptDir%\Icons\plaintextdoc_64x64.ico
 menu, case, add ; line ;-------------------------
-menu, case, add, Setting && About, :cset
-menu, case, icon, Setting && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
+menu, case, add, Settings && About, :cset
+menu, case, icon, Settings && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
 menu, case, add, ; line -------------------------
 menu, case, add, Close This Menu, CloseMenu
 menu, case, icon, Close This Menu, %A_ScriptDir%\Icons\aero Close_24x24-32b.ico
@@ -760,6 +820,7 @@ dopusforumurl := "https://resource.dopus.com/"
 doupushomepageurl := "https://www.gpsoft.com.au"
 dopusdocsurl := "https://docs.dopus.com/doku.php?id=introduction"
 dngrepurl := "https://dngrep.github.io"
+regexbuddyurl := "https://www.regexbuddy.com"
 
 ;***************************************************************************
 ;************************* HOTKEYS *****************************************
@@ -817,9 +878,32 @@ Ctrl + Alt + N or F9 -- Open Active File in Alternative Text Editor Menu
 ; "
 
 
+; dllcall for dpi scaling per screen with mixed dpi menu fix ; dpi scaling per screen with mixed dpi menu fix
+;; this might break the menu working on windows 7 win7
+;; https://www.autohotkey.com/docs/v1/misc/DPIScaling.htm#Workarounds
+;; forum post: https://www.autohotkey.com/boards/viewtopic.php?style=1&t=135025
+DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+;-------------------------
+;; these semi work, allow you use hotkeys from the script when the menu is open, usually ahk blocks hotkeys when its busy showing a menu.
+Menu_SetModeless("case") ; make menu modeless
+Menu_SetModeless("copen") ; make menu modeless
+Menu_SetModeless("cfind") ; make menu modeless
+Menu_SetModeless("ctools") ; make menu modeless
+Menu_SetModeless("cset") ; make menu modeless
+Menu_SetModeless("cform") ; make menu modeless
+Menu_SetModeless("ctxt") ; make menu modeless
+Menu_SetModeless("folders") ; make menu modeless
+Menu_SetModeless("alttxt") ; make menu modeless
+Menu_SetModeless("Mylibmenu") ; make menu modeless
+Menu_SetModeless("ev") ; make menu modeless
+Menu_SetModeless("dope") ; make menu modeless
+Menu_SetModeless("run") ; make menu modeless
+Menu_SetModeless("alttxtsub") ; make menu modeless
+Menu_SetModeless("dtmenu") ; make menu modeless
+Menu_SetModeless("insert") ; make menu modeless
 
 
-return
+Return
 ;; First Return, END Auto execute
 
 ;---------------------------------------------------------------------------
@@ -845,11 +929,13 @@ IfLive() ;; function ;; checks if Auto Copy is running
 CopyClipboardCLM() ;; Function
 {
 	global ClipSaved  ;Ensure global is used if ClipSaved is accessed elsewhere
-	Global filename, dir, ext, filestem, drive, lastfolder
+Global filename, dir, ext, filestem, drive, lastfolder, highlighted, selected
 	global ClipSaved := ""
-	sleep 100
+	sleep 50
 	ClipSaved := ClipboardAll  ; Save the current clipboard contents
-	sleep 200 ; todo broken fix adjust time longer if needed
+sleep getdelaytime() * 1000
+sleep 50
+; sleep 369 ; todo broken fix adjust time longer if needed
 	Clipboard := ""  ; Clear the clipboard
 	Sleep 50  ; Adjust the sleep time if needed
 	; WinGet, id, ID, A
@@ -880,22 +966,27 @@ PasteClipboardCLM() ;; function
     ; WinGetClass, class, ahk_id %id%
     ; if (class ~= "(Cabinet|Explore)WClass|Progman|dopus.lister")
         ; Send {F2}
-    send, ^v ; Sendinput, ^{vk43} ;, Sendinput, ^v  ; Send Ctrl+V
-    Sleep 1000  ; Give the system time to paste the clipboard content
-	; RestoreClipboard()
+    send, ^v ; Sendinput, ^{vk43} ; send, ^v, ; Sendinput, ^{vk43} ; Sendinput, ^v  ; Send Paste
+	sleep getdelaytime() * 1000
+	sleep 200
+    ; Sleep 500  ; Give the system time to paste the clipboard content
     Clipboard := ClipSaved  ; {Restore the saved clipboard contents}
 	sleep 400
     ClipSaved := ""  ; Clear the variable
+    sleep 50
 }
 
 RestoreClipboard() ;; function
 {
 global Clipsaved
+clipboard := ""
 sleep 100
 Clipboard := ClipSaved
-sleep 1000
+sleep getdelaytime() * 1000
+; sleep 1000
+sleep 300
 ClipSaved := ""  ; Clear the variable
-; return
+sleep 50
 }
 
 
@@ -944,7 +1035,7 @@ Send ^{vk56} ;Ctrl V ; SendInput, ^v, send, ^v
 ; return
 }
 
-getfileinfo() ;; function 
+getfileinfo() ;; function
 {
 Global ClipSaved, filename, dir, ext, filestem, drive, activefile, lastfolder, highlighted
 iflive()
@@ -957,41 +1048,103 @@ sleep 100
 cleanupPATHstring() ;; function ; trims white space, removes single & double quotes, converts ahk dir var, splits file path into parts, from the selected FILE PATH. // gocleanpath
 {
 Global ClipSaved, filename, dir, ext, filestem, drive, lastfolder, activefile, highlighted
-sleep 90
 Clipboard := RegExReplace(RegExReplace(Clipboard, "\r?\n"," "), "(^\s+|\s+$)") ; remove line breaks\returns
-sleep 90
 Clipboard := RegExReplace(Clipboard, "^(?:'*)|('*$)") ; remove single quotes '' leading - trailing
-sleep 90
 Clipboard := StrReplace(clipboard,"""") ; remove double quotes "" leading - trailing
-sleep 90
+Clipboard := RegExReplace(Clipboard, ",\s*$") ; Remove trailing comma and any spaces 
+
 If (SubStr(Clipboard, 1, 8) = "file:///") { ;convert file url path to win path
-	Clipboard := SubStr(Clipboard, 9) ; Remove the 'file:///' prefix
-	Clipboard := StrReplace(Clipboard, "%20", " ") ; Decode spaces
-	Clipboard := StrReplace(Clipboard, "/", "\") ; Convert to Windows backslashes
+	decodeURLpath(clipboard)
+	goto split
 }
 If InStr(Clipboard, "`%A_ScriptDir`%") ; expand AHKs var
 	{
 		clipboard := StrReplace(Clipboard, "%A_ScriptDir%", A_ScriptDir)
 		dir := RegexReplace(clipboard, "\\[^\\]*$", "")
 	}
-; if InStr(Clipboard, "%"),,UseErrorLevel { ; Expand environment variables if present
-if InStr(Clipboard, "%") { ; Expand environment variables if present
-Clipboard := RegExReplace(Clipboard, "C:\\Users\\", "")
-Transform, Clipboard, Deref, %Clipboard%
+
+; Handle environment variables (improved version)
+if RegExMatch(Clipboard, "%\w+%"),,useerrorlevel {  ; Only matches proper %variable% patterns
+	Transform, Clipboard, Deref, %Clipboard%
 	if errorlevel
 		{
-		; tooltip, ERR! @ Line#  %A_LineNumber%`nAHK Couldn't Expand EnvVar.`n`nTrying to continue without it.
-		; sleep 1500
-		; tooltip
-		gosub split
+		tooltip, ERR! @ Line#  %A_LineNumber%`nAHK Couldn't Expand Env Var.`n`nTrying to continue without it.
+		sleep 1500
+		tooltip
+		goto split
 		}
 }
+
 split:
 SplitPath, Clipboard, filename, dir, ext, filestem, drive
 lastfolder := dir ;claude
 lastfolder := RegExReplace(lastfolder, ".*\\([^\\]+)\\?$", "$1")
 sleep 90
 ; folder := RegExReplace(folder, "\\$") ; removes trailing \ from a dir path. From expmenu: clould be useful here ? or is the last folder regex already doing this?
+}
+
+/*
+; decodeURLpath(inputpath) ;; usage Examples decodeurlpath() ;; function
+; myPath := "file:///C:/Some%20Folder/file.txt"
+; decodedPath := decodeURLpath(myPath)
+; Example 1: Using a variable that already exists
+filename := "myfile.txt"                   ; Create a variable first
+decodedPath := decodeURLpath(filename)     ; Send that variable to the function
+
+; Example 2: Using a string directly 
+decodedPath := decodeURLpath("myfile.txt") ; Send a string directly
+
+; Example 3: Variable can come from anywhere
+InputBox, userFile, Enter filename         ; Get filename from user input
+decodedPath := decodeURLpath(userFile)     ; Send that input to function
+
+; Example 4: Could be from another function
+getSelectedFile() {
+    return "selected.txt"
+}
+decodedPath := decodeURLpath(getSelectedFile())
+*/
+
+decodeURLpath(inputpath) {
+Global filename, dir, ext, filestem, drive, lastfolder, activefile, highlighted
+    If (SubStr(Clipboard, 1, 8) = "file:///") { ; Handle file:/// URLs
+        Clipboard := SubStr(Clipboard, 9)
+    }
+	;;; Special characters allowed in Windows filenames and their URL encodings
+    ;;; Decode all URL-encoded special characters
+    Clipboard := StrReplace(Clipboard, "%20", " ")   ; Space
+    Clipboard := StrReplace(Clipboard, "%21", "!")   ; Exclamation mark
+    Clipboard := StrReplace(Clipboard, "%23", "#")   ; Hash/pound
+    Clipboard := StrReplace(Clipboard, "%24", "$")   ; Dollar sign
+    Clipboard := StrReplace(Clipboard, "%25", "%")   ; Percent
+    Clipboard := StrReplace(Clipboard, "%26", "&")   ; Ampersand
+    Clipboard := StrReplace(Clipboard, "%27", "'")   ; Single quote
+    Clipboard := StrReplace(Clipboard, "%28", "(")   ; Opening parenthesis
+    Clipboard := StrReplace(Clipboard, "%29", ")")   ; Closing parenthesis
+    Clipboard := StrReplace(Clipboard, "%2B", "+")   ; Plus sign
+    Clipboard := StrReplace(Clipboard, "%2C", ",")   ; Comma
+    Clipboard := StrReplace(Clipboard, "%2D", "-")   ; Hyphen/minus
+    Clipboard := StrReplace(Clipboard, "%2E", ".")   ; Period
+    Clipboard := StrReplace(Clipboard, "%3D", "=")   ; Equals sign
+    Clipboard := StrReplace(Clipboard, "%40", "@")   ; At symbol
+    Clipboard := StrReplace(Clipboard, "%5B", "[")   ; Opening square bracket
+    Clipboard := StrReplace(Clipboard, "%5D", "]")   ; Closing square bracket
+    Clipboard := StrReplace(Clipboard, "%5E", "^")   ; Caret
+    Clipboard := StrReplace(Clipboard, "%60", "`")   ; Backtick ;"
+    Clipboard := StrReplace(Clipboard, "%7B", "{")   ; Opening curly brace
+    Clipboard := StrReplace(Clipboard, "%7D", "}")   ; Closing curly brace
+    Clipboard := StrReplace(Clipboard, "%7E", "~")   ; Tilde
+	Clipboard := StrReplace(Clipboard, "%C2%A6", "¦")   ; Vertical bar symbol
+	Clipboard := StrReplace(Clipboard, "%2F", "/")   ; Forward slash
+	Clipboard := StrReplace(Clipboard, "%5F", "_")   ; Underscore
+	Clipboard := StrReplace(Clipboard, "%3B", ";")   ; Semicolon
+	Clipboard := StrReplace(Clipboard, "%3A", ":")   ; Colon
+	Clipboard := StrReplace(Clipboard, "%3F", "?")   ; Question mark
+	Clipboard := StrReplace(Clipboard, "%3C", "<")   ; Less than
+	Clipboard := StrReplace(Clipboard, "%3E", ">")   ; Greater than
+	Clipboard := StrReplace(Clipboard, "%7C", "|")   ; Pipe
+    Clipboard := StrReplace(Clipboard, "/", "\") 	; Convert forward slashes to backslashes
+    return Clipboard
 }
 
 /*
@@ -1019,11 +1172,11 @@ return
 */
 
 ;***** END ***************CLIPBOARD FUNCTIONS *************** END **********
-;*************************************************************************** 
+;***************************************************************************
 
 ;***************************************************************************
 ;*************************** MENU, CTXT, FUNCTIONS *************************
-;*************************************************************************** 
+;***************************************************************************
 Upper() ;; function
 {
 global ClipSaved
@@ -1039,6 +1192,7 @@ global ClipSaved
     StringLower, Clipboard, Clipboard
     PasteClipboardCLM()
 }
+
 Title() ;; function
 {
 global ClipSaved
@@ -1054,6 +1208,7 @@ global ClipSaved
     Clipboard := TitleCase
     PasteClipboardCLM()
 }
+
 Sentence() ;; Function
 {
 global ClipSaved
@@ -1100,6 +1255,7 @@ global ClipSaved
     Clipboard := FirstChar camelCase
     PasteClipboardCLM()
 }
+
 Pascal() ;; Function
 {
 global ClipSaved
@@ -1140,7 +1296,6 @@ global ClipSaved
 	sleep 175
     PasteClipboardCLM()
 }
-
 
 addDot() ;; function
 {
@@ -1250,6 +1405,7 @@ global ClipSaved
     PasteClipboardCLM()
 }
 ;********* END *********** MENU, CTXT, FUNCTIONS ********** END ************
+
 ;***************************************************************************
 ;************************* MENU, CFORM, FUNCTIONS **************************
 ;***************************************************************************
@@ -1436,6 +1592,81 @@ sleep 200
 pasteclipboardclm()
 return
 
+expandscriptdir:
+IfLive()
+clipboard := StrReplace(Clipboard, "%A_ScriptDir%", A_ScriptDir)
+sleep 100
+pasteclipboardclm()
+sleep 800
+return
+; 1:: ;; testing
+decodexml:
+iflive()
+; XMLDecode(clipboard)
+XMLDecode()
+sleep 400
+pasteclipboardclm()
+sleep 750
+
+return
+
+; 2:: ;; testing
+encodexml:
+iflive()
+XMLEncode()
+; XMLEncode(clipboard)
+sleep 400
+PasteClipboardCLM()
+sleep 750
+return
+
+; 3:: ;; testing
+convertfileurl:
+iflive()
+decodeURLpath(clipboard)
+sleep 400
+PasteClipboardCLM()
+sleep 750
+return
+
+convertsymbols:
+    ClipSaved := ClipboardAll
+	sleep 350
+    Clipboard := ""
+    Send, ^c
+    ClipWait, 1
+    if (ErrorLevel) {
+        MsgBox,,, Failed to copy text. Please select some text and try again.,3
+		Clipboard := ClipSaved
+        return
+    }
+
+    ; Map of unshifted to shifted keys
+    Unshifted := "``1234567890-=[]\;',./"
+    Shifted :=   "~!@#$%^&*()_+{}|:""<>?"
+    Text := Clipboard
+    NewText := "" ; Conversion logic
+    Loop, Parse, Text
+    {
+        
+        Pos := InStr(Unshifted, A_LoopField) ; Check if the character is in the unshifted map
+        if Pos
+            NewText .= SubStr(Shifted, Pos, 1) ; Get corresponding shifted character
+        else {
+            Pos := InStr(Shifted, A_LoopField) ; Check if the character is in the shifted map
+            if Pos
+                NewText .= SubStr(Unshifted, Pos, 1) ; Get corresponding unshifted character
+            else
+                NewText .= A_LoopField ; Leave unchanged
+        }
+    }
+    Clipboard := NewText
+    ClipWait, 1
+    Send, ^v
+    Sleep, 100
+    Clipboard := ClipSaved
+	sleep 800
+return
 RASpace:
 IfLive()
 TempText:=Clipboard
@@ -1470,13 +1701,11 @@ sleep 90
 PasteClipboardCLM()
 return
 
-
 ;******** END ************ MENU, CFORM, FUNCTIONS ********* END ************
-;*************************************************************************** 
-
+;***************************************************************************
 
 ;***************************************************************************
-;************************* MENU, CTOOLS, FUNCTIONS ************************* 
+;************************* MENU, CTOOLS, FUNCTIONS *************************
 ;***************************************************************************
 
 clearclip:
@@ -1866,6 +2095,7 @@ global clipsaved
 return
 
 
+
 TextToSpeech: ; Start Text-to-Speech
     Global ClipSaved, TTS_Voice
     iflive()
@@ -1873,6 +2103,9 @@ TextToSpeech: ; Start Text-to-Speech
     sleep 300
     restoreclipboard()
     if (text != "") {
+		tooltip, Reading Selected Text Aloud`nPress ESC to Stop Speaking.
+		sleep 1500
+		tooltip
         ; Create or reuse the TTS COM object
         if !IsObject(TTS_Voice)
             TTS_Voice := ComObjCreate("SAPI.SpVoice")
@@ -1940,7 +2173,7 @@ Return
 
 
 ;************************* END, CTOOLS, FUNCTIONS **************************
-;*************************************************************************** 
+;***************************************************************************
 
 
 
@@ -1949,7 +2182,6 @@ Return
 ;************************* MENU, CFIND, FUNCTIONS **************************
 ;*************************************************************************** 
 ahksearchmenu:
-;; run, https://www.autohotkey.com/search/?q=%Find%
 		global ClipSaved
 		IfLive()
         if (Clipboard = "") { ; If the clipboard is empty, use the old clipboard content
@@ -1960,11 +2192,12 @@ ahksearchmenu:
 		sleep 200
 		run, "https://www.autohotkey.com/search/?q=%clipboard%"
 		sleep 200
-        Clipboard := ClipSaved
-		sleep 200
-
+        ; Clipboard := ClipSaved
+		; sleep 200
+		restoreclipboard()
+		sleep 50
 return
-
+/*
 ahksearch() ;; function ;; todo clean up this double menu call, this one is not being used, here for ref
 {
 Global ClipSaved
@@ -1985,7 +2218,7 @@ sleep 175
         Clipboard := ClipSaved ; Restore the original clipboard content
 return
 }
-
+*/
 Dictionarydotcom:  ; added to caps\ccase menu
 IfLive()
 Word := RegExReplace(Clipboard, "[^\w\s]")
@@ -2057,7 +2290,7 @@ return
 
 ;--------------------------------------------------
 ; HELPFILES := {"AutoHotkey.chm": "C:\\Program Files\\AutoHotkey\\AutoHotkey.chm"}
-
+; C:\Program Files\AutoHotkey\AutoHotkey.chm
 ; For k, v in HELPFILES
 ; {
 ;     Label := Func("GetHelp").Bind(v, StrReplace(A_Args[1], "#", "_"))
@@ -2110,7 +2343,7 @@ GetHelp(HelpFile) {
 
 sleep 800
 restoreclipboard()
-sleep 20
+sleep 800
 return
 ;--------------------------------------------------
 ;************************* END, MENU, CFIND, FUNCTIONS *********************
@@ -2126,7 +2359,6 @@ dtMenuAction:
 Return
 
 ;************************* TEST SWAP START SECTION *************************
-; !S:: ;; test swap testing errors
 /*
 ; [ text_swap script info]
 ; version     = 1.2
@@ -2134,6 +2366,7 @@ Return
 ; author      = davebrny
 ; source      = https://gist.github.com/davebrny/8bdbef225aedf6478c2cb6414f4b9bce
 */
+
 text_swap:
 repeat_last_swap_interactive:
 textswap()
@@ -2319,9 +2552,10 @@ iflive()
 sleep 75
 cleanuppathstring()
 sleep 75
-dir := clipboard 
-FileGetAttrib, Attributes, % dir
-
+; dir := clipboard
+; FileGetAttrib, Attributes, % dir
+FileGetAttrib, Attributes, %clipboard%
+; MsgBox, 4160, dugbug check, clipboard:  %clipboard%`n`nFN: %filename%`nDir: %dir%`next: %ext%`nFs: %filestem%`nDv: %drive%\`nLF: %lastfolder%`n`nAF: %Activefile%`n`nHL: %highlighted%`n`nSN: %A_scriptname%`nLine: %a_linenumber%, 30
 ;Folders\\Dirs
 IfInString, Attributes, D 
 		{
@@ -2345,7 +2579,8 @@ IfInString, clipboard, "shell:::"
 		Return
 		}
 ;open\\run files by ext
-	if % ext = "ahk"
+	; if % ext = "ahk"
+	if (ext = "ahk")
 		{
 		try Run %texteditor% "%clipboard%"
 		catch
@@ -2355,7 +2590,8 @@ IfInString, clipboard, "shell:::"
 		sleep 300
 		Return
 		}
-	else if % ext = "ico" 
+	; else if % ext = "ico"
+	else if (ext = "ico")
 		{
 		try Run %xnviewmp% "%clipboard%"
 			catch
@@ -2365,14 +2601,14 @@ IfInString, clipboard, "shell:::"
 		sleep 300
 		Return
 		}
-	else if % ext = "exe" 
+	else if (ext = "exe")
 		{
 		run "%clipboard%",,useerrorlevel  ; Run % "Explorer.exe /select, " Chr(34) clipboard Chr(34) ;; Chr(34) is quote this opens explore with the file selected
 		if errorlevel
 				{
 				LogError(Clipboard)
-				Tooltip, ERR! Could not open this File or Dir.`nPlease Check the Path.
-				Sleep, 2000
+				Tooltip, ERR! @ Line: %a_linenumber%`nCould not open this File or Dir.`nPlease Check the Path.
+				Sleep, 2500
 				Tooltip
 				}
 		sleep 400
@@ -2386,13 +2622,13 @@ IfInString, clipboard, "shell:::"
 			if errorlevel
 				{
 				LogError(Clipboard)
-				Tooltip, ERR! Could not open this File or Dir.`nPlease Check the Path.
+				Tooltip, ERR! @ Line: %A_linenumber%`nCould not open this File or Dir.`nPlease Check the Path.
 				Sleep, 2000
 				Tooltip
 				}
 		sleep 100
 		restoreclipboard()
-		sleep 300
+		sleep 800
 		return
 		}
 
@@ -2409,7 +2645,7 @@ IfInString, clipboard, "shell:::"
 		; }
 sleep 200
 restoreclipboard()
-sleep 300
+sleep 750
 return
 
 runshell:
@@ -2542,6 +2778,7 @@ gowebsite:
 Global ClipSaved
 iflive()
 sleep 90
+Clipboard := RegExReplace(RegExReplace(Clipboard, "\r?\n"," "), "(^\s+|\s+$)")
 ;websites//urls
 	If SubStr(ClipBoard,1,8)="https://"
 		{
@@ -2580,15 +2817,7 @@ restoreclipboard()
 sleep 20
 return
 
-LogError(Path) { ;; logerror function
-global clipsaved, filename, ext, filestem, dir, lastfolder
-    if ErrorLevel
-    {
-    FileAppend, % "*`n+-=START=-+`nError Info...`nTime: " A_Now "`n@ Line: " A_LineNumber "`nClipboard := " Clipboard "`n`nWhich Hotkey: " A_ThisHotkey "`nThis Label: " A_ThisLabel "`nWhich Menu: " A_ThisMenu "`nWhich Menu Item: " A_ThisMenuItem "`nMenu Pos: " A_ThisMenuItemPos "`nFull Menu text...`nmenu`, " A_thismenu "`, Add`, " A_ThisMenuItem "`, " A_ThisLabel "`n`nVars listed.....`nFilename: " filename "`nExt: " ext "`nFilestem: " filestem "`nDir: " dir "`nParent-LastFolder: " lastfolder "`n`nEvent Info: " A_EventInfo "`nLast Error: " A_LastError "`nThis Func: " A_ThisFunc "`n+-=END=-+`n", %A_ScriptDir%\%A_scriptname%- ERROR LOG.txt,UTF-8
-	sleep 500
-    Return
-    }
-}
+
 ; OpenREGfromselection:
 ;Open Regedit and navigate to RegPath.
 ;RegPath accepts both HKEY_LOCAL_MACHINE and HKLM formats.
@@ -2993,14 +3222,14 @@ iflive()
 sleep 20
 cleanuppathstring()
 sleep 20
-	if InStr(Clipboard, "%")  ; If it contains environment variables
-		{
+	; if InStr(Clipboard, "%")  ; If it contains environment variables
+		; {
 		
-		try run %everything15a% -newtab -s "%clipboard%"
-		sleep 500
-		RestoreClipboard()
-		return
-		}
+		; try run %everything15a% -newtab -s "%clipboard%"
+		; sleep 500
+		; RestoreClipboard()
+		; return
+		; }
 	if !(FileExist(Clipboard))
 		{
         ToolTip, ERR. Directory or File Not Found!`nTrying Parent Dir Instead.
@@ -3013,9 +3242,8 @@ sleep 20
 		FileGetAttrib, Attributes, %Clipboard%
         if (InStr(Attributes, "D"))  ; If it's a directory
 		{
-			clipboard := RegExReplace(clipboard, "\\$") ; removed trailing "\" 
+			clipboard := RegExReplace(clipboard, "\\$") ; removes trailing "\" 
 			sleep 200
-		    ; send, "%Clipboard%"
 			try run %everything15a% -newtab -s """"%clipboard%""""
 		}
 		else ; If it's a file
@@ -3025,9 +3253,9 @@ sleep 20
 		}
 
 	}
-Sleep, 300
+Sleep 300
 restoreclipboard()
-sleep 90
+sleep 750
 return
 
 
@@ -3041,8 +3269,9 @@ if (class != "Notepad++")  ; Check if the active window is not Notepad++
 	sleep 50
 	return
 	}
+sleep 50
 sendinput, ^f
-sleep 350
+sleep 400
 sendinput, !d
 return
 
@@ -3315,6 +3544,19 @@ try run %ditto% /Open
 }
 return
 
+runQCE:
+if !fileexist(qce)
+	{
+	MsgBox, 262209, ECLM - App Launcher, Qucik Clipboard Editor cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, https://clipboard.quickaccesspopup.com/
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		Return
+	}
+try run %qce%
+return
 abc:
 try run, %A_ScriptDir%\AutoCorrect\AutoCorrect_2.0_ECLM.ahk
 return
@@ -3328,9 +3570,14 @@ return
 
 #If !(WinActive("ahk_exe dopus.exe"))  ; Exclude Directory Opus (dopus.exe) for following hotkeys
 
-~MButton::
+; ~MButton::
+ShowTheMainMenu:
 menucaseshow()
 return
+; ^!f3:: ;; alt hotkey
+ShowTheMainMenuALTHK:
+menucaseshow()
+RETURN
 
 ; ^space::
 ; gosub expmenu
@@ -3342,18 +3589,16 @@ return
     Gosub StopSpeaking
 Return
 
-^+r:: ;Reload Script
+; ^+r:: ;; Reload Script
 reload:
 tooltip, %ScriptName%`nis Reloading...
 sleep 700
 tooltip
-SLEEP 30
+sleep 30
 reload
 return
 
-^!f3:: ;; alt hotkey
-menucaseshow()
-RETURN
+
 
 $CapsLock:: ;; E CapsLock Menu!!!
     KeyWait CapsLock, T0.15
@@ -3372,9 +3617,10 @@ $CapsLock:: ;; E CapsLock Menu!!!
     KeyWait CapsLock
 return
 
-^!esc:: ;; exit ECLM
-exitapp
-return
+; ^!esc:: ;; exit ECLM
+; exitscript:
+; exitapp
+; return
 ;///////////////////////////////////////////////////////////////////////////
 
 ;; gui, sticky, hotkeys, gui sticky hotkeys, gui hotkeys *************************
@@ -3408,22 +3654,22 @@ return
 ;///////////////////////////////////////////////////////////////////////////
 
 #If GetKeyState("CapsLock", "T") && ShiftedNumRow  ; Check the toggle state // shifted number row hotkeys with toggle
-    `::+` ; Shifted Capslock
-    1::+1 ; Shifted Capslock
-    2::+2 ; Shifted Capslock
-    3::+3 ; Shifted Capslock
-    4::+4 ; Shifted Capslock
-    5::+5 ; Shifted Capslock
-    6::+6 ; Shifted Capslock
-    7::+7 ; Shifted Capslock
-    8::+8 ; Shifted Capslock
-    9::+9 ; Shifted Capslock
-    0::+0 ; Shifted Capslock
-    -::+- ; Shifted Capslock
-    =::+= ; Shifted Capslock
-    [::+[ ; Shifted Capslock
-    ]::+] ; Shifted Capslock
-    \::+\ ; Shifted Capslock
+    `::+` ;;  Shifted Capslock
+    1::+1 ;;  Shifted Capslock
+    2::+2 ;;  Shifted Capslock
+    3::+3 ;;  Shifted Capslock
+    4::+4 ;;  Shifted Capslock
+    5::+5 ;;  Shifted Capslock
+    6::+6 ;;  Shifted Capslock
+    7::+7 ;;  Shifted Capslock
+    8::+8 ;;  Shifted Capslock
+    9::+9 ;;  Shifted Capslock
+    0::+0 ;;  Shifted Capslock
+    -::+- ;;  Shifted Capslock
+    =::+= ;;  Shifted Capslock
+    [::+[ ;;  Shifted Capslock
+    ]::+] ;;  Shifted Capslock
+    \::+\ ;;  Shifted Capslock
 #If
 ;///////////////////////////////////////////////////////////////////////////
 ;------------------------- SHOW MENUS COMMANDS
@@ -3440,6 +3686,10 @@ showfindmenu:
 menu, cfind, show
 return
 showdtmenu:
+Menu, dtmenu, DeleteAll ;new ;refreshes time menu from click
+Date := A_Now
+List := DateFormats(A_now)
+TextMenuDate(List)
 menu, dtmenu, show
 return
 showctxtmenu:
@@ -3463,7 +3713,7 @@ return
 	saved := () ; clear saved
 Return
 
-^':: ;;'Put selected text in "Quotes"
+^':: ;; Put selected text in "Quotes"
 ClipQuote:
 global clipsaved
 copyclipboardclm()
@@ -3475,7 +3725,7 @@ pasteclipboardclm()
 sleep 100
 return
 
-+CapsLock::    ; Switch between UPPERCASE & lowercase
++CapsLock::    ;; Switch between UPPERCASE & lowercase
   origClipboard=%clipboard%
   clipboard=
 sleep 200
@@ -3494,9 +3744,10 @@ sleep 200
     else
       StringUpper, clipboard, clipboard
     SendInput, ^{vk56} ;Ctrl V
-    Sleep, 350
+    Sleep, 400
   }
   clipboard=%origClipboard%
+  sleep 400
 return
 
 ^!f2:: ;; my own stickies
@@ -3504,7 +3755,7 @@ newsticky:
 CreateStickyNote()
 return
 
-^+F2:: ;;; new sticky from selection
+^+F2:: ;; new sticky from selection
 CopyToStickyNote()
 return
 
@@ -3688,12 +3939,12 @@ if FileExist(inifile)
 		try run, %texteditor% "%inifile%"
 		catch
 		run notepad.exe "%inifile%"
+		return
 	}
 	else
 	{
+
 	gosub makeini
-	; defaultIniSettings := GetDefaultIniSettings()
-    ; FileAppend, %defaultIniSettings%, %inifile%
     Sleep 750
     ToolTip, Your settings file was not found.`nCreating a new one. One moment please.
     Sleep 2000
@@ -3736,7 +3987,7 @@ IfMsgBox timeout
 return
 
 ShiftedNumRow:
-    ShiftedNumRow := !ShiftedNumRow
+    ShiftedNumRow := !ShiftedNumRow  ; Toggle the state
     if (ShiftedNumRow)
         {
 		ToolTip, Shifted # Row is Enabled`n`~`!`@`#`$`%`^`&`*`(`)`_`+`{`}`|
@@ -3754,7 +4005,7 @@ ShiftedNumRow:
 Return
 
 ToggleReplaceNPPRightClick: 
-    ReplaceNPPRightClick := !ReplaceNPPRightClick
+    ReplaceNPPRightClick := !ReplaceNPPRightClick ; Toggle the setting
 	menu, cset, togglecheck, Replace the NP++ Right Click Menu
 	if (ReplaceNPPRightClick)
 		{
@@ -3785,7 +4036,7 @@ openquick:
 return
 
 aboutsoftwareL:
-msgbox, A quick note the Software Launchers.`n`nThe AutoHotkey Auto Spelling Correct Script is already included with this download. That will run. -- The others are not included.`n`nThese are great Software Tools for working with text, they are free to download and install. Links are in the about window.`n`nIf you install them anywhere other than their default locations you have to update the PROGRAM PATHS to the .exe files inside of the settings file manually.
+msgbox, 262144, A quick note the Software Launchers.`n`nThe AutoHotkey Auto Spelling Correct Script is already included with this download. That will run. -- The others are not included.`n`nThese are great Software Tools for working with text, they are free to download and install. Links are in the about window.`n`nIf you install them anywhere other than their default locations you have to update the PROGRAM PATHS to the .exe files inside of the settings file manually.
 return
 
 suspendkeys:
@@ -3819,13 +4070,40 @@ return
 
 
 runasadmin:
- If !A_IsAdmin
- 	 Run *RunAs "%A_ScriptFullPath%"
+If !A_IsAdmin {
+    Run *RunAs "%A_ScriptFullPath%" ; Relaunch script as admin
+} else {
+	MsgBox, 4420, Running As Admin, If you don't want this script running as Admin any longer you must Exit it completely and Re-Run it.`n`nWould you like to EXIT\QUIT now?`n`nYou have to Restart it Manually afterward.`n`nYES = KILL`nNO = Continue as Admin, 30
+    IfMsgBox Yes
+		exitapp
+	IfMsgBox No
+		return
+	IfMsgBox timeout
+		return
+}
 return
+
 
 makeini:
 fileappend,
 (
+; [MENU_TOGGLES]
+
+[Beep_Enabled]
+key=1
+[LiveMenuEnabled]
+key=0
+[ShiftedNumRow]
+key=0
+[ReplaceNPPRightClick]
+key=0
+[DarkMode]
+key=1
+[OSD]
+key=1
+
+
+
 [Programs]
 Texteditor = C:\Program Files\Notepad++\notepad++.exe
 
@@ -3840,88 +4118,309 @@ everything15a = C:\Program Files\Everything 1.5a\Everything64.exe
 excel = C:\Program Files (x86)\Microsoft Office\root\Office16\EXCEL.EXE
 geany = C:\Program Files\Geany\bin\geany.exe
 markdownmonster = C:\Program Files\Markdown Monster\MarkdownMonster.exe
-notepad4 = C:\Program Files Portable\Notepad4\Notepad4.exe
+notepad4 = C:\Program Files\Notepad4\Notepad4.exe
 notepadpp = C:\Program Files\Notepad++\notepad++.exe
 obsidian = C:\Users\%A_Username%\AppData\Local\Programs\obsidian\Obsidian.exe
 obsidianshell = C:\Program Files Portable\ObsidianShell\ObsidianShell.CLI.exe
+QCE = C:\Program Files\Quick Clipboard Editor\QuickClipboardEditor.exe
+QCEm = C:\Program Files\Quick Clipboard Editor\QCEmessenger.exe
 scite = C:\Program Files\AutoHotkey\SciTE\SciTE.exe
 sharex = C:\Program Files\ShareX\ShareX.exe
+SublimeText = C:\Program Files\Sublime Text\sublime_text.exe
 textgrab = C:\Program Files\Text-Grab\Text-Grab.exe
-textify = C:\Users\%A_username%\AppData\Local\Programs\Textify\Textify.exe
+textify = C:\Users\%A_Username%\AppData\Local\Programs\Textify\Textify.exe
 vscode = C:\Users\%A_Username%\AppData\Local\Programs\Microsoft VS Code\code.exe
-VSCodium = C:\Program Files Portable\vscodium-portable\VSCodium.exe
+VSCodium = C:\Users\%A_Username%\AppData\Local\Programs\VSCodium\VSCodium.exe
 word = C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE
 xnviewmp = C:\Program Files\XnViewMP\xnviewmp.exe
 
 
-[Beep_Enabled]
-key=1
-[LiveMenuEnabled]
-key=0
-[ShiftedNumRow]
-key=0
-[ReplaceNPPRightClick]
-key=0
-[DarkMode]
-key=1
-[OSD]
-key=1
-), %inifile%
+
+
+
+
+
+[Global_Hotkeys]
+;; ITEMS ON THE MAIN MENU
+;**************************************************
+ShowTheMainMenu=~MButton
+ShowTheMainMenuALTHK=^!F3
+; - Curly Brackets on New Lines
+wrapincbrackets=
+; - Wrap selected text in Quotes
+clipquote=^'
+; - Show Extended Capslock Menu on menu tray
+Capsmenubutton=
+; - Emoji Keyboard
+; - Copy (Add to Clipboard)
+appendclip=
+; - Show the Insert Date & Time MENU
+showdtmenu=
+
+;; - ITEMS ON THE TEXT TOOLS & APPS MENU
+;**************************************************
+; - Show the Text Tools MENU
+showtoolsmenu=
+; - Save Selection To New Document
+newtxtfile=
+; - Quick Save Selection to New.txt File
+quicktxtfile=
+; - Copy Selected to New Np++ Document
+newnpppdoc=
+; - Save Clipboard to New Document
+SaveClipboardAsTxt=
+; - View Clipboard Text
+viewclip=
+; - Clear Clipboard
+clearclip=
+; - Grab Location Bar Address (Copy)
+copylocationbar=
+; - Copy Selection to Temp Sticky
+CopyToStickyNote=
+; - Read [Selected Text] Out Loud
+TextToSpeech=
+; - Software Launchers (About)
+aboutsoftwareL=
+; - Run AHK Auto Correct (Included)
+abc=
+; - Ditto Clipboard
+runditto=
+; - Quick Clipboard Editor
+runQCE=
+; - Textify
+runtextify=
+; - Text Grab
+runtextgrab=
+; - Notepad++
+runnotepadpp=
+
+;; - ITEMS ON THE FIND\SEARCH SELECTED TEXT... MENU
+;**************************************************
+showfindmenu=
+; - Google This
+googlethis=
+; - Youtube This
+youtubethis=
+; - Define Word (Google)
+definethis=
+; - Wikipedia Search
+wikipediasearch=
+; - AHK Site Search via Google
+ahksearchmenu=
+; - Visit Website [If a URL is selected]
+gowebsite=#!u
+; - Local Searches
+; - Everything, Find [Selected Text] Locally
+Findwitheverything=
+; - System Index, Find with EveryThing 1.5a
+evindex=
+; - NP++, Find in Files
+findinfilesnpp=
+; - Find in Files with AstroGrep
+findastro=
+; - Find in Files with dnGREP
+finddngrep=
+; - Search in AHK Help File (Local)
+ahkhelplocal=
+; - Look up on Dictionary.com & Thesaurus.com
+Dictionarydotcom=
+
+;; - ITEMS ON THE OPEN\RUN\EXPLORE\FILES... Menu
+;**************************************************
+; - Show the IF Files\Dirs is [Selected] Menu
+showopenmenu=
+; - Open Folder
+OpenDIRselection=
+; - Run\Open File
+RUNfromselection=
+; - Copy File\Folder to
+COPYfromselection=
+; - Explore Folder in Everything
+EVpath=
+; - Search File in Everything
+EVfile=
+; - Load Path into dnGREP for Searching
+dngreploadpath=
+; - Edit in Text Editor
+Edittxtfile=
+; - Duplicate File as "File Name -CopyDup.ext"
+makedup=
+; - File Content to Clipboard (Text-Based Files)
+filetoclipboard=
+; - Jump to Key in RegEdit
+RegJump=
+; - Windows Context Menu
+wincontextmenu=
+; - View Explore Folder Popup Menu
+expmenu=
+; - If NP++ Switch to Alt Open With Menu
+alttxtnppmenu=
+; - Put File into Subfolder (Folder takes Filename)
+movefiletofolder=
+; - Copy File Names & Details of Folder to Clipboard
+copydetails=
+
+;; - ITEMS ON THE CODE FORMATTING..... MENU
+;**************************************************
+; - 1 /* Block Comment */
+commentblock=
+; - 2 {Wrapped}
+cbrakectswrapped=
+; - 3 (Parentheses)
+wrapparen=
+; - 4 [Square Brackets]
+squbracket=
+; - 5 `% PercentVar `%
+wrappercent=
+; - 6 `Code - Inline`
+CodeLine=
+; - 7 ```Code - Box```
+CodeBox=
+; - 8 [code]Box - Forum[/code]
+forumcodebox=
+; - 9 <kbd>K</kbd>
+dopusK=
+; - 0 <!-- xml Comment -->
+wrapinxmlcomment=
+
+; - B Expand `% A_ScriptDir `%
+expandscriptdir=
+; - C Encode XML
+Encodexml=
+; - D Decode XML
+decodexml=
+; - E Covert file:\\\url to Std Path
+convertfileurl=
+
+;; - ITEMS ON THE MODIFY TEXT & CASE MENU
+;**************************************************
+; - Show the Modify Text & Case menu
+showctxtmenu=
+; - UPPERCASE
+Upper=
+; - lowercase
+Lower=
+; - Title Case
+Title=
+; - Sentence case
+Sentence=
+; - Capital Case
+Capital=
+; - Reverse - esreveR
+Reverse=
+; - iNVERT cASE
+Invert=
+; - Convert Numbers&Symbols, 123$`%^<->!@#456
+convertsymbols=
+; - PascalCase
+Pascal=
+; - camelCase
+camel=
+; - aLtErNaTiNg cAsE
+Alternating=
+; - Remove Extra Spaces
+RemoveExtraS=
+; - RemoveALL Spaces
+RASpace=
+; - Space to Dot.Case
+addDot=
+; - Remove.Dot to Space
+removedot=
+; - Space to Under_Score
+addunderscore=
+; - Remove_Underscore to Space
+removeunderscore=
+; - Space to Dash-Case
+adddash=
+; - Remove-Dash to Space
+removedash=
+; - Sort > 0-9,A-Z
+sorttext=
+; - Fix Linebreaks
+FixLineBreaks=
+; - Remove Illegal Characters & Emojis
+removeillegal=
+; - Swap at Anchor Word
+text_swap=
+
+;; - ITEMS ON THE SETTINGS & ABOUT MENU
+;**************************************************
+; - Show the Settings & About MENU
+showsettingsmenu=
+; - Toggle Live Preview & Auto Copy
+ToggleLiveMenu=
+; - Dark Mode | Light Mode
+DMToggle=
+; - Mute Sound on Capslock Toggle
+togglebeepsetting=
+; - Show OSD for Capslock State
+osdtoggle=
+; - Capslock for Number Row (On\Off) ~!@#$`%^&*()_+
+shiftednumrow=
+; - About Extended Caps Lock Menu
+aboutcapswindow=
+; - Visit Github Webpage
+visitgithub=
+; - Edit Main Script
+editscript=
+; - Edit Settings File
+editsettings=
+; - Reload Script - Ctrl + Shift + R
+reload=^+R
+; - View Hotkeys
+viewhotkeys=
+; - Suspend Hotkeys
+suspendkeys=
+; - Quit \ Exit \ Kill - Ctrl + Alt + Esc
+exitscript=^!esc
+
+;; - ALT-TEXT EDITOR MENU ITEMS
+; NOTE !! this menu was mainly set up to use when Notepad++ is Active. it will work in some other instances thou BE CAREFUL setting global hotkeys here, it my not work as expected in other apps.
+;**************************************************
+;**************************************************
+; - Open With Menu
+altmenualttxtshow=
+altoinppp=
+; - Notepad4
+altoinotepad4=
+; - Scite 4 AHK
+altoiscite=
+; - AHK Studio
+altoiahkstudio=
+; - VS Code
+altoivscode=
+; - Geany
+altoigeany=
+; - Word
+altoiword=
+; - Excel
+altoiexcel=
+; - Duplicate File
+altmakedup=
+; - Copy Full File Path
+altcopypath=
+; - Copy File Name
+altcopyname=
+; - Search in Everything
+altevfile=
+; - Explore in Everything
+altevexp=
+)
+, %inifile%
+
 return
 
 
-GetDefaultIniSettings() {
-    return "
-    (
-[Programs]
-Texteditor = C:\Program Files\Notepad++\notepad++.exe
-
-ahkstudio = C:\Program Files Portable\AHK Studio V2\AHK-Studio V2.ahk
-astrogrep = C:\Program Files (x86)\AstroGrep\AstroGrep.exe
-bcompare = C:\Program Files\Beyond Compare 5\BCompare.exe
-ditto = C:\Program Files\Ditto\Ditto.exe 
-dngrep = C:\Program Files\dnGrep\dnGREP.exe
-dopus = C:\Program Files\GPSoftware\Directory Opus\dopus.exe
-dopusrt = C:\Program Files\GPSoftware\Directory Opus\dopusrt.exe
-everything15a = C:\Program Files\Everything 1.5a\Everything64.exe
-excel = C:\Program Files (x86)\Microsoft Office\root\Office16\EXCEL.EXE
-geany = C:\Program Files\Geany\bin\geany.exe
-markdownmonster = C:\Program Files\Markdown Monster\MarkdownMonster.exe
-notepad4 = C:\Program Files Portable\Notepad4\Notepad4.exe
-notepadpp = C:\Program Files\Notepad++\notepad++.exe
-obsidian = C:\Users\%A_Username%\AppData\Local\Programs\obsidian\Obsidian.exe
-obsidianshell = C:\Program Files Portable\ObsidianShell\ObsidianShell.CLI.exe
-scite = C:\Program Files\AutoHotkey\SciTE\SciTE.exe
-sharex = C:\Program Files\ShareX\ShareX.exe
-textgrab = C:\Program Files\Text-Grab\Text-Grab.exe
-textify = C:\Users\%A_username%\AppData\Local\Programs\Textify\Textify.exe
-vscode = C:\Users\%A_Username%\AppData\Local\Programs\Microsoft VS Code\code.exe
-VSCodium = C:\Program Files Portable\vscodium-portable\VSCodium.exe
-word = C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE
-xnviewmp = C:\Program Files\XnViewMP\xnviewmp.exe
-
-[Beep_Enabled]
-key=1
-[LiveMenuEnabled]
-key=0
-[ShiftedNumRow]
-key=0
-[ReplaceNPPRightClick]
-key=0
-[DarkMode]
-key=1
-[OSD]
-key=1
-    )"
-}
 
 
 
 
 Aboutcapswindow() ;; function GUI
 {
-global
-aboutcapswindow := " ;"
+global SelectedTab, scriptname, scriptversion, inifile, iniload, inicontent
+
+
+overview := "
 (
 This Extended Capslock Menu is a expanded context menu, written with AutoHotkey.
 Its made for working\playing with text.
@@ -3984,90 +4483,14 @@ There's a handful of light-weight text editors that I play with... This menu can
 If you're an AHK enthusiast I recommend adding your own editors. 
  
 ... And more ...
-************************************************** 
-**************************************************
-**************************************************
-A note about the softwares used by Extended Caplock Menu...
-&& Stored Prefs in the 'Edit -SETTINGS.ini File' +!+!+
-**************************************************
-You can change a few defaults for the menu. Such as...,
-	*- Auto Copy & Live Preview (OFF by default),
-	*- Replace the NP++ Right Click Menu (OFF by Default)
-	- Change Dark\Light Mode (Dark ON by default),
-	- Sound Beeps on Caplock Toggle (ON by default),
-	- Caplocks for Number Row (OFF by default),
-These toggles are stored in the '.ini' file and will persist after reloading the menu.
-**************************************************
-
-**Links most all software referenced are listed below and on the about window**
-**Or a Quick google search (from the menu) can help you find the other ones**
-All software referenced in Extended Capslock Menu are free with the exception of Directory Opus.
-Which I HIGHLY recommended as the most Amazing, Pleasant and Over-Powerful File Manager\Explorer Replacement ever made! Seriously I haven't use windows explorer in over decade because, just, no.
-	You can find out more on their...
-	- Forums, https://resource.dopus.com/
-	- Website, https://www.gpsoft.com.au  and\or
-	- Documentation, https://docs.dopus.com/doku.php?id=introduction. 
-There is a free 60 day trail you try. Should you enjoy it
- you can use this reference code for 15% off your purchase --> ' CW4D0S289B4K '.
-This menu tries to interact directly with the following programs...
-	* Everything 1.5a
-	* AstroGrep
-	* dnGrep
-	* Notepad++
-	*$ Directory Opus
-This menu will try to launch, but not interact with these other great text tools...
-	* Ditto
-	* Textify
-	* Text Grab
-	* Notepad++
-	* AHK Auto Correct (already included with this download)
-The Alternative Text Editor Menu for Notepad++ will try to open the active file in...
-	* Notepad4
-	* Geany
-	* VS Code or VS Codium
-	* Scite 4 AHK
-	* AHK Studio
-	* MS Word
-	* MS Excel
-	* Markdown Monster - $hareware
-These are just the ones I use, if you know how, the 'alttxt' menu could be edited to include other text editors From the '.ahk' script file.
+)"
+aboutcapswindow := " ;" more notes
+(
 
 **************************************************
-+!+!+!+!++!+!+!+!++!+!+!+!+
-(!IMPORTANT!)
- >>> ASSIGNING YOUR DEFAULT LOCATIONS FOR
- >>> THE OTHER SOFTWARE THIS MENU INTERACTS WITH.
- If you want to that is. The 3rd party software(s) are Optional, more below.
-+!+!+!+!++!+!+!+!++!+!+!+!+
 **************************************************
 
-The list of software used in the menu are referenced as variables from the '-SETTINGS.ini' file. They have to be updated to suite your system MANUALLY with a simple copy and paste. Use the 'Edit Settings.ini File' from the settings sub-menu as a quick shortcut to the file.
 
-They will try to run from the default install locations, as set in the .ini, IF you have them installed in a different location you NEED update them there. Paste the true path to your .exe's, without quotes.
-
-If not updated or if not installed the 3rd party software menu functions just won't do anything. SO THEY ARE NOT REQUIRED. Thou, don't delete or leave a reference empty as it could cause annoying popup messages box about variables not being assigned from AHK.
-
-	For example, Ditto (a clipboard manager),
-	as custom portable install should be changed to...
-		ditto = X:\Portable Program Files\Ditto\ditto.exe
-	rather than the default...
-		C:\Program Files\Ditto\ditto.exe
-
-Now anywhere in the script you see Run, %ditto% - it will be run from the file path your have provided here.
-
-You can also set your favorite Default Text Editor here.
-
-If not set text files will try to open with Notepad++.exe.
-As I have preset it. If NP++ is not installed (at its default location),
-then it defaults windows own Notepad.exe.
-Replace...
-	Texteditor = C:\Program Files\Notepad++\notepad++.exe
-with...
-	Texteditor = X:\Your favorite\text\editor.exe
-
-
-
-***************************************************
 ***************************************************
 ****** KNOWN ISSUES & AUTO COPY MODE WARNING ******
 ***************************************************
@@ -4114,16 +4537,106 @@ You can still access NP++ own context menu with a 'Ctrl' + 'Right Click' or the 
 
 )" 
 
+aboutsoftware := "
+(
+**************************************************
+A note about the softwares used by Extended Caplock Menu...
+&& Stored Prefs in the 'Edit -SETTINGS.ini File' +!+!+
+**************************************************
+
+There are a few pieces of software I use that built into this menu.`nAll free except one. Links are below.`nIf the link is ***marked with*** it means...`nThe menu interacts with this software for searchers or file operations.`nThe unmarked links are only quick launcher that open software, like the start menu.`n`nHeres a list of links to them if you want some awesome software.
+
+**************************************************
+
+**Links most all software referenced are listed below and on the about window**
+**Or a Quick google search (from the menu) can help you find the other ones**
+
+All software referenced in Extended Capslock Menu are free with the exception of Directory Opus.
+Which I HIGHLY recommended as the most Amazing, Pleasant and Over-Powerful File Manager\Explorer Replacement ever made! Seriously I haven't use windows explorer in over decade because, just, no.
+	You can find out more on their...
+	- Forums, https://resource.dopus.com/
+	- Website, https://www.gpsoft.com.au  and\or
+	- Documentation, https://docs.dopus.com/doku.php?id=introduction.
+There is a free 60 day trail you try. Should you enjoy it
+ you can use this reference code for 15% off your purchase --> ' CW4D0S289B4K '.
+
+This menu tries to interact directly with the following programs...
+	* Everything 1.5a
+	* AstroGrep
+	* dnGrep
+	* Notepad++
+	*$ Directory Opus
+
+This menu will try to launch, but not interact with these other great text tools...
+	* Ditto
+	* Textify
+	* Text Grab
+	* Notepad++
+	* AHK Auto Correct (already included with this download)
+
+The Alternative Text Editor Menu for Notepad++ will try to open the active file in...
+	* Notepad4
+	* Geany
+	* VS Code or VS Codium
+	* Scite 4 AHK
+	* AHK Studio
+	* MS Word
+	* MS Excel
+	* Markdown Monster - $hareware
+These are just the ones I use, if you know how, the 'alttxt' menu could be edited to include other text editors From the '.ahk' script file.
+
+**************************************************
++!+!+!+!++!+!+!+!++!+!+!+!+
+(!IMPORTANT!)
+ >>> ASSIGNING YOUR DEFAULT LOCATIONS FOR
+ >>> THE OTHER SOFTWARE THIS MENU INTERACTS WITH.
+ If you want to that is. The 3rd party software(s) are Optional, info on the settings tab.
++!+!+!+!++!+!+!+!++!+!+!+!+
+**************************************************
+
+
+)"
 
 ; " changelog = change log =
 changelog := " ;"
 (
 
-*************************************************************
-************************* CHANGELOG ************************* 
-*************************************************************
 
 
+------ v.2025.01.12 --------------------------- v.2025.01.27
+
++++ Improved \ Shortened the copy time when using a single tap on the Capslock key to copy !!!
+
++++ Added the ability to set global hotkeys that be added, changed & saved in the .INI for most menu items
+
++++ added a Dynamic sleep function into the the RestoreClipBoard Fuctions for better handling of the clipboard being restored correctly
+
++ added DPI-Awareness DllCall to fix the context menu show in the wrong spot on multi-montier setup with mixed DPIs.
+
++ added Modeless Menu Function, a windows DllCall that allow you use hotkeys from the script when the menu is open! Usually AHK blocks hotkeys when its busy showing a menu.
+
++ added UseErrorLevel to the menu so if there's an error detected on a sinlge menu item, the menu will still show without being killed by AHK
+
++ added 123 < to > !@#`, Convert Between Numbers<&&>Symbols to text menu
+
++ added expand %A_ScriptDir% to code menu
+
++ added Encode & Decode XML to code menu ( todo these need be error check some more but they're there for now )
+
++ added Convert file:///C:/file.url to standard Path to code menu
+
++ added improvements\expansion to file:///C:/file.url Handleing
+
++ added ( Script is Running as ADMIN ) notification to settings menu when script is elevated
+
++ improvements to error levels & handling of windows `%System Environment Variables`%
+
++ updated About GUI with tabs to spread out all the info provided
+
++ added the ability to edit settings in the '-SETTINGS.ini' file directly from About GUI
+
++ added the ability to check github for updates from the about window
++ added Quick Clip Board Editor to the Tools Menu
 ------ v.2024.12.19 ---------------------------
 
 =+ fixed a syntax error when sending a system index search to Everything
@@ -4138,6 +4651,7 @@ changelog := " ;"
 + Added  a hot to Quit\Exit App, `Ctrl` + `Alt` + `Esc`
 
 = improved variable expansion when creating settings.ini file 
++ a handful of small bug fix adjustments
 
 ------ v.2024.12.03 ---------------------------
 
@@ -4244,7 +4758,7 @@ new, double click to open extend capslock menu
 
 + added search selection in files via astrogrep
 
-+++ Added two special If Notepad++ is active menus triggered by hotkeys
++++ Added two special If, Notepad++ is active menus triggered by hotkeys
 + add notepad++ menus , open in alttxt editor menu with hotkey ^!N:: `Ctrl` + `Alt` + `N`
 + added ^{space} hotkey to notepad++ for the folder explorer menu
 	- also works in Everything 1.5a on a selected file.
@@ -4356,57 +4870,288 @@ this option can be toggled on\off
 )"
 ;"
 
+; aboutini := "
+aboutini = 
+(
+
+**************************************************
+** ABOUT [MENU_TOGGLES] **************************
+**************************************************
+These items are toggled on Setting & About Menu
+These toggles are stored in the '.ini' file and will persist after reloading the menu.
+
+	- Auto Copy & Live Preview (OFF by default),
+	- Replace the NP++ Right Click Menu (OFF by Default)
+	- Change Dark\Light Mode (Dark ON by default),
+	- Sound Beeps on Caplock Toggle (ON by default),
+	- Show an OSD when Capslock is Toggled (ON by Default)
+	- Caplocks for Number Row (OFF by default),
+
+
+
+**************************************************
+** ABOUT [PROGRAMS] ******************************
+**************************************************
+
+The list of software used in the menu are referenced as variables from the '-SETTINGS.ini' file. They have to be updated to suite your system MANUALLY with a simple copy and paste. You can make changes to in the box above or Use the 'Edit --Settings.ini File' from the settings sub-menu to edit the file in a text editor.
+
+They will try to run from the default install locations, as set in the .ini, IF you have them installed in a different location you NEED update them there. Paste the true path to your .exe's, without quotes.
+
+If not updated ornot installed the 3rd party software menu functions just won't do anything. So they are not required. Thou, don't delete or leave a reference empty as it could cause annoying popup messages box about variables not being assigned from AHK.
+
+
+For example...
+Ditto is a great a clipboard manager & tool.
+as custom portable install should be changed to...
+
+ditto `= X:\Portable Program Files\Ditto\ditto.exe
+	rather than the default...
+C:\Program Files\Ditto\ditto.exe
+
+Now anywhere in the script you see Run, `%ditto`% - it will be run from the file path your have provided here.
+
+You can also set your favorite Default Text Editor.
+
+If not set text files will try to open with Notepad++.exe.
+As I have preset it. If NP++ is not installed (at its default location),
+then it will try windows own Notepad.exe.
+Replace...
+	Texteditor `= C:\Program Files\Notepad++\notepad++.exe
+with...
+	Texteditor `= X:\Your favorite\text\editor.exe
+
+
+
+
+
+***************************************************
+** ABOUT [GLOBAL_HOTKEYS] *************************
+***************************************************
+
+
+
+A few global hotkeys are already set, you can change them here. 
+A few others are hard coded in the script which cannot or should not be set to avoid conflicts with system keys, you won't see those in this list.
+
+Any hotkeys set inside this .ini file will be GLOBAL, they will work in every application!
+To make them Context Sensitive or Program Specific they should not be set here, but rather inside the .ahk file within #IfWinActive directives
+
+**************************************************
+
+Each " Menu Item Name " is listed, with the LabelName= on the line below it.
+Assign the hotkey after the " = "
+
+NOTE !!! - The line with the " LabelName= " should NOT start with a " ; " or " # " otherwise it will be ignored by the program. You can shut off a hot key this way too.
+
+-------------------------
+
+Examples ... 
+for... " Google This " on the Find Menu
+googlethis=#+o
+the hotkey would be... Win + Shift + O
+
+for... " Open Folder " on the Files Menu
+OpenDIRselection = #!o
+the hotkey would be... Alt + Win + O
+
+for... " 1 `/`* Block Comment `*`/ " on the Code Formatting Menu
+commentblock= ^NumpadDiv
+the hotkey would be... Ctrl + / -- on the NumberPad --
+
+;-------------------------
+
+AutoHotkey's Modifier Symbols are...
+
+Ctrl = ^
+Shift = +
+Win = #
+Alt = !
+;-------------------------
+
+For a full list of {Special_KeyNames} such as ESC, Home, Mouse Buttons, Space etc... and their uses 
+visit the Docs page for reference.
+
+You can use the menu to get you there. select this web address and choose " Visit Website [If a URL is Selected] " from the Find Menu our use the hotkey " Alt + Win + U "
+
+ https://www.autohotkey.com/docs/v1/KeyList.htm 
+
+;-------------------------
+
+; The Menus and Items are organized\grouped together by the menu they appear on, nearly in order here....
+
+
+)
+
 gui, capsa: color, 171717, 090909
+gui, capsa: font, cffb900, Consolas
+; Create Tabs
+; gui, capsa: add, Tab2, xm w550 h630 vSelectedTab gTabChange, Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings ; vSelectedTab gTabChange ;; the V & G labels hre are casing warnings from gpt so
+gui, capsa: add, Tab2, buttons xm w550 h630 -Theme , Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings
+gui, capsa: Tab, 1  ; ; Overview Tab
 
+gui, capsa: font, cffb900, Consolas
+gui, capsa: font, s12
+gui, capsa: add, text, center  w520, %scriptname%
+gui, capsa: add, text,  center w520, Version // Last Update: %scriptversion%
+
+gui, capsa: Add, text, center w520, -------------------- Overview --------------------
+gui, capsa: font, s10
+gui, capsa: add, edit, w520 r15, %overview%
+gui, capsa: font, s12
+gui, capsa: Add, text, center w520, --------------------------------------------------
+gui, capsa: Add, Link, center w520, <a href="https://github.com/indigofairyx/Extended_Capslock_Context_Menu">Extended Capslock Menu Github Page</a>
+GUI, CAPSA: add, picture, border , %A_ScriptDir%\icons\OSD overlay_232x63.png
+
+
+; More Notes Tab
+gui, capsa: Tab, 2
+gui, capsa: font, s12,  Consolas
 gui, capsa: font, cffb900
-gui, capsa: add, button, x+m w1 h1 gcapsclose, Close
-gui, capsa: font, s12 
-gui, capsa: add, text, xm center w550, %scriptname%
-gui, capsa: add, text, xm center w550, Version // Last Update: %scriptversion%
-gui, capsa: Add, Link, xm, <a href="https://github.com/indigofairyx/Extended_Capslock_Context_Menu">Extended Capslock Menu Github Page</a>
-gui, capsa: Add, text, x+m, <-- Visit for More Info && Updates
-gui, capsa: Add, text, xm center w550, ------------------------- Overview, Hotkeys && ChangeLog ------------------------- 
+gui, capsa: add, edit, w520 r15, %aboutcapswindow%
 
-gui, capsa: font, s10  Consolas
+;--------------------------------------------------
+gui, capsa: Tab, 3 ; Changelog Tab
+gui, capsa: font, s11,  Consolas
 gui, capsa: font, cffb900
-; gui, capsa: add, text, xm, %aboutcapswindow%
-gui, capsa: add, edit, xm w550 r23, %aboutcapswindow%`n`n`n%a_tab%%hotkeys%`n`n`n %changelog%`n`n
-gui, capsa: add, picture, xm, %A_ScriptDir%\Icons\capslock is on overlay_464x57.png
-
-gui, capsa: font, cA0BADE
-gui, capsa: add, picture, xm w36 h36, %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
+gui, capsa: add, text,center w520, *************************************************************`n************************* CHANGELOG *************************`n*************************************************************
+gui, capsa: add, edit,  w520 r27, %changelog%
 
 
+gui, capsa: Tab, 4 ; Links Tab
+gui, capsa: font, cffb900, Consolas
+gui, capsa: add, edit, x+m cA0BADE w520 r10, %aboutsoftware% 
+gui, capsa: font, s9,  Consolas
+gui, capsa: Add, Link, , <a href="https://github.com/notepad-plus-plus/notepad-plus-plus">***Notepad++*** - You never know.</a>
+gui, capsa: Add, Link, , <a href="https://www.voidtools.com/forum/viewtopic.php?t=9787">***Everything v1.5a*** - Powerful local search tool</a>
+gui, capsa: add, link, , <a Herf="https://astrogrep.sourceforge.net/features/">***AstroGrep*** - A good tool for searching text inside files.</a>
+gui, capsa: add, link, , <a Herf="https://dngrep.github.io">***dnGrep*** - A top of the line  tool for searching text inside files.</a>
+gui, capsa: Add, Link, , <a href="https://www.gpsoft.com.au">***Directory Opus*** - The most  powerful File Explorer Replacement - Alternative.</a>
+gui, capsa: add, text, , Dirctory Opus is the only Paid $oftware on this menu. Its well Worth IT!
 
-gui, capsa: add, text, x+m cA0BADE, There are a few pieces of software I use that built into this menu.`nAll free except one. Links are below.`nIf the link is ***marked with*** it means...`nThe menu interacts with this software for searchers or file operations.`nThe unmarked links are only quick launcher that open software, like the start menu.`n`nHeres a list of links to them if you want some awesome software.
+gui, capsa: Add, Link, , <a href="https://github.com/sabrogden/Ditto">Ditto - Clipboard Manager</a>
 
-gui, capsa: Add, Link, xm, <a href="https://github.com/sabrogden/Ditto">Ditto - Clipboard Manager</a>
-gui, capsa: Add, Link, xm, <a href="https://ramensoftware.com/textify">Textify - Lets you copy text out of message boxes and guis</a>
-gui, capsa: Add, Link, xm, <a href="https://github.com/TheJoeFin/Text-Grab/">Text Grab - Amazing OCR tool</a>
-gui, capsa: Add, Link, xm, <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">An AHK Global Auto Correct Script - This is already included here.</a>
-gui, capsa: Add, Link, xm, <a href="https://github.com/notepad-plus-plus/notepad-plus-plus">***Notepad++*** - You never know.</a>
-gui, capsa: Add, Link, xm, <a href="https://www.voidtools.com/forum/viewtopic.php?t=9787">***Everything v1.5a*** - Powerful local search tool</a>
-gui, capsa: add, link, xm, <a Herf="https://astrogrep.sourceforge.net/features/">***AstroGrep*** - A good tool for searching text inside files.</a>
-gui, capsa: add, link, xm, <a Herf="https://dngrep.github.io">***dnGrep*** - A top of the lin  tool for searching text inside files.</a>
-gui, capsa: Add, Link, xm, <a href="https://www.gpsoft.com.au">***Directory Opus*** - The most  powerful File Explorer Replacement - Alternative.</a>
-gui, capsa: add, text, xm, Dirctory Opus is the only Paid $oftware on this menu. Its well Worth IT!
-gui, capsa: add, text, xm, (Press Space to Close)
-gui, capsa: add, button, x+m gcapsclose, Close
+gui, capsa: Add, Link, , <a href="https://ramensoftware.com/textify">Textify - Lets you copy text out of message boxes and guis</a>
+gui, capsa: Add, Link, , <a href="https://github.com/TheJoeFin/Text-Grab/">Text Grab - Amazing OCR tool</a>
+gui, capsa: Add, Link, , <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">An AHK Global Auto Correct Script - This is already included here.</a>
+gui, capsa: Add, Link, , <a href="https://clipboard.quickaccesspopup.com">Quick Clipboard Editor - A Clipborad editor with advanced text formatting options.</a>
+gui, capsa: Add, Link, , <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">AutoHotkey.com</a>
+
+;; settings & ini tab;
+; MsgBox, INI file path: %inifile%`nContent: %inicontent%
+gui, capsa: Tab, 5
+gui, capsa: add, text, section,You can edit the settings in the ini file here or choose `nEdit Settings from this menu to edit in the Default Text Editor ->
+gui, capsa: add, picture, ys w28 h28 gshowsettingsmenu, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico
+gui, capsa: font, cffb900 s10, Consolas
+gui, capsa: add, text,xs, %A_scriptname%-SETTINGS.ini%A_tab%
+gui, capsa: add, Button, disabled h15 x+s10 vallowsave gsaveini, &Save .ini && Reload
+; gui, capsa: add, edit, w520 r15 viniload ginisave,
+gui, capsa: font, cDCDCDC s11, Consolas
+global inicontent := ""
+global iniedit 
+global allowsave
+FileRead, inicontent, %inifile%
+; fileread, inicontent, %inifile%
+; guicontrol,,iniload, %inifile%
+GuiControl,, iniedit, %inicontent%
+; gui, capsa: add, edit, xs w520 r15 vinicontent ginisave, %inicontent% ; Edit box for INI content ;; ginisave label from gpt is breaking shit
+gui, capsa: add, edit, xs w520 r15 gonchange viniEdit, %inicontent% ; Edit box for INI content
+
+
+gui, capsa: font, cffb900 s09, Consolas
+; gui, capsa: add, text, , AHK Modifier Key Symbols .. Ctrl = ^ `, Alt = ! `, Shift = + `, Windows Key = #
+; gui, capsa: Add, Link, , <a href="https://www.autohotkey.com/docs/v1/KeyList.htm">Click here to view the Full KeyList page on AutoHotkey.com</a>
+
+gui, capsa: add, text, , Read Me - About Stored Settings
+gui, capsa: font, cFFE9AC s10, Consolas
+gui, capsa: add, edit, w520 r12, %aboutini%
+
+
+; Gui, Add, Edit, R20 vMyEdit
+; FileRead, FileContents, C:\My File.txt
+    ; FileRead, inicontent, %inifile%
+; GuiControl,, MyEdit, %FileContents%
+
+
+; Return to the main layout
+gui, capsa: Tab 
+gui, capsa: font, cA0BADE, Consolas
+; gui, capsa: add, text, xm , (Press Space to Close)
+gui, capsa: add, picture, xm w36 h36, %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
+gui, capsa: add, button, x+m gcapsclose, &Close
 guicontrol, focus, Close
+gui, capsa: add, button, x+m gCheckUpdatesmanual, Check for &Updates
+gui, capsa: add, picture, x+m w36 h36 greload, %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
+; gui, capsa: add, picture, x+m, %A_ScriptDir%\Icons\Screenshots\menus_caps_464x57.png
 
-gui, capsa: +Border +Resize -MaximizeBox ; +Dpiscale
+
+
+gui, capsa: +Border +Resize -MaximizeBox ; +hwndidDisplayWin
+		; Gui, Color, 131313
 gui, capsa: show,, Extended CAPS Menu - About
+gui, capsa: +Border +Resize -MaximizeBox ; +Dpiscale
+gui, capsa: show,, Extended CAPS Menu - About 
+sleep 500
+sendinput {up}
 
+return
+;; end about caps gui
 } 
 
 
 capsclose:
-gui capsa: hide
-; gui capsa2: hide
+; gui capsa: hide
+gui capsa: Destroy
 return
 close:
-gui, hide
+; gui, hide
+gui capsa: Destroy
 return
+OnChange: ; Triggered when the content of the edit box changes
+Gui, capsa: Submit, NoHide
+If (iniEdit != iniContent)
+; If (iniEdit != "") ; Enable the button if there's text in the edit box
+    GuiControl, capsa: Enable, allowsave
+Else ; Disable the button if the edit box is not changed
+    GuiControl, capsa: Disable, allowsave
+Return
+
+saveini:
+MsgBox, 4132, , This will save the edits you made in this window to the .ini file and reload the menu. `n`n Continue?`n`n
+IfMsgBox no
+	return
+filecopy, %inifile%, %inifile%.BAK	; make a backup of current .ini
+FileSetAttrib, +H, %inifile%.BAK  	;  and hide it.
+GuiControlGet, inicontent, , iniEdit ; Get the text from the edit box
+FileDelete, %inifile%                ; Delete the existing file to avoid appending
+FileAppend, %inicontent%, %inifile%  ; Write the new content to the INI file
+sleep 1500 ; give time for file to be written
+gosub reload	; reload the script to apply changes
+return
+
+inibox:
+msgbox %inicontent%
+return
+TabChange:
+; This label will trigger when a user switches tabs.
+gui, capsa: submit, nohide
+if (SelectedTab = "1") {
+    ; Code for the Overview Tab (if needed)
+} else if (SelectedTab = "2") {
+    ; Code for the Hotkeys Tab (if needed)
+} else if (SelectedTab = "3") {
+    ; Code for the Changelog Tab (if needed)
+} else if (SelectedTab = "4") {
+    ; Code for the Links Tab (if needed)
+}
+else if (SelectedTab = "5")
+ {
+    ; Code for the Links Tab (if needed)
+fileread, inicontent, %inifile%
+guicontrol,,iniload, %inicontent%
+}
+return 
+
+
 
 
 #IfWinActive Extended CAPS Menu - About
@@ -4416,7 +5161,7 @@ return
 #ifwinactive
 
 viewhotkeys:
-MsgBox, 64, Extended Capslock Menus Hotkeys, %hotkeys%
+MsgBox, 262208, Extended Capslock Menus Hotkeys, %hotkeys%
 return
 
 ; admintog := 0
@@ -4495,7 +5240,7 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 ; return
 
 ; f9::
-; ^!n:: ;np++, open active file in alt editor
+; ^!n:: ;; np++, open active file in alt editor
 ; gosub alttxtnppmenu
 ; return
 
@@ -5055,11 +5800,12 @@ else
     menu, alttxt, icon, Open in Default Text Editor`, (If Set`, Otherwise Notepad), notepad.exe
 menu, alttxt, add, ; line -------------------------
 
-menu, alttxt, add, Notepad++ in new Window, altoinppnewwindow
+menu, alttxt, add, Notepad++, altoinppp
 if FileExist(notepadpp)
-	menu, alttxt, icon, Notepad++ in new Window, %notepadpp%
+	menu, alttxt, icon, Notepad++, %notepadpp%
 else
-menu, alttxt, icon, Notepad++ in new Window, %A_ScriptDir%\Icons\notepad++_100.ico
+menu, alttxt, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
+
 menu, alttxt, add, Notepad4, altoinotepad4
 if FileExist(notepad4)
 menu, alttxt, icon, Notepad4, %notepad4%
@@ -5153,7 +5899,7 @@ menu, alttxt, show
 return
 
 aboutalttxtmenu:
-msgbox, This is a custom made open with menu.`nThese are a few of the Text Editors I like to play with.`nThere are many others!`n`nIf you're Familiar with AHK I recommend editing and running the '.ahk' to add you're own favorite editors here.
+msgbox,262144,, This is a custom made open with menu.`nThese are a few of the Text Editors I like to play with.`nThere are many others!`n`nIf you're Familiar with AHK I recommend editing and running the '.ahk' to add you're own favorite editors here.
 return
 
 
@@ -5223,8 +5969,9 @@ return
 ; restoreclipboard()
 ; return
 
-altoinppnewwindow:
-try run, %notepadpp% -multiInst "%activefile%",, useerrorlevel
+altoinppp:
+; try run, %notepadpp% -multiInst "%activefile%",, useerrorlevel
+try run, %notepadpp% "%activefile%",, useerrorlevel
 if errorlevel
 	return
 sleep 1000
@@ -5465,6 +6212,16 @@ sleep 10
 return
 
 ;---------------------------------------------------------------------------
+LogError(Path) { ;; logerror function
+global clipsaved, filename, ext, filestem, dir, lastfolder
+    if ErrorLevel
+    {
+    FileAppend, % "*`n+-=START=-+`nError Info...`nTime: " A_Now "`n@ Line: " A_LineNumber "`nClipboard := " Clipboard "`n`nWhich Hotkey: " A_ThisHotkey "`nThis Label: " A_ThisLabel "`nWhich Menu: " A_ThisMenu "`nWhich Menu Item: " A_ThisMenuItem "`nMenu Pos: " A_ThisMenuItemPos "`nFull Menu text...`nmenu`, " A_thismenu "`, Add`, " A_ThisMenuItem "`, " A_ThisLabel "`n`nVars listed.....`nFilename: " filename "`nExt: " ext "`nFilestem: " filestem "`nDir: " dir "`nParent-LastFolder: " lastfolder "`n`nEvent Info: " A_EventInfo "`nLast Error: " A_LastError "`nThis Func: " A_ThisFunc "`n+-=END=-+`n", %A_ScriptDir%\%A_scriptname%- ERROR LOG.txt,UTF-8
+	sleep 500
+    Return
+    }
+}
+;---------------------------------------------------------------------------
 ;///////////////////////////////////////////////////////////////////////////
 wincontextmenu:
 iflive()
@@ -5485,10 +6242,11 @@ else
 	}
 return
 
+;; https://autohotkey.com/board/topic/20376-invoking-directly-contextmenu-of-files-and-folders/
+;; source: https://autohotkey.com/board/topic/89281-ahk-l-shell-context-menu/
+; global idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, pIContextMenu3, WPOld ;; for heading
 ShellContextMenu( sPath, win_hwnd = 0, pidl = 0, pIShellFolder = 0, pidlChild = 0, pt = 0, pIContextMenu = 0 )
 {
-;; source: https://autohotkey.com/board/topic/89281-ahk-l-shell-context-menu/
-; global idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, pIContextMenu3, WPOld
    if ( !sPath  )
       return
    if !win_hwnd
@@ -5604,3 +6362,300 @@ CoTaskMemFree(pv)
 ;///////////////////////////////////////////////////////////////////////////
 ;///////////////////////// END WIN CONTEXT MENU ////////////////////////////
 ;///////////////////////////////////////////////////////////////////////////
+
+
+; source:  https://www.reddit.com/r/AutoHotkey/comments/193wdki/hotkeys_are_dont_work_when_a_menu_is_being_shown/
+; This function self initializes. No need to call it manually.
+; When the user clicks away to close the menu, the message WM_ACTIVATEAPP is sent.
+; Calling EndMenu on WM_ACTIVATEAPP fixes the bug that causes a modeless menu to show in the previous position.
+; this function allows hotkeys to be triggred when a menu is visiable, usually ahk blocks hotkeys when its busy displaying a menu.
+ModelessMenuEnd(wParam) {
+    static _ := OnMessage(0x0000001C, "ModelessMenuEnd") ; WM_ACTIVATEAPP
+    if !wParam
+        DllCall("EndMenu")
+}
+
+Menu_SetModeless(menuNameOrHandle)
+{
+    if menuNameOrHandle is Not Integer
+        hMenu := MenuGetHandle(menuNameOrHandle)
+    else
+        hMenu := menuNameOrHandle
+
+    if !hMenu
+        return
+
+    size := 16+3*A_PtrSize
+    VarSetCapacity(MenuInfo, size, 0)
+    NumPut(size, MenuInfo, 0) ;cbsize
+
+    MIM_STYLE := 0x10
+    MNS_MODELESS := 0x40000000
+    NumPut(MIM_STYLE, MenuInfo, 4) ;fmask
+    DllCall("GetMenuInfo", "ptr", hMenu, "ptr", &MenuInfo)
+    style := NumGet(MenuInfo, 8, "uint") ; check dwStyle
+    if !(style & MNS_MODELESS) ; If dwStyle not modeless
+    {
+        ; Set MNS_MODELESS style
+        NumPut(style|MNS_MODELESS, MenuInfo, 8)
+        DllCall("SetMenuInfo", "uint", hMenu, "uint", &MenuInfo)
+    }
+}
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+
+; Decodes XML numeric character references and predefined entities directly on the clipboard content.
+XMLDecode() {
+    ; Initialize variables
+    local prev := 1, result := "", regexNeedle := "S)&(?:" ; Regex to match XML entities
+        . "amp|lt|gt|apos|quot|"                         ; Predefined entities
+        . "#(?:\d+|x[[:xdigit:]]+)"                      ; Numeric entities (decimal and hex)
+        . ");"
+    
+    ; Process the clipboard content
+    ClipSaved := ClipboardAll ; Backup the clipboard
+    value := Clipboard        ; Get the current clipboard content
+    while (cur := RegExMatch(value, regexNeedle, m, prev)) {
+        ; Append text before the match to the result
+        result .= SubStr(value, prev, cur - prev)
+        ; Decode matched XML entities
+        switch m {
+            case "&amp;":  result .= "&"               ; Decode `&amp;` to `&`
+            case "&lt;":   result .= "<"               ; Decode `&lt;` to `<`
+            case "&gt;":   result .= ">"               ; Decode `&gt;` to `>`
+            case "&apos;": result .= "'"               ; Decode `&apos;` to `'`
+            case "&quot;": result .= """"              ; Decode `&quot;` to `"`
+            default:
+                ; Handle numeric entities (`&#...;` or `&#x...;`)
+                num := SubStr(m, 3)
+                result .= Chr(SubStr(num, 1, 1) == "x" ? "0x" SubStr(num, 2) : num)
+        }
+        prev := cur + StrLen(m) ; Move past the current match
+    }
+    ; Append the remaining text
+    result .= SubStr(value, prev)
+    Clipboard := result       ; Update clipboard with the decoded result
+    return                    ; End function
+}
+
+; Encodes all potentially dangerous characters in the clipboard content so that
+; the resulting string can be safely inserted into an XML element or attribute.
+; `quotesEncoded` determines if single ('') and double ("") quotes are encoded.
+XMLEncode(quotesEncoded := false) {
+    ; Initialize variables
+    local prev := 1, result := "", regexNeedle := "S)[" ; Regex for dangerous XML characters
+        . "&<>" (quotesEncoded ? "'""" : "") "]|"       ; Match &, <, >, ' (optional), and "
+        . "[^ -~]"                                      ; Match non-printable/control characters
+    
+    ; Process the clipboard content
+    ; ClipSaved := ClipboardAll ; Backup the clipboard
+    value := Clipboard        ; Get the current clipboard content
+    while (cur := RegExMatch(value, regexNeedle, m, prev)) {
+        ; Append text before the match to the result
+        result .= SubStr(value, prev, cur - prev)
+        ; Encode dangerous characters
+        switch m {
+            case "&": result .= "&amp;" ; Encode `&` as `&amp;`
+            case "<": result .= "&lt;"  ; Encode `<` as `&lt;`
+            case ">": result .= "&gt;"  ; Encode `>` as `&gt;`
+            case """": result .= "&quot;" ; Encode `"` as `&quot;` if `quotesEncoded` is true
+            case "'": result .= "&apos;" ; Encode `'` as `&apos;` if `quotesEncoded` is true
+            default:
+                ; Encode control characters or non-printables as numeric entities
+                result .= "&#" Ord(m) ";"
+        }
+        prev := cur + StrLen(m) ; Move past the current match
+    }
+    ; Append the remaining text
+    result .= SubStr(value, prev)
+    Clipboard := result ; Update clipboard with the encoded result
+    return              ; End function
+}
+
+
+;///////////////////////////////////////////////////////////////////////////
+;; get delay time function
+; numpadadd::
+; freq := ""
+; CounterBefore := ""
+; CounterAfter := ""
+; delaytime()
+;-------------------------
+
+;///////////////////////////////////////////////////////////////////////////
+;; get delay time fuction for dynamic sleeps
+viewdelaytime:
+getdelaytime()
+msgbox D_t: %delay_time%`ndelaytick: %delaytick% ;`n freq: %freq%
+return
+/*
+;;; raw code from forum, below is edit by AUTOHOTKEY Gurus
+; delaytime()
+; {
+; global
+; DllCall("QueryPerformanceFrequency", "Int64*", freq)
+; DllCall("QueryPerformanceCounter", "Int64*", CounterBefore)
+; Sleep 1000
+; DllCall("QueryPerformanceCounter", "Int64*", CounterAfter)
+; MsgBox % "Elapsed QPC time is " . (CounterAfter - CounterBefore) / freq * 1000 " ms"
+; } 
+*/
+
+GetDelayTime() ;; function
+{
+;; Demonstrates QueryPerformanceCounter(), which gives more precision than A_TickCount's 10 ms., source: https://www.autohotkey.com/docs/v1/lib/DllCall.htm
+;; video ref: https://www.youtube.com/watch?v=TKxiqnZLcz8 , title: How to Creating a self-Adjusting Sleep that adjusts to your Computer's Load
+;; !!!! usage example = sleep getdelaytime() * 1000 ;; the * 1000 matches the bottomline of the fucntion both can be delected
+	global delay_time, delaytick
+	DllCall("QueryPerformanceFrequency", "Int64*", freq := 0)
+	DllCall("QueryPerformanceCounter", "Int64*", CounterBefore := 0)
+	loop 1000
+		delaytick := A_Index
+	DllCall("QueryPerformanceCounter", "Int64*", CounterAfter := 0)
+	; MsgBox "Elapsed QPC time is "  (CounterAfter - CounterBefore) / freq * 1000 " ms" ; debug view output from docs
+
+	return delay_time := (CounterAfter - CounterBefore) / freq * 1000
+}
+;///////////////////////////////////////////////////////////////////////////
+
+;; read ini fucntions
+ReadHotkeysFromIni() ;; function
+{
+    global
+    IniRead, HotkeySection, %inifile%, Global_Hotkeys
+    if (HotkeySection = "ERROR")
+        return
+
+    Loop, Parse, HotkeySection, `n, `r
+    {
+        if (A_LoopField = "")
+            continue
+            
+        KeyParts := StrSplit(A_LoopField, "=")
+        if (KeyParts.Length() < 2)
+            continue
+
+        LabelName := KeyParts[1]
+        HotkeyValue := KeyParts[2]
+        
+        if (HotkeyValue = "" || HotkeyValue = "ERROR")
+            continue
+            
+        try {
+            Hotkey, %HotkeyValue%, %LabelName%, On
+        } catch {
+            continue
+        }
+    }
+} 
+
+ReadProgramsfromIni() ;; function
+{
+global
+IniRead, ProgramSection, %inifile%, Programs
+if (ProgramSection = "ERROR") {
+    MsgBox, Could not read the Programs section from the INI file.
+    return
+}
+Loop, Parse, ProgramSection, `n, `r
+	{
+		; Each line should be in the format Key=Value
+		StringSplit, KeyValue, A_LoopField, =
+		; Use indirect assignment for globals
+		; global
+		VarName := KeyValue1  ; Name of the variable from the INI key
+		VarValue := KeyValue2 ; Value of the variable from the INI value
+		%VarName% := VarValue ; Assign dynamically
+	}
+; MsgBox, % "Path to Notepad++: " notepadpp
+; MsgBox, % "Path to Notepad4: " notepad4
+; MsgBox, % "Path to Directory Opus: " dopus
+; MsgBox, % "Path to Directory rt: " dopusrt
+}
+
+
+
+
+
+; IconsDir := A_ScriptDir . "\Icons" ; Path to the Icons folder
+markiconsdirasreadonly()
+{
+Loop, Files, %IconsDir%\*.* ; Iterate through all files in the Icons folder
+{
+    FileGetAttrib, attrib, %A_LoopFileFullPath% ; Get the file's attributes
+    If !(InStr(attrib, "R")) ; Check if the file is NOT read-only
+    {
+        FileSetAttrib, +R, %A_LoopFileFullPath% ; Mark the file as read-only
+        ; MsgBox, File marked as read-only: %A_LoopFileName%
+    }
+}
+; MsgBox, Finished processing files in`n %IconsDir%
+Return
+}
+
+
+
+CheckUpdates:
+    ; Create and send the HTTP request
+    HttpRequest := ComObjCreate("MSXML2.XMLHTTP.6.0")
+    HttpRequest.Open("GET", GitHubAPI, False)
+    HttpRequest.Send()
+
+    ; Retrieve the HTTP status and response text
+    Status := HttpRequest["status"] ; Use bracket notation for compatibility
+    Response := HttpRequest["responseText"]
+
+    ; Handle errors
+    If (Status != 200) {
+        MsgBox, 48, Error, Failed to fetch release info from GitHub.`nHTTP Status: %Status%
+        Return
+    }
+
+    ; Parse the JSON response to extract the "tag_name"
+    LatestVersion := RegexMatch(Response, """tag_name"":\s*""(.*?)""", Match) ? Match1 : ""
+    If (LatestVersion = "") {
+        MsgBox, 48, Error, Failed to parse the version from GitHub API response.
+        Return
+    }
+
+    ; Compare versions
+    If (ScriptVersion = LatestVersion) {
+        MsgBox, 64, Up-to-Date, Your script is up-to-date! Current version: %ScriptVersion%.
+    } Else {
+        MsgBox, 48, Update Available, A new version is available: %LatestVersion%.`nYour version: %ScriptVersion%.
+    }
+Return
+
+; GitHubVersionFile := "https://raw.githubusercontent.com/indigofairyx/Extended_Capslock_Context_Menu/refs/heads/main/Extended%20Capslock%20Context%20Menu/version.txt" ; URL to the version file in your GitHub repo
+; Tempupdatecheck := A_Temp . "\version.txt" ; Temporary file to store the downloaded version
+
+
+CheckUpdatesmanual:
+    ; Download the version file from GitHub
+    URLDownloadToFile, %GitHubVersionFile%, %Tempupdatecheck%
+    If (ErrorLevel)
+    {
+        MsgBox, 4112, Error!, Failed to download version info from GitHub!`n`nPlease try again later or visit the ECLM Repo directly., 10
+        Return
+    }
+    ; Read the downloaded version
+    ; FileRead, LatestVersion, %Tempupdatecheck%
+	FileReadLine, LatestVersion, %Tempupdatecheck%, 1
+
+    LatestVersion := Trim(LatestVersion) ; Remove extra spaces/newlines
+
+    ; Compare versions
+    If (ScriptVersion = LatestVersion)
+    {
+		FileDelete, %Tempupdatecheck%
+		MsgBox, 4096, Up to Date, Your ECLM is Up To Date.`n`nVersion:  %scriptversion%`n, 10
+    }
+    Else
+    {
+        MsgBox, 4161, New Version Available., A new version of ECLM is available!`n`nLast Updated: %LatestVersion%`nYour version: %ScriptVersion%`n`nClick OK to visit the Github Releases page where you can see the Change Log and Download the new version.`n`nReplace this directory with the new one and reload.`n
+		IfMsgBox OK
+			run https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases/tag/%latestversion%
+    }
+sleep 800
+filedelete, %tempupdatecheck%
+Return

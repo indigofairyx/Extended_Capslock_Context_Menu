@@ -36,7 +36,7 @@ if !FileExist(inifile)
 		; ToolTip
 		; sleep 200
 		; }
-; }
+	; }
 
 
 
@@ -4984,6 +4984,7 @@ You can use the menu to get you there. select this web address and choose " Visi
 
 )
 
+Gui, capsa: New
 gui, capsa: color, 171717, 090909
 gui, capsa: font, cffb900, Consolas
 ; Create Tabs

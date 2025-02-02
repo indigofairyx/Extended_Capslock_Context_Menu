@@ -3,7 +3,7 @@ An AutoHotkey menu for working-playing with text
 
 # About Extended Capslock Menu
 
-### This Extended Capslock Menu is a expanded context menu, written with [AutoHotkey](https://www.autohotkey.com.
+### This Extended Capslock Menu is a expanded context menu, written with [AutoHotkey](https://www.autohotkey.com).
 ### Its made for working\playing with text.
 ### With this menu, after *[\*SELECTING SOME TEXT\*]* and then picking a menu item, the text will be copied to your clipboard (with your previous clipboard item preserved) so you can...
 

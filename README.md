@@ -68,23 +68,22 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 	+ If you're an AHK enthusiast I recommend adding your own editors.
 
 
-### ... And more !!! ... Check Out the Releases pages for detail of other Features & Fixes & Screenshots as they were added.
+### ... And more !!! ... Check Out the Change Logs on the Releases pages for Features & Fixes & Screenshots & other details as they're added.
 
 ***
 
-# To Run download zip from [Releases Page](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases)
+# To Run download the zip from [Releases Page](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases)
 
 ## There are 3 options to run.
 
 ### \#1 Portable 
 Simply Drag & Drop the `Extended Capslock Context Menu.ahk` file onto the "AutoHotkeyU64 - Shortcut.lnk" shortcut and it will run.
-No installation required to run this AutoHotkey Script,
-A portable version of AutoHotkey is included in this download.
+No installation is required to run this AutoHotkey Script, A portable version of AutoHotkey is included in this download.
 
-### \#2 Run the script, the `Extended Capslock Context Menu.ahk` if you already have AutoHotkey installed
+### \#2 Run the `Extended Capslock Context Menu.ahk` if you already have AutoHotkey installed
 If your already have AHK installed simply run the script as you normally would. \*\**This is my preferred way as I'm always editing and epanding this menu, you're free to edit the code as well.*
 
-or, if you dont want to fuss with scripts,
+or, if you dont want to fuss with scripts...
 
 ### \#3 Run the `.exe`
 A compiled `Extended Capslock Menu v.2025.XX.XX.exe` is included here. This will likely make windows fuss. click run anyway, the code is in the .ahk file.

@@ -1,21 +1,11 @@
 # Extended Capslock Context Menu
 An AutoHotkey menu for working-playing with text
 
-## To run, portably, download zip from Releases page, drag & drop the `.ahk` file onto the AutoHotkey.exe
-
-Download this Repo from the [Releases](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases) for lasted Updates and Bugfixes!
-
-**NOTE!!!** *This script needs to run from the folder its zipped in, or the icons will be missing and it will error out.*
-
-![notepad++_2024-11-03_12-33-06AM_960x660](https://github.com/user-attachments/assets/787b8ccf-cc80-4655-8fb0-dcfdaad91ee4)
-
-
 # About Extended Capslock Menu
 
-This Extended Capslock Menu is a expanded context menu, written with AutoHotkey.
-Its made for working\playing with text.
-
-With this menu, after *[SELECTING SOME TEXT]* and then picking a menu item, the text will be copied to your clipboard (with your previous clipboard item preserved) so you can...
+### This Extended Capslock Menu is a expanded context menu, written with [AutoHotkey](https://www.autohotkey.com.
+### Its made for working\playing with text.
+### With this menu, after *[\*SELECTING SOME TEXT\*]* and then picking a menu item, the text will be copied to your clipboard (with your previous clipboard item preserved) so you can...
 
 	+ search the web or local computer (using free software),
 	+ save selected text to a New Text Document(s),
@@ -35,7 +25,7 @@ With this menu, after *[SELECTING SOME TEXT]* and then picking a menu item, the 
 		~!@#$%^&*()_+{}|
 
 
-From the 'Open\Run\Explore...     [ Files Menu ]' , you can ...
+From the 'Open\Run\Explore\Files...  Menu' , you can ...
 ... When a Folder\File Path, Url, or Regkey path is [*SELECTED*]
 e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 
@@ -80,9 +70,38 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 
 ### ... And more !!! ... Check Out the Releases pages for detail of other Features & Fixes & Screenshots as they were added.
 
-
-# Hotkeys
 ***
+
+# To Run download zip from [Releases Page](https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases)
+
+## There are 3 options to run.
+
+### \#1 Portable 
+Simply Drag & Drop the `Extended Capslock Context Menu.ahk` file onto the "AutoHotkeyU64 - Shortcut.lnk" shortcut and it will run.
+No installation required to run this AutoHotkey Script,
+A portable version of AutoHotkey is included in this download.
+
+### \#2 Run the script, the `Extended Capslock Context Menu.ahk` if you already have AutoHotkey installed
+If your already have AHK installed simply run the script as you normally would. \*\**This is my preferred way as I'm always editing and epanding this menu, you're free to edit the code as well.*
+
+or, if you dont want to fuss with scripts,
+
+### \#3 Run the `.exe`
+A compiled `Extended Capslock Menu v.2025.XX.XX.exe` is included here. This will likely make windows fuss. click run anyway, the code is in the .ahk file.
+
+Check out the about window from the setting menu for an more over of an overview.
+
+
+**NOTE!!!** *This script needs to run from the folder its zipped in, or the icons will be missing and it will error out.*
+
+![notepad++_2024-11-03_12-33-06AM_960x660](https://github.com/user-attachments/assets/787b8ccf-cc80-4655-8fb0-dcfdaad91ee4)
+
+
+
+
+## Hotkeys
+***
+
 
 
 ## Extended CAPSLOCK KEY Functionality Using AutoHotkey:
@@ -93,7 +112,7 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 
 `Capslock`, ***HOLD, Show Extended Capslock Menu***
 
-`Middle Mouse Button` -- Alt Mouse Hotkey to OPEN MENU
+~~`Middle Mouse Button` -- Alt Mouse Hotkey to OPEN MENU~~
 
 `Ctrl` + `Alt` + `F3` -- Alt Keyboard Hotkey to OPEN MENU
 
@@ -101,11 +120,11 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
   
 `Ctrl` + `Alt` + `F2` -- New Empty Sticky Note
   
-`Ctrl` + `Shift` + R -- Reload Script
+`Ctrl` + `Shift` + `R` -- Reload Script
   
 --------------------------------------------------
 
-`Alt` + `Capslock` -- Toggle Capslock
+~~`Alt` + `Capslock` -- Toggle Capslock~~
 
 `Ctrl` + `Capslock` -- Toggle Caplock
 
@@ -131,7 +150,7 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 
 **************************************************
 
-### ----+++ OTHER HOTKEYS +++-----
+## ----+++ OTHER HOTKEYS +++-----
 
 `Ctrl` + `Shift` + `"` -- Paste Current Clipboard in "Quotes"
 
@@ -160,9 +179,8 @@ e.g. C:\Users\YourUserName\Documents\AutoHotkey\Some Script File.ahk
 # Screenshots
 ***
 
-![Extended_Capslock_Menu_2024-10-14_01-08-54AM_880x1527](https://github.com/user-attachments/assets/033ab52f-60ff-44c8-96ff-9ce3bd26de8f)
 
-![Extended_Capslock_Menu_2024-10-14_01-09-45AM_544x672](https://github.com/user-attachments/assets/a458c45f-6844-45fa-a1b0-03feb308c3a1)
+
 
 ![menu date time LIGHT MODE notepad++_786x695](https://github.com/user-attachments/assets/e41cd97d-df7b-4358-97e1-e9fa3ea443ab)
 

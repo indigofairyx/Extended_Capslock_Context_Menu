@@ -1,5 +1,5 @@
 # Extended Capslock Context Menu
-An AutoHotkey menu for working-playing with text
+An AutoHotkey Context menu for working-playing-coding with text!
 
 # About Extended Capslock Menu
 

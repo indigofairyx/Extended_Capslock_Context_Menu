@@ -8,11 +8,12 @@
 # add toggle options panel to gui for some options that can exist outside of the menu.
 # made sub menu for File menu, put lesser used into in there, e.g. props, move, cmd stats, etc
 # add auto correct about and autostart up options
-# move hotkeys message to about gui tab
+# change + add middle mouse button live menu option here.
+	# make Dynamic fast mind menu for live menu
 */
 
 
-ScriptVersion := "v.2025.02.28"
+ScriptVersion := "v.2025.03.01"
 ScriptName := "Extended CapsLock Menu" 
 global scriptversion
 global scriptname
@@ -75,6 +76,7 @@ SetMouseDelay, 0
 Process, Priority,, R ;Runs Script at High process priority for best performance
 CoordMode, Mouse, Screen
 SendMode Input
+FileEncoding, UTF-8
 
 ;--------------------------------------------------
 
@@ -120,9 +122,9 @@ else
 ;--------------------------------------------------
 
 ;; todo, figure out which EnvGet's I dont need, clean this list out.
-envget, userprofile, userprofile
+; envget, userprofile, userprofile
+; EnvGet, LocalAppData, LocalAppData
 ; EnvGet, OutputVar, % A_Is64bitOS ? "ProgramW6432" : "ProgramFiles"
-EnvGet, LocalAppData, LocalAppData
 ; msgbox, %userprofile%
 ; EnvGet, EnvGetVar, Path
 ; EnvGet, EnvGetVar, envgetvar
@@ -152,6 +154,8 @@ trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
 global trayicon
 iconerror = %A_ScriptDir%\icons\view error_192x192.ico
 global iconerror
+startuplink := A_StartUp "\" Scriptname ".lnk"
+global startuplink
 ;;// sticky note parms
 ; currentIndex := 1 
 pinoff=%A_ScriptDir%\icons\pin-off_26x26.ico
@@ -590,7 +594,7 @@ menu, gui, icon, Create New Temp Sticky`tCtrl + N, %A_ScriptDir%\Icons\sticky-no
 menu, gui, add, ; line ;-------------------------
 if FileExist(quicknotesdir)
 	{
-	menu, gui, add, Open Quick Notes Dir`tCtrl + Shift + O, openquick
+	menu, gui, add, Open Quick Notes Dir`tCtrl + Shift + O, OpenQuickNotesDir
 	if FileExist(dopus)
 		menu, gui, icon, Open Quick Notes Dir`tCtrl + Shift + O, %dopus%
 	else
@@ -618,6 +622,9 @@ menu, gui, add, Pin \ Unpin to Top`tCtrl + P, pintotop
 menu, aset, add
 menu, aset, deleteall
 
+Menu, aset, Add, Toggle >> Dark Mode | Light Mode, DMToggle 
+Menu, aset, icon, Toggle >> Dark Mode | Light Mode, %A_ScriptDir%\Icons\darkmodetoggleshell32_284_48x48.ico
+
 menu, aset, add, Always Run As Admin, togSTARTASADMIN
 if (StartAsAdmin)
 	{
@@ -628,19 +635,50 @@ else
 		menu, aset, icon, Always Run As Admin, %togFF%
 	}
 
+
+menu, aset, add, Check For Updates on Start Up, togUpdatecheckonstartup
+menu, aset, icon, Check For Updates on Start Up, %icons%\globe web internet updater arrow xfav 256x256.ico
+if (CheckForUpdatesONStartup)
+	menu, aset, ToggleCheck, Check For Updates on Start Up
+	
+menu, aset, add, Run ECLM at Start Up, togRunonStartUp
+menu, aset, icon, Run ECLM at Start Up, %icons%\rocket_emoji_startup_64x64.ico
+if (RunonStartUP)
+	{
+	menu, aset, ToggleCheck, Run ECLM at Start Up
+	; startuplink := A_StartUp "\" Scriptname ".lnk"
+	if !FileExist(startuplink)
+		FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,0
+	}
+else
+	{
+	if FileExist(startuplink)
+		FileDelete, %startuplink%
+	}
+menu, aset, add, ; line -------------------------
+Menu, aset, add, Toggle Live Preview && Auto Copy, ToggleLiveMenu
+if (LiveMenuEnabled)
+	Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
+else
+	Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
+; Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico ; og alt icon
+
+if !(A_IsCompiled)
+{
+menu, aset, add, ; line -------------------------
 if (SeeErrors)
 	{ ;; if on
-	menu, aset, add, Don't Show Error Warnings on Launch, Togglewarnings
-	menu, aset, icon, Don't Show Error Warnings on Launch, %icons%\stock_dialog-error_96x96.ico
+	menu, aset, add, Don't Show Error AHK Warnings on Launch, Togglewarnings
+	menu, aset, icon, Don't Show Error AHK Warnings on Launch, %icons%\stock_dialog-error_96x96.ico
 	}
 else
 	{ ;; if off
-	menu, aset, add, Suppressing Error Warnings!!!, togglewarnings
-	menu, aset, icon, Suppressing Error Warnings!!!, %icons%\error_attention caution delete__32x32.ico
+	menu, aset, add, Suppressing Error Warnings!, togglewarnings
+	menu, aset, icon, Suppressing Error Warnings!, %icons%\error_attention caution delete__32x32.ico
 	}
-Menu, aset, Add, Toggle >> Dark Mode | Light Mode, DMToggle 
-Menu, aset, icon, Toggle >> Dark Mode | Light Mode, %A_ScriptDir%\Icons\darkmodetoggleshell32_284_48x48.ico
-
+}
+; menu, aset, add, ; line -------------------------
+; menu, aset, add, If any Toggle options seem stuck - Reload, reload
 ;---------------------------------------------------------------------------
 menu, cset, add, < ------ Settings && About ------ >, showsettingsmenu
 menu, cset, icon, < ------ Settings && About ------ >, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico,,28
@@ -703,12 +741,6 @@ else
 	; menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\mouse pointer click main_10_2_32x32.ico
 	menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\settings-mouse-right-click_32x32.ico
 	}
-Menu, cset, add, Toggle Live Preview && Auto Copy, ToggleLiveMenu
-if (LiveMenuEnabled)
-	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
-else
-	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
-; Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico ; og alt icon
 
 menu, cset, add, ; line ;-------------------------
 if !(a_isadmin)
@@ -722,12 +754,13 @@ else
 	menu, cset, icon, Script is Running as ADMIN, %A_ScriptDir%\Icons\admin attention win11 imageres_107.ico
 	}
 menu, cset, add, Additonal Settings >>>>, :aset
+menu, cset, icon, Additonal Settings >>>>, %icons%\settings panel JLicons_33_64x64.ico
 
 menu, cset, add, ; line ;-------------------------
 ; menu, cset, add, ; line ;-------------------------
 if FileExist(quicknotesdir)
 	{
-	menu, cset, add, Open Quick Notes Dir, openquick
+	menu, cset, add, Open Quick Notes Dir, OpenQuickNotesDir
 	if FileExist(dopus)
 		menu, cset, icon, Open Quick Notes Dir, %dopus%
 		else
@@ -758,8 +791,8 @@ menu, cset, icon, Edit " -SETTINGS.ini " File, %A_ScriptDir%\Icons\ini alt xfav 
 menu, cset, add, ; line ;-------------------------
 menu, cset, add, Reload Script          --         Ctrl + Shift + R, reload
 menu, cset, icon, Reload Script          --         Ctrl + Shift + R, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
-menu, cset, add, View Hotkeys, viewhotkeys
-menu, cset, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
+; menu, cset, add, View Hotkeys, viewhotkeys
+; menu, cset, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
 
 menu, cset, add, Suspend Hotkeys, suspendkeys
 menu, cset, icon, Suspend Hotkeys, %A_ScriptDir%\Icons\advert-block_64x64.ico
@@ -776,7 +809,7 @@ menu, tray, nostandard
 menu, tray, icon, %trayicon%
 
 menu, tray, add, Show Extended Capslock Menu, Capsmenubutton
-menu , tray, icon, Show Extended Capslock Menu, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,32
+menu, tray, icon, Show Extended Capslock Menu, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,32
 menu, tray,  default, Show Extended Capslock Menu
 menu, tray, add, ; line ;-------------------------
 menu, tray, add, About Extended Caps Lock Menu, aboutcapswindow
@@ -820,7 +853,6 @@ MenuCaseShow() ;; function
 	winget, targetID, ID, A ;; get the active window ID over which the menu is shown, sometimes the window can become deactivited when showing the menu  this can be used to re-activate the window before pastes
     dtmenurefresh()
 	
-
 	menu, case, add
     Menu, case, DeleteAll ; Clear and reinitialize the menu
     Menu, Case, Add, EXTENDED CAPSLOCK MENU  (Toggle Caps), ToggleCapsLock
@@ -867,7 +899,6 @@ MenuCaseShow() ;; function
         ; Menu, case, Add, %MenuItemName%, viewclip
         ; Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\eye_close__32x32.ico
 		; Menu, case, add, ; line -------------------------
-		
 		; this section can be comment out to completely hide this static menu item when its off, it will\\can only appear when turn on
     }
 
@@ -919,7 +950,7 @@ Menu, Case, add, Cut, basiccut
 menu, case, icon, Cut, %A_ScriptDir%\Icons\edit-cut_32x32.ico
 menu, case, add, Paste                                       Double Tap CAPS, basicpaste
 menu, case, icon, Paste                                       Double Tap CAPS, %A_ScriptDir%\Icons\edit-paste_256x256.ico
-MENU, case, ADD, Paste As Plain Text, pasteplain
+MENU, case, ADD, Paste As Plain Text, pasteasplaintext
 MENU, case, icon, Paste As Plain Text, %A_ScriptDir%\Icons\plaintextdoc_64x64.ico
 menu, case, add ; line ;-------------------------
 menu, case, add, Settings && About, :cset
@@ -940,7 +971,7 @@ Menu, Case, Show
 url := "https://github.com/indigofairyx/Extended_Capslock_Context_Menu"
 astrogrepurl := "https://astrogrep.sourceforge.net/features/"
 dittourl := "https://github.com/sabrogden/Ditto"
-everythingurl := "https://www.voidtools.com/forum/viewtopic.php?t=9787"
+everythingurl := "https://www.voidtools.com/forum2/viewtopic.php?t=9787"
 autocorrecturl := "https://github.com/BashTux1/AutoCorrect-AHK-2.0"
 textifyurl := "https://ramensoftware.com/textify"
 Textgraburl := "https://github.com/TheJoeFin/Text-Grab/"
@@ -952,62 +983,6 @@ dopusdocsurl := "https://docs.dopus.com/doku.php?id=introduction"
 dngrepurl := "https://dngrep.github.io"
 regexbuddyurl := "https://www.regexbuddy.com"
 
-/*
-;***************************************************************************
-;************************* HOTKEYS *****************************************
-;***************************************************************************
-; this section is not for editing, it only reference for the message box popup
-; changing the keys here won't change them inside the script.
-*/
-
-hotkeys =
-(
------[[[[ HOTKEYS ]]]]-----
-Extended CAPSLOCK KEY Functionality Using AutoHotkey:
-	+ Capslock, Single Tap, COPY
-	+ Capslock, Double Tap, PASTE
-	+ Capslock, HOLD, Show Extended Capslock Menu
-
-Middle Mouse Button -- Alt Mouse Hotkey to OPEN MENU
-Ctrl + Alt + F3 -- Alt Keyboard Hotkey to OPEN MENU
-
-  Ctrl + Shift + F2 -- New Sticky Filled With Selection
-  Ctrl + Alt + F2 -- New Empty Sticky Note
-  Ctrl + Shift + R -- Reload Script
-  Ctrl + Alt + Esc -- Quit \ Exit Script
---------------------------------------------------
-Alt + Capslock -- Toggle Capslock
-Ctrl + Capslock -- Toggle Caplock
-Shift + Capslock -- Switch between UPPERCASE & lowercase
---------------------------------------------------
---- Hotkeys for the Sticky Note GUI Windows ---
-Alt + M -- Show Sticky GUI Quick Menu
-Ctrl + S -- Save Sticky As
-Ctrl + Shift + S -- Quick Save As '.txt'
-Ctrl + N -- Create New Empty Temp Sticky
-Ctrl + P -- Pin Sticky To Top
-Ctrl + Shift + O -- Open Quick Notes Folder
-Ctrl + ESC -- Close Stick without saving
-**************************************************
-
-         -----+++ OTHER HOTKEYS +++-----
-Ctrl + Shift + `" -- Paste Clipboard in Quotes
-	Ctrl + `" -- Put Quotes Around [`"Selected Text"]
-Win + H -- Add Auto Correct Hot Strings ...
-		 ...(if include Auto Correct script is running)
---------------------------------------------------
-
-==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
-Right Click -- Can replace NP++ menu with this one. (optional)
-Ctrl + Space -- Open Live Folder Menu...
-	if a [* C:\Filepath.txt *] is selected it show's that files folder
-	if nothing is selected it will show the folder of the Active file
-	+ this can also work in Everything 1.5a on a selected file, it will show that files folder
-	- this menu hotkey is turn off else where
-Ctrl + Alt + N or F9 -- Open Active File in Alternative Text Editor Menu
-**************************************************
-)
-; "
 
 
 ; dllcall for dpi scaling per screen with mixed dpi menu fix ; dpi scaling per screen with mixed dpi menu fix
@@ -1034,8 +1009,13 @@ Menu_SetModeless("insert") ; make menu modeless
 
 if (isfirstrun)
 	gosub firstrunwelcome
+if (CheckForUpdatesONStartup)
+	gosub CheckUpdatesStartup
 if (ShowAboutonStart)
 	Aboutcapswindow()
+
+
+
 
 Return
 ;; First Return, END Auto execute
@@ -1136,7 +1116,7 @@ Clipboard := "" ; empty the clipboard, ready to revive content
 sleep 50
 }
 
-PastePlain() ;; function
+pasteasplaintext() ;; function
 {
 	global ClipSaved
     ClipSaved := ClipboardAll  ; save original clipboard contents
@@ -4070,7 +4050,7 @@ Return
 
 ; ^+r:: ;; Reload Script
 reload:
-tooltip, %ScriptName%`nis Reloading...
+tooltip, %A_ScriptName%`nis Reloading...
 sleep 700
 tooltip
 sleep 30
@@ -4155,7 +4135,7 @@ return
 gosub newsticky
 return
 ^+O:: ;; open quick notes dir
-gosub openquick
+gosub OpenQuickNotesDir
 return
 ^esc:: ;; close sticky
 gosub guidestory
@@ -4479,7 +4459,7 @@ return
 
 
 editscript:
-if A_IsCompiled != 1
+if (A_IsCompiled != 1)
 	{
 		try run %texteditor% "%filePath%"
 		catch
@@ -4550,7 +4530,7 @@ visitgithub:
 run https://github.com/indigofairyx/Extended_Capslock_Context_Menu
 return
 
-openquick:
+OpenQuickNotesDir:
 	try run, %quicknotesdir%
 		catch
 	msgbox,,Extended Capslock Menu,Your Quick Notes Folder was not found.`n`nTry saving some notes first.,7
@@ -4617,13 +4597,49 @@ return
 Togglewarnings:
 SeeErrors := !SeeErrors
 if (SeeErrors)
-	iniwrite, 0, %inifile%, Global_Toggles, SeeErrors
-else
 	iniwrite, 1, %inifile%, Global_Toggles, SeeErrors
-sleep 300
+else
+	iniwrite, 0, %inifile%, Global_Toggles, SeeErrors
+sleep 750
 reload
 return
 
+togUpdatecheckonstartup:
+CheckForUpdatesONStartup := !CheckForUpdatesONStartup
+if (CheckForUpdatesONStartup)
+	{
+	IniWrite, 1, %inifile%, Global_Toggles, CheckForUpdatesONStartup
+	menu, aset, ToggleCheck, Check For Updates on Start Up
+	}
+else
+	{
+	IniWrite, 0, %inifile%, Global_Toggles, CheckForUpdatesONStartup
+	menu, aset, ToggleCheck, Check For Updates on Start Up
+	}
+sleep 400
+return
+
+
+
+togRunonStartUp:
+RunonStartUP := !RunonStartUP
+if (RunonStartUP) ;; if run on startup create a .lnk in %appdatae%\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+{
+			;; examples from ahkhelp
+			; SYNTAX 4 -- FileCreateShortcut, Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]
+			; SYNTAX EXAMPLE 4 -- FileCreateShortcut, Notepad.exe, %A_Desktop%\My Shortcut.lnk, C:\, "%A_ScriptFullPath%", My Description, C:\My Icon.ico, i
+	IniWrite, 1, %inifile%, Global_Toggles, RunonStartUP
+	FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,0
+	menu, aset, togglecheck, Run ECLM at Start Up
+
+}
+else ; if dont run on startup delete the .lnk from %appdatae%\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+{
+	IniWrite, 0, %inifile%, Global_Toggles, RunonStartUP
+	FileDelete, %A_StartUp%\%ScriptName%.lnk
+	menu, aset, togglecheck, Run ECLM at Start Up
+}
+sleep 400
 return
 
 makeini:
@@ -4632,6 +4648,7 @@ fileappend,
 
 [Global_Toggles]
 LiveMenuEnabled=0
+ModelessMenusTOG=0
 StartAsAdmin=0
 CAPS_Beep_Enabled=1
 Show_CAPS_OSD=1
@@ -4642,12 +4659,15 @@ Double_Right=1
 ShowAboutonStart=0
 isfirstrun=1
 SeeErrors=0
+CheckForUpdatesONStartup=1
+RunonStartUP=0
 
 
 
 [Programs]
 Texteditor = C:\Program Files\Notepad++\notepad++.exe
 
+adventure = C:\Program Files\Adventure\Adventure.exe
 ahkstudio = C:\Program Files\AutoHotkey\AHK Studio\AHK-Studio.exe
 astrogrep = C:\Program Files (x86)\AstroGrep\AstroGrep.exe
 bcompare = C:\Program Files\Beyond Compare 5\BCompare.exe
@@ -4672,6 +4692,7 @@ textgrab = C:\Program Files\Text-Grab\Text-Grab.exe
 textify = C:\Users\%A_Username%\AppData\Local\Programs\Textify\Textify.exe
 vscode = C:\Users\%A_Username%\AppData\Local\Programs\Microsoft VS Code\code.exe
 VSCodium = C:\Users\%A_Username%\AppData\Local\Programs\VSCodium\VSCodium.exe
+winfindr = C:\Program Files\WinFindr\WinFindr.exe
 word = C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE
 xnviewmp = C:\Program Files\XnViewMP\xnviewmp.exe
 
@@ -4689,22 +4710,32 @@ xnviewmp = C:\Program Files\XnViewMP\xnviewmp.exe
 ;**************************************************
 ; - Toggle the CAPSLOCK key state - Ctrl + Capslock is hard coded in the script you can set another one here.
 Togglecapslock=!capslock
+; - Show Extended Capslock Menu
 ShowTheMainMenu=~MButton
 ShowTheMainMenuALTHK= ^!F3
-; - Curly Brackets on New Lines
-wrapincbrackets=
+Capsmenubutton=
 ; - Wrap selected text in Quotes
 clipquote=^'
-; - Show Extended Capslock Menu on menu tray
-Capsmenubutton=
+; - Paste clipboard in "Quotes"
+pasteclipboardinquotes=^+'
+; - Visit Website [If a URL is selected]
+gowebsite=#!u
+; - Reload Script - Ctrl + Shift + R
+reload=^+R
+; - Quit \ Exit \ Kill - Ctrl + Alt + Esc
+exitscript=^!esc
+; - Switch CASE between UPPER & lower
+switchCASE=+CapsLock
+; - Letter Swap
+letterswap=!r
+; - + Copy (Add\Append to Clipboard)
+appendclip=^+C
 
-; - Copy (Add to Clipboard)
-appendclip=
-; - Show the Insert Date & Time MENU
-showdtmenu=
 
 ;; - ITEMS ON THE TEXT TOOLS & APPS MENU
 ;**************************************************
+; - Show the Insert Date & Time MENU
+showdtmenu=
 ; - Show the Text Tools MENU
 showtoolsmenu=
 ; - Save Selection To New Document
@@ -4753,8 +4784,7 @@ definethis=
 wikipediasearch=
 ; - AHK Site Search via Google
 ahksearchmenu=
-; - Visit Website [If a URL is selected]
-gowebsite=#!u
+
 ; - Local Searches
 ; - Everything, Find [Selected Text] Locally
 Findwitheverything=
@@ -4807,6 +4837,8 @@ copydetails=
 
 ;; - ITEMS ON THE CODE FORMATTING..... MENU
 ;**************************************************
+; - Curly Brackets on New Lines
+wrapincbrackets=
 ; - 1 /* Block Comment */
 commentblock=
 ; - 2 {Wrapped}
@@ -4910,14 +4942,10 @@ visitgithub=
 editscript=
 ; - Edit Settings File
 editsettings=
-; - Reload Script - Ctrl + Shift + R
-reload=^+R
 ; - View Hotkeys
 viewhotkeys=
 ; - Suspend Hotkeys
 suspendkeys=
-; - Quit \ Exit \ Kill - Ctrl + Alt + Esc
-exitscript=^!esc
 
 ;; - ALT-TEXT EDITOR MENU ITEMS
 ; NOTE !! this menu was mainly set up to use when Notepad++ is Active. it will work in some other instances thou BE CAREFUL setting global hotkeys here, it my not work as expected in other apps.
@@ -4953,16 +4981,10 @@ altevexp=
 
 
 ; Other 
-;; Paste clipboard in "Quotes"
-pasteclipboardinquotes=^+'
-
 ; - Open the Quick Notes Directory from the menu
-openquick=
-
-; - Switch CASE between UPPER & lower
-switchCASE=+CapsLock
-; - Letter Swap
-letterswap=
+OpenQuickNotesDir=
+; - Paste as Plain Text
+pasteasplaintext=
 
 )
 , %inifile%
@@ -5047,57 +5069,66 @@ If you're an AHK enthusiast I recommend editing the script manually to add your 
 
 
 )"
-aboutcapswindow := " ;" more notes
+knownissues := " ;" more notes
 (
-
-**************************************************
-**************************************************
-
 
 ***************************************************
 ****** KNOWN ISSUES & AUTO COPY MODE WARNING ******
 ***************************************************
-This AutoHotkey menu is meant to be run on *[SELECTED TEXT.]*
 
-It has been modified to show when text is not selected,
-therefore, at times, it may not work as expected.
+++++++++++++++++++++++++++++++++++++++++++++++++++
 
-E.G. if no text is selected, in a text editor, and you fire a menu item that want to modify text,
-it may copy and format an entire line and paste it back into the editor.
+Regarding the Double-Right Click Menu Setting. (Off by Defualt) This is another I always leave on all the time.
 
-A.k.a., use with Caution!!! Especially when working in file manager!
-If you use its copy and paste functions on files, or select a menu item with a file selected, it will copy files to your clipboard expecting text input to send to a search or modify before pasting.
+It's a global mouse-key that will show the Menu in ANY application! 
 
-It can me used on file names if you hit F2 (Rename) first to select text in the file name.
-Though if window changes focus it will deselect the text causing the file itself to be copied. 
+This one can be more buggy than the Replace NP++ option. sometime both right click menus end up show overtop of each.
 
-Additionally -------------------------  
-When enabled the Live Preview & Auto Copy will automatically send CTRL + C to COPY, to any program you are in, EVERY TIME you open the menu!!!
+Again this harmless but annoying that you have to hit Esc to cancel the right click menus. Occasionally one or the other menus, trying to override each other, get stuck, ignore the ESC key, then you have to click around to closes the menus and then try again.
 
-This auto copy updates the live preview menu item. Otherwise it only send a Copy command after selecting a menu item that requires [SELECTED TEXT] to process, which is most of them.
+++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Its a fun feature though use it with caution, especially in file managers! 
+Regarding 'Replace Notepad++ Context Menu' Option.
+Its set to OFF by default.
 
-It's turned OFF by default when you start this app.
-When toggled from the settings menu it will stay on through a reload, until you turn it off again.
+Personally, I love this! I have it set ON, all the time for months with very few issues.
 
-The Menu will open slightly faster when not waiting for the clipboard to update.
-Thou, depending on the project auto copy is also helpful.
+95`% of the time its fine, but, this feature can be a bit buggy.
 
-Furthermore ------------------------- 
-Regarding 'Replace Notepad++ Context Menu'.
-Its set to OFF my default.
-Personally, I love this, have it set ON for myself.
+Sometimes the standard context menu will still be triggered behind the Extended Capslock Menu which block it from receiving mouse click inputs.
 
-90`% of the time its fine, but, this feature can be a bit buggy.
-Sometimes the standard context menu will still be triggered behind the Extended Capslock Menu which block it from receiving mouse click inputs. Its harmless but annoying. Reloading seems to help.
-It also doesn't interact well with the Search Results Window.
+Its harmless but annoying. Reloading seems to help. It also doesn't interact well with the Search Results Window.
 
 You can still access NP++ own context menu with a 'Ctrl' + 'Right Click' or the 'AppsKey' on your keyboard.
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++
- 
 
+Regarding the Live Preview & Auto Copy Menu Option
+
+Its a fun feature though use it with caution, especially in file managers!
+
+
+When enabled the Live Preview & Auto Copy will automatically send CTRL + C to COPY, to any program you are in, EVERY TIME you open the menu!!!
+This Auto Copy Mode is meant to be run on [*SELECTED TEXT*]
+
+This Auto Copy updates the Live Preview Menu Item. Otherwise it only send a Copy command after selecting a menu item that requires [*SELECTED TEXT*] to process, which is most of them.
+
+It's turned OFF by default when you start this app. When toggled On from the settings menu it will stay on through a reload, until you turn it off again.
+
+It has been modified to show when text is not selected, therefore, at times, it may not work as expected. E.G. if no text is selected, in a text editor, and you fire a menu item that want to modify text, it may copy and format an entire line and paste it back into the editor.
+
+A.k.a., use with Caution!!! Especially when working in file manager!
+
+If you use its copy and paste functions on files, or select a menu item with a file selected, it will copy files to your clipboard expecting text input to send to a search or modify before pasting.
+
+It can be used on file names if you hit F2 (Rename) first to select text in the file name.
+Though if window changes focus it will deselect the text causing the file itself to be copied. 
+
+The Menu will open slightly faster when not waiting for the clipboard to update.
+
+This menu options is mostly for fun, it's not really ment to be use regularly, thou, depending on the project auto copy is also helpful.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++
 )" 
 
 aboutsoftware := "
@@ -5159,292 +5190,7 @@ These are just the ones I use, if you know how, the 'alttxt' menu could be edite
 
 
 )"
-/*
-; " changelog = change log =
-changelog := " ;"
-(
 
-
------- v.2025.02.01 ---------------------------
-
-+ added swap letter hotkey
-+ added removed empty lines to text formatting menu
-+ improved and added Quick Notes Directory as a LIVE FOLDER sub-menu to tools menu
-+ put run option on alttext menu for .ahk files
-+++ added a toggle to - Show the Menu with a Double-Right Click - to the Settings menu
-+ Show_CAPS_OSD for Capslock toggle now live updates showing icons for the toggled settings
-++ added text statistics to tools menu. counts lines, works, characters etc of selected text or documents
--about gui clean up & orgnization
-
------- v.2025.01.28 ---------------------------
-
-+++ Improved \ Shortened the copy time when using a single tap on the Capslock key to copy !!!
-
-+++ Added the ability to set global hotkeys that be added, changed & saved in the .INI for most menu items
-
-+++ added a Dynamic sleep function into the the RestoreClipBoard Fuctions for better handling of the clipboard being restored correctly
-
-+ added DPI-Awareness DllCall to fix the context menu show in the wrong spot on multi-montier setup with mixed DPIs.
-
-+ added Modeless Menu Function, a windows DllCall that allow you use hotkeys from the script when the menu is open! Usually AHK blocks hotkeys when its busy showing a menu.
-
-+ added UseErrorLevel to the menu so if there's an error detected on a sinlge menu item, the menu will still show without being killed by AHK
-
-+ added 123 < to > !@#`, Convert Between Numbers<&&>Symbols to text menu
-
-+ added expand %A_ScriptDir% to code menu
-
-+ added Encode & Decode XML to code menu ( todo these need be error check some more but they're there for now )
-
-+ added Convert file:///C:/file.url to standard Path to code menu
-
-+ added improvements\expansion to file:///C:/file.url Handleing
-
-+ added ( Script is Running as ADMIN ) notification to settings menu when script is elevated
-
-+ improvements to error levels & handling of windows `%System Environment Variables`%
-
-+ updated About GUI with tabs to spread out all the info provided
-
-+ added the ability to edit settings in the '-SETTINGS.ini' file directly from About GUI
-
-+ added the ability to check github for updates from the about window
-+ added Quick Clip Board Editor to the Tools Menu
-
-
------- v.2024.12.19 ---------------------------
-
-=+ fixed a syntax error when sending a system index search to Everything
-+ fixed\updated the `Ctrl` + `Space` hotkey for the explorer popup menu in everything 1.5a. -- In a recent update they added this hotkey as a default to their search bar. Its functionality is now kept in the search bar, when launched from the results panel it will show this menu :-)
-
-+ added a info message box to the Edit Script menu item when chosen from the compiled version of the menu
-
-+ added message boxes to tools\launchers menu for 3rd party programs. When they are not found as installed the box tells you and provides a faster link to that software website. **still have todo this to the alt editor menu
-
-+ added\replacing dnGrep over astrogrep as a find in files software. 
-
-+ Added  a hot to Quit\Exit App, `Ctrl` + `Alt` + `Esc`
-
-= improved variable expansion when creating settings.ini file 
-+ a handful of small bug fix adjustments
-
------- v.2024.12.03 ---------------------------
-
-++ added open windows context menu to the selected path to the Files menu!!
-+ added find in files using dnGREP to find menu
-+ added the abiltiy to open\run windows 'shell:::' folders\apps to the files menu
-= added UTF-8 Encoding to Saving text files options
-= improved replacing NP++'s rightclick menu. this menu now will only show in the editor and not not the side panels or document tabs.
-
-++ added an option to turn off the On Screen Display that shows when the capslock is toggled on to the settings menu
-= improved Show_CAPS_OSD to show if Sound Beeps and\or Shifted Number is Active
-= set custom font to system font on Show_CAPS_OSD
-
------- v.2024.11.23 ---------------------------
-
-= Fixed an icon error from last update
-= Fixed a launch error for the included Auto-Correct Spelling Script
-= A few cosmetic menu headings updates
-
------- v.2024.11.18 ---------------------------
-
-+ added searching selection in the local AutoHotKey.chm help file to the find\search menu!
-
-+ added toggle checks to suspend hotkeys menu items, when OFF they show as checked
-
-+ added live folder sub-menu for the Extended Capslock Menu QUICK Notes to Notepad++'s alternative menu
-
-+ added a hotkey, {Escape}, to Stop Speaking for the Text to Speech tool.
-
-+ expanded the Explore Popup Menu to also work in Everything 1.5a with the {Ctrl} + {Space} Hotkey, also, fixed clipboard not restoring from the explore popup menu, again
-
-+ New hotkey added, {F9}, for showing the Open In Alt Editor Menu in NP++ & Everything 1.5a even faster
-+ also added error level checks for folders and large files to this menu
-
-+ added quick select numbers to the Code Formatting menu, as well as some more icons
-
-+ fixed an issue when right click outside of NP++ while its  still active showing this menu rather than menu that should be appearing
-
-+ added Dynamic icons that change for Directory Opus users on any Open Dir items.
-
-= the live preview menu item now only appears when auto copy mode is turned on via the settings menu
-
-= fixed a syntax error when searching the system index via Everything 1.5a
-= fixed typos causing errors when trying to run the geany text editor
-= fixed a syntax error for opening Astrogrep via the CLI with a search term
-- removed the google hotkey, Alt + G (its still in the script if you want to uncomment it)
-
------- v.2024.11.06 ---------------------------
-
--- New Menu Items --
-+ added 'Edit in Text Editor' to the Open\Run\Explore [ Files ] Menu, will try your set option first [NP++], then notepad.exe
-+ added 'If NP++ Switch to Alt Open With Menu' item to the Open\Run\Explore [ Files ] Menu
-
-+ the text field in temp sticky notes now resize with the window!!
-
-+ added the handling of file urls e.g. 'file:///urls.ext' to the Open\Run\Explore [ Files ] Menu
-
-= fixed an error with the handling of the '.ahk' from the Run\Open File... menu item. // ahk files open in a text editor rather than running. [ if you use ahk you know why ]
-
-+ added errorlevel check to append\add to clipboard function
-+ added errorlevel checks to Alt Open With Menu for NP++
-
-+ expanded go to website from text to handle more url types, e.g. IP address, ftp://, and Other web address that don't end in '.com', e.g. .net.org.gov.uk.fr.au etc
-
-+ fixed the clipboard not being restored when using the 'Ctrl' + 'Space' hotkey\menu item for the explore folder popup menu
-
-+ fixed the handling of window `%Environment Vars`% in file paths. e.g. '%systemroot%\notepad.exe' ""`%localappdata`%"" `%userprofile`%\desktop 
-
-+ a couple icon updates with more dynamic icons to match your Text Editor = if set in the `-SETTING.ini` 
-
------- v.2024.11.04 ---------------------------
-
-=+ improved explore folder popup menu not showing icons or opening folders. navigating folders in menu now follows the location accurately.
-
-+ added errorlevel check to -CopyDup file function, if duplicate already exist, ask it you want to replace it.
-+ fixed all everything 1.5a search to all run with cli parms
-+ fixed Explore this dir in everything not sending quotes around dir
-
-+ added Read selected text out loud using TTS to Tools menu
-
------- v.2024.11.02 ------------------------------- 
-
-+++ Added Ini Settings File for Toggle Items! They Now Stay Set to the User Choice Arcoss Reloads!
-
-+ added and updated settings menu toggle icons
-+ a few dynamic icons dopus vs explorer
-+ dynamic icons to match %texteditor%
-- removed welcome traytip on light\dark toggle.
-
-+ and a copy to options for non Directory Opus users
-= fixed copy folder to... Not copying folder but dumping folder content to selected dir.
-
-= tray menu changes
-new, double click to open extend capslock menu
-
-+ add option to set a default text editor, default is set as notepad++, can be changed in ini file
-+ add errorlevel checks to send missing editors to windows notepad
-
-+ added make duplicate -CopyDup.ext to the open\run\explore\files menu
-
-+ added a errorlog function with useerrorlevel
-
-+ improved searches with everything15a running from cli rather than thru multiples lines of ahk input
-
-+ added search selection in files via astrogrep
-
-+++ Added two special If, Notepad++ is active menus triggered by hotkeys
-+ add notepad++ menus , open in alttxt editor menu with hotkey ^!N:: `Ctrl` + `Alt` + `N`
-+ added ^{space} hotkey to notepad++ for the folder explorer menu
-	- also works in Everything 1.5a on a selected file.
-
-+ added toggle to replace notepad++ right click menu with this menu as a default
-	- notepad++'s OG context menu can still be access by a mouse-hotkey `Ctrl` + `Right Click`
-
------- v.2024.10.28 ------------------------------- 
-
-+ added Copy Selection to New Notepad++ Doc to the Tools menu
-+ started cleaning up the About Window GUI
-+ new cleaned up tray menu, double click icon to open menu, right click for quick settings
-
------- v.2024.10.23 ------------------------------- 
-
-Fix to Save As on Sticky notes, now auto appends '.txt' to a file if user left the .ext off a name
-
------- v.2024.10.21 ------------------------------- 
-
-+ Added open Registry keys in RegEdit to the 'Open\Run\Explore...' Menu
-+ Added Search File & Explore Folder With Everything to the 'Open\Run\Explore...' Menu
-+ Added Copy to Folder option for user who don't have Directory Opus
-= Fixed 'Warp in Quotes' not restoring clipboard after function
-
-+ Improved save functions from Sticky GUI
-- Removed (extra) buttons from Sticky Notes GUI, Replaced them with a single button containing Save Options
-+ Added Tab ability inside of text box Sticky GUI
-
-+ Added Hotkeys to the Sticky Note GUI Windows
-	Alt + M = Show Sticky GUI Quick Menu
-	Ctrl + S = Save Sticky As
-	Ctrl + Shift + S = Quick Save As
-	Ctrl + N = Create New Empty Temp Sticky
-	Ctrl + Shift + O = Open Quick Notes Folder
-	Ctrl + ESC = Close Stick
-+++ Found a workaround to AHK not show custom Context Menus in GUI Edit Box
-+++ Added Extended Capslock Menu as the Right-Click Menu in the Sticky GUI
-
-+ Added a few Global hotkeys
-	Middle Mouse Button = Now shows Extended Capslock Menu (will now show in Directory Opus)
-	Ctrl + Shift + F2 = Copies Selected Text to Temp Sticky
-	Ctrl + Alt + F2 = New Empty Temp Stick
-	Ctrl + Alt + F3 = Alt hot to show Extended Capslock Menu
-
------- v.2024.10.15 -------------------------------
-
-++ IMPORTANT BUG FIX - fixed an error in the Restore Clipboard function !!
-
------- v.2024.10.13 -------------------------------
-
-+ added Live Preview with Auto Copy when the menu is launched
-+ added a Settings sub-menu
-+ added a settings file for mapping 3rd party software (when note installed in their default locations) & changing a few default toggle options
-++ added a few more options for searching selected text, online and locally (requires Everything 1.5a and Notepad++)
-
-+++ Improvements +++
-+ shortened the amount of time it takes for the menu to appear when holding down the capslock to 0.15 seconds
-+ improved the functions that handle the clipboard for better speed and consistency
-+ added alt menu hotkey Ctrl + Alt + F3
-+ added more options to the Modify Text & Case, and Code Formatting sub-menus
-
-++ Add Shifted Number Row Mode!!! +++
-Capslock can now also shift your NUMBER ROW, E.G.
-	`1234567890-=[]\
-	~!@#$%^&*()_+{}|
-this option can be toggled on\off	
-
-+++ NEW Sticky Note GUIs!!! +++
-+ Added GUI for quick temp sticky notes!!
-+ Ctrl + Alt + F2 for a new blank note or from the menu on selected text will automatically copy the text into the note
-
-+ Sound beeps on capslock toggle
-+ gui overlay that hovers over the taskbar area when capslock is on
-
-+ added a compiled .exe for easier running. A few script options will be limited from the exe. I still recommend the running .ahk file, especially if you want edit\customize the menu.
-
-++ Special Addition to this DOPUS EDITION ++ 
-+ Added an Open\Run\Explore... Menu that works on a selected file address from inside a text document.
-(REQUIRES DIRCOTRY OPUS) its not free but its well worth it.
-= A few of these menu item should work through file explorer, thou I haven't fully tested them with explorer
-	- open folder
-	- run\open a file
-	- copy file to clipboard, paste them in a file manager! (REQUIRES DIRCOTRY OPUS) 
-= works on true file paths, and with system variables e.g.
- '%USERPROFILE%\Documents\AutoHotkey\'
-+ copy the content of text-based file into your clipboard
-> move files into a sub-folder or up into parent folder
-
------- v.2024.09.28 ------------------------------- 
-
-+ Updated and Fixed the Insert Date & Time Menu to refresh automatically\dynamically every time the menu is launched.
-+ Added a Run as Admin option to the Tools menu
-
------- v.2024.09.20 ------------------------------- 
-
-= minor icon updates that should allow this menu to run on systems running windows 7 without errors
-
------- v.2024.09.13 ------------------------------- 
-
-* FIRST PUBLIC RELEASE *
-+ added new menu items
-	+ copy + append to clipboard
-	+ save clipboard to new document
-++ improvements ++
-+ better save new document options.
-+ can now save as other types of text based formats (e.g. .ahk, .css, etc) rather then strictly .txt files
-+ added errorlevel escapes to stop the script when copying attempts fail
-
-)"
-;"
-*/
 ; aboutini := "
 aboutini = 
 (
@@ -5558,8 +5304,70 @@ You can use the menu to get you there. select this web address and choose " Visi
 
 )
 
+
+
+/*
+;***************************************************************************
+;************************* HOTKEYS *****************************************
+;***************************************************************************
+; this section is not for editing, it only reference for the message box popup
+; changing the keys here won't change them inside the script.
+*/
+global hotkeys
+hotkeys =
+(
+-----[[[[ HOTKEYS ]]]]-----
+Extended CAPSLOCK KEY Functionality Using AutoHotkey:
+	+ Capslock, Single Tap, COPY
+	+ Capslock, Double Tap, PASTE
+	+ Capslock, HOLD, Show Extended Capslock Menu
+
+Middle Mouse Button -- Alt Mouse Hotkey to OPEN MENU
+Ctrl + Alt + F3 -- Alt Keyboard Hotkey to OPEN MENU
+
+  Ctrl + Shift + F2 -- New Sticky Filled With Selection
+  Ctrl + Alt + F2 -- New Empty Sticky Note
+  Ctrl + Shift + R -- Reload Script
+  Ctrl + Alt + Esc -- Quit \ Exit Script
+--------------------------------------------------
+Alt + Capslock -- Toggle Capslock
+Ctrl + Capslock -- Toggle Caplock
+Shift + Capslock -- Switch between UPPERCASE & lowercase
+--------------------------------------------------
+--- Hotkeys for the Sticky Note GUI Windows ---
+Alt + M -- Show Sticky GUI Quick Menu
+Ctrl + S -- Save Sticky As
+Ctrl + Shift + S -- Quick Save As '.txt'
+Ctrl + N -- Create New Empty Temp Sticky
+Ctrl + P -- Pin Sticky To Top
+Ctrl + Shift + O -- Open Quick Notes Folder
+Ctrl + ESC -- Close Stick without saving
+**************************************************
+
+         -----+++ OTHER HOTKEYS +++-----
+Ctrl + Shift + `" -- Paste Clipboard in Quotes
+	Ctrl + `" -- Put Quotes Around [`"Selected Text"]
+Win + H -- Add Auto Correct Hot Strings ...
+		 ...(if include Auto Correct script is running)
+--------------------------------------------------
+
+==+++ SPECIAL IF Notepad++ ACTIVE HOTKEYS +++==
+Right Click -- Can replace NP++ menu with this one. (optional)
+Ctrl + Space -- Open Live Folder Menu...
+	if a [* C:\Filepath.txt *] is selected it show's that files folder
+	if nothing is selected it will show the folder of the Active file
+	+ this can also work in Everything 1.5a on a selected file, it will show that files folder
+	- this menu hotkey is turn off else where
+Ctrl + Alt + N or F9 -- Open Active File in Alternative Text Editor Menu
+**************************************************
+)
+; "
+
+
+;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 ;; start about gui
+;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 Gui, capsa: New
 Gui, capas: Margin, 5, 5
@@ -5571,25 +5379,27 @@ gui, capsa: font, , Consolas
 ; gui, capsa: add, Tab2, xm w550 h630 vSelectedTab gTabChange, Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings ; vSelectedTab gTabChange ;; the V & G labels hre are casing warnings from gpt so
 ; gui, capsa: add, Tab2, buttons xm w550 h630 -Theme , Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings
 
-gui, capsa: add, Tab3, buttons xm w550 h630 -Theme , Overview|INI Settings|ChangeLog|Software Info|Known Issues|Tab 6|Tab 7
+gui, capsa: add, Tab3, buttons xm w550 h630 -Theme , Overview|INI Settings|Hotkeys|ChangeLog|Software Info|Known Issues ;|Tab 6
 
 
 gui, capsa: Tab, 1
   ; ; Overview Tab
 
 gui, capsa: font, cffb900, Consolas
-gui, capsa: font, s12
+gui, capsa: font, s11
 ; gui, capsa: add, text, center  w520, %scriptname%
 gui, capsa: add, text,  center w520, Version // Last Update: %scriptversion%
 
-gui, capsa: add, Text, w520, This Extended Capslock Menu is a expanded context menu, written with AutoHotkey. Its made for codeing\working\playing with text.`n`nWith this menu, after *[SELECTING SOME TEXT]* and then picking a menu item, the text will be copied to your clipboard (with your previous clipboard item preserved) so you can...`n
+gui, capsa: add, Text, w520, This Extended Capslock Menu is a expanded context menu, written with AutoHotkey. Its made codeing\working\playing with text.`n`nWith this menu, after *[SELECTING SOME TEXT]* and then picking a menu item, the text will be copied to your clipboard (with your previous clipboard item preserved) so you can...`n
 gui, capsa: font, s10
 gui, capsa: add, edit, w520 r15, %overview%
-gui, capsa: font, s12
+gui, capsa: font, s09
+gui, capsa: Add, text, center w520, ** This Overview Text is Live. You can use the menu here to test && play with the menu. It will reset when you reload this window.
 gui, capsa: Add, text, center w520, --------------------------------------------------
+gui, capsa: font, s10
 gui, capsa: Add, Link, center w520, <a href="https://github.com/indigofairyx/Extended_Capslock_Context_Menu">Extended Capslock Menu Github Page</a>
 
-GUI, CAPSA: add, picture, border hwndhOSD gToggleCapsLock, %A_ScriptDir%\icons\Show_CAPS_OSD overlay_232x63.png
+GUI, CAPSA: add, picture, border hwndhOSD gToggleCapsLock, %A_ScriptDir%\Screenshots\OSD overlay_362x79.png
 tip=
 	(ltrim
 	This On Screen Display appears over the Task Try whey CAPSlock is ON.`nThe Icons update depending on which optional Toggle Settings you have Enabled.`nThis Overlay can also be Toggle OFF if you don't want to see it.`nClick here to Toggle your Capslock to view the dispay
@@ -5600,29 +5410,38 @@ addtooltip(hOSD,tip)
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 gui, capsa: Tab, 2
-;; hotkeys & settings tab
-; MsgBox, INI file path: %inifile%`nContent: %inicontent%
+;;  ini settings tab
 gui, capsa: font, s09, Consolas
-gui, capsa: add, text, section,You can edit the settings in the ini file here or choose `nEdit Settings from this menu to edit in the Default Text Editor ->
 
-gui, capsa: add, picture, ys w28 h28 hwndhshowsettingstip gshowsettingsmenu, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico
-AddTooltip(hshowsettingstip,"Click here to view the Settings Menu")
+gui, capsa: add, text, section, Edit the settings in the .ini file here and\or Settings Menus Options ↓ 
+
+gui, capsa: add, picture, section w28 h28 hwndhshowsettingstip gshowsettingsmenu, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico
+AddTooltip(hshowsettingstip,"Quick Settings Menu")
+gui, capsa: add, picture, ys W28 h28 hwndhcodespark gpreviewalttxtmenu, %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
+AddToolTip(hcodespark, "Edit .INI Options")
+gui, capsa: add, picture, ys, w28 h28 hwndhaset gshowasetmenu, %icons%\settings panel JLicons_33_64x64.ico
+addtooltip(haset, "Additional Settings Menu")
 
 gui, capsa: font, cDCDCDC s10, Consolas
-gui, capsa: add, text, hWndhedinginifile gdonothing xs, %A_scriptname%-SETTINGS.ini%A_tab%
-AddTooltip(hedinginifile,"This .ini file is loaded in the box below.`nSave & Reload to use changes")
-gui, capsa: add, Button, disabled h15 x+s10 vallowsave gsaveini, &Save .ini && Reload
-; gui, capsa: add, edit, w520 r15 viniload ginisave,
+gui, capsa: add, text, hWndhedinginifile gdonothing ys, %A_space%%A_scriptname%-SETTINGS.ini%A_space%%A_space%
+AddTooltip(hedinginifile,"This .ini file is loaded in the box below.`nSave & Reload to use changes.")
+
+Gui, Add, Button, disabled vallowsave gsaveini h12 x+s, &Save .ini && Reload
+GuiControlGet, hwndallowsave , Hwnd, allowsave
+DllCall("uxtheme\SetWindowTheme", "ptr", hwndallowsave , "str", "DarkMode_Explorer", "ptr", 0)
+
+; if (darkmode)
+	; gui, add, picture, w28 h28 ys hwndhdarkmenu vmenumodeset gDMToggle, %menuLT%
+; else
+	; gui, add, picture, w28 h28 ys hwndhdarkmenu vmenumodeset gDMToggle, %menuDK%
+
 gui, capsa: font, cDCDCDC s11, Consolas
 global inicontent := ""
 global iniedit 
 global allowsave
 FileRead, inicontent, %inifile%
-; fileread, inicontent, %inifile%
-; guicontrol,,iniload, %inifile%
 GuiControl,, iniedit, %inicontent%
-; gui, capsa: add, edit, xs w520 r15 vinicontent ginisave, %inicontent% ; Edit box for INI content ;; ginisave label from gpt is breaking shit
-gui, capsa: add, edit, xs w520 r15 gonchange viniEdit, %inicontent% ; Edit box for INI content
+gui, capsa: add, edit, xs w520 r20 gonchange viniEdit, %inicontent% ; Edit box for INI content
 
 
 gui, capsa: font, cffb900 s09, Consolas
@@ -5631,20 +5450,26 @@ gui, capsa: font, cffb900 s09, Consolas
 
 gui, capsa: add, text, , Read Me - About Stored Settings
 gui, capsa: font, cFFE9AC s10, Consolas
-gui, capsa: add, edit, w520 r12, %aboutini%
+gui, capsa: add, edit, w520 r8, %aboutini%
 
 
-; Gui, Add, Edit, R20 vMyEdit
-; FileRead, FileContents, C:\My File.txt
-    ; FileRead, inicontent, %inifile%
-; GuiControl,, MyEdit, %FileContents%
+
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 gui, capsa: Tab, 3
+gui, capsa: add, picture,w24 h24 section, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
+gui, capsa: add, text, x+10+s , Hotkeys - Tab 3 - Coming soon...
+; gui, capsa: add, text,,
+
+gui, capsa: add, edit,w520 r27 xs,%hotkeys%
+
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+gui, capsa: Tab, 4
  ; Changelog Tab
 ; gui, capsa: font, s11,  Consolas
 ; gui, capsa: font, cffb900
-; gui, capsa: add, text,center w520, *************************************************************`n************************* CHANGELOG *************************`n*************************************************************
+gui, capsa: add, text,center w520, *************************************************************`n************************* CHANGELOG *************************`n*************************************************************
 ; gui, capsa: add, edit,  w520 r27, %changelog%
 
 ; clogfile = %A_ScriptDir%\ChangeLog.txt
@@ -5677,64 +5502,82 @@ if (A_Username = "CLOUDEN")
 	DllCall("uxtheme\SetWindowTheme", "ptr", hwndeclnp , "str", "DarkMode_Explorer", "ptr", 0)
 	}
 
+
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
-gui, capsa: Tab, 4
+gui, capsa: Tab, 5
 ;; software & links
-gui, capsa: font, cffb900, Consolas
-gui, capsa: add, edit, x+m cA0BADE w520 r13, %aboutsoftware% 
+gui, capsa: font, cFFE9AC s9, Consolas
+; gui, capsa: font, cffb900, Consolas
+gui, capsa: add, edit, x+m cA0BADE w520 r13 +readonly, %aboutsoftware% 
 gui, capsa: font, s9,  Consolas
+
+gui, capsa: Add, Link, section , <a href="https://github.com/notepad-plus-plus/notepad-plus-plus">***Notepad++*** - The Best all-purpose, lite-weight replacement for`n Windows Notepad.</a> <a href="https://www.binaryfortress.com/NotepadReplacer/">Install with Notepad Replacer.</a> 
+
+; gui, capsa: Add, Link, xs, <a href="https://www.binaryfortress.com/NotepadReplacer/">Notepad Replacer - Install with this.</a> 
+
+gui, capsa: Add, Link, , <a href="https://www.voidtools.com/forum2/viewtopic.php?t=9787">***Everything v1.5a*** - Powerful local search tool</a>
+
+gui, capsa: add, link, , <a href="https://dngrep.github.io">***dnGrep*** - A top of the line tool for searching text inside files.</a>
+
+gui, capsa: add, link, , <a href="https://astrogrep.sourceforge.net/features/">***AstroGrep*** - A good tool for searching text inside files.</a>
+
+gui, capsa: Add, Link,hwndhdopelink , <a href="https://www.gpsoft.com.au">***Directory Opus*** - The best and most over powered File Manager.`n A Replacement, Alternative for Windows File Explorer.</a>
+AddToolTip(hdopelink, "Dirctory Opus is the only Paid $oftware on this menu I wrote into this menu. Its well Worth IT!`nTheres a free trail to try. If you like it you can get `%15 off your purchase with this code...`nCW4D0S289B4K" )
+
+gui, capsa: Add, Link, , <a href="https://github.com/sabrogden/Ditto">Ditto - Clipboard Manager</a>
+
+gui, capsa: Add, Link, , <a href="https://clipboard.quickaccesspopup.com">Quick Clipboard Editor - A Clipborad editor with advanced`n text & code formatting options built.</a>
+
+gui, capsa: Add, Link, , <a href="https://ramensoftware.com/textify">Textify - Lets you copy text out of message boxes and guis</a>
+
+gui, capsa: Add, Link, , <a href="https://github.com/TheJoeFin/Text-Grab/">Text Grab - An Amazing OCR tool</a>
+
+gui, capsa: Add, Link, , <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">An AHK Global Auto Correct Script - This is already included here.</a>
+
+gui, capsa: Add, Link, hwndhahkcom , <a href="https://autohotkey.com">AutoHotkey.com</a>
+AddToolTip(hahkcom, "The coding language this menu was written with.")
 ; gui, capsa: Add,Link,hWndhLink,This is a <a href="https://autohotkey.com">example tooltip hover link</a>.
 ; Tip=
    ; (ltrim
     ; Tooltip for the Link control.  Click on me to go to AutoHotkey.com.
    ; )
 ; AddToolTip(hLink,Tip)
-gui, capsa: Add, Link, , <a href="https://github.com/notepad-plus-plus/notepad-plus-plus">***Notepad++*** - You never know.</a>
-gui, capsa: Add, Link, , <a href="https://www.voidtools.com/forum/viewtopic.php?t=9787">***Everything v1.5a*** - Powerful local search tool</a>
-gui, capsa: add, link, , <a Herf="https://astrogrep.sourceforge.net/features/">***AstroGrep*** - A good tool for searching text inside files.</a>
-gui, capsa: add, link, , <a Herf="https://dngrep.github.io">***dnGrep*** - A top of the line  tool for searching text inside files.</a>
-gui, capsa: Add, Link,hwndhdopelink , <a href="https://www.gpsoft.com.au">***Directory Opus*** - The most  powerful File Explorer Replacement - Alternative.</a>
-AddToolTip(hdopelink, "Dirctory Opus is the only Paid $oftware on this menu I wrote into this menu. Its well Worth IT!`nTheres a free trail to try. If you like it you can get `%15 off your purchase with this code...`nCW4D0S289B4K" )
-; gui, capsa: add, text, , Dirctory Opus is the only Paid $oftware on this menu. Its well Worth IT!
 
-gui, capsa: Add, Link, , <a href="https://github.com/sabrogden/Ditto">Ditto - Clipboard Manager</a>
-gui, capsa: Add, Link, , <a href="https://clipboard.quickaccesspopup.com">Quick Clipboard Editor - A Clipborad editor with advanced text formatting options.</a>
-
-gui, capsa: Add, Link, , <a href="https://ramensoftware.com/textify">Textify - Lets you copy text out of message boxes and guis</a>
-gui, capsa: Add, Link, , <a href="https://github.com/TheJoeFin/Text-Grab/">Text Grab - Amazing OCR tool</a>
-gui, capsa: Add, Link, , <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">An AHK Global Auto Correct Script - This is already included here.</a>
-gui, capsa: Add, Link, , <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">AutoHotkey.com</a>
-
-;---------------------------------------------------------------------------
-;---------------------------------------------------------------------------
-gui, capsa: Tab, 5
-
-; known issues Tab
-gui, capsa: font, s12,  Consolas
-gui, capsa: font, cffb900
-gui, capsa: add, edit, w520 r15, %aboutcapswindow%
 
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 gui, capsa: tab, 6
-gui, capsa: add, text, , Tab 6 - Coming soon...
+; known issues Tab
+gui, capsa: font, cffb900
+gui, capsa: font, s09,  Consolas
+gui, capsa: add, edit, w520 r15 +readonly, %knownissues%
+
+gui, capsa: font, cFFE9AC s10,  Consolas
+gui, capsa: add, text, w520, `nAll in all I'm a N00B at code\programming [just a computer geek really], this AutoHotkey Menu project has been an exercise of learning and fun mostly. I love this menu and have been using it daily on my machine for months. Overall what's happening in the background of the menu is pretty simple and I've tried to break most menu items, looking for bugs, before I've shared it here. It's fairly stable. That being said if you discover any issues or know how to code with AHK, and have recommendations, please report an issue on the github page.
+gui, capsa: add, link,,<a href="https://github.com/indigofairyx/Extended_Capslock_Context_Menu/issues">%scriptname% Issues Page</a>
+
+; gui, capsa: font, cFFE9AC s10, Consolas
+gui, capsa: font, cffb900
+gui, capsa: add, text, gdonothing, For reference, This AHK Menu was Written && Tested on
+gui, capsa: add, text,  hwndhwin7 gdonothing, Windows 10
+addtooltip(hwin7, "It should also run on Win7 for you die hards,`nthou few menu items might now work.`nand... uhhh Never11")
+gui, capsa: add, text, x+10, using
+gui, capsa: add, text, x+10 gdonothing hwndhahkv2, AutoHotkey v1.1.37.02
+addtooltip(hahkv2, "`And no, I won't updating\converting this AHK v2.`nIt only copies and searches\runs text.`nThere's no need fix what isn't broken.")
+gui, capsa: add, text, w520,
 
 ;---------------------------------------------------------------------------
 
 ;---------------------------------------------------------------------------
-gui, capsa: tab, 7
-gui, capsa: add, text, , Tab 7 - Coming soon...
+; gui, capsa: tab, 7
+; gui, capsa: add, text, , Tab 7 - Coming soon...
 
 ;---------------------------------------------------------------------------
 
 
 ; Return to the main layout
 gui, capsa: Tab 
-
-
-
-
 
 
 gui, capsa: font, cA0BADE, Consolas
@@ -5774,6 +5617,9 @@ winwaitactive Extended Capslock Menu - About
 guicontrol, focus, closebut ; darkbutton1 ; Close ;; this needs to be the controls Var, not logical name
 } 
 
+showasetmenu:
+menu, aset, show
+return
 
 previewalttxtmenu:
 activefile = %inifile%
@@ -5794,9 +5640,11 @@ Else ; Disable the button if the edit box is not changed
 Return
 
 saveini:
-MsgBox, 4132, , This will save the edits you made in this window to the .ini file and reload the menu. `n`n Continue?`n`n
-IfMsgBox no
-	return
+; MsgBox, 4132, , This will save the edits you made in this window to the .ini file and reload the menu. `n`n Continue?`n`n
+; IfMsgBox no
+	; return
+tooltip Saving %A_scriptname%-SETTINGS.ini ...
+
 filecopy, %inifile%, %inifile%.BAK	; make a backup of current .ini
 FileSetAttrib, +H, %inifile%.BAK  	;  and hide it.
 GuiControlGet, inicontent, , iniEdit ; Get the text from the edit box
@@ -5910,7 +5758,7 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 
     if (LiveMenuEnabled)  ; Only show message box when turning ON
     {
-		Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
+		Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
         Tooltip, Auto Copy when you open`nthe menu is now Turn ON!
 		sleep 2000
 		tooltip
@@ -5920,7 +5768,7 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
     }
 	else
 	{
-		Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
+		Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
 		tooltip, Live Preview && Auto Copy is Turned OFF!
 		sleep 2000
 		tooltip
@@ -5928,12 +5776,13 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 		return
 
 	}
+sleep 400
 }
 
 firstrunwelcome:
 IniWrite, 0,  %inifile%, Global_Toggles, isfirstrun
 Aboutcapswindow()
-MsgBox, 4160, %scriptname%, Thank for checking out Extended Capslock Menu!`n`nIt looks like this is your first time running it.`n`nGive the about window a quick glance.`n`nTo see this about window again you can get to it from the Settings & About Menu Item.
+MsgBox, 4160, %scriptname%, Thank for checking out Extended Capslock Menu!`n`nIt looks like this is your first time running it.`n`nGive the about window a quick glance.`n`nFrom here you can read the Overview, Edit your INI settings, Find links to free softwares that this menu utilizes, scan the Changelog and Known Issues, Check for Updates, etc...`n`nTo see this about window again you can get to it from the Settings & About Menu.
 return
 
 ;***************************************************************************
@@ -6926,7 +6775,7 @@ if !FileExist(topmenu)
 	; }
 Menu, %TopMenu%, Add
 Menu, %TopMenu%, deleteall
-Menu, %TopMenu%, Add, Open Quick Docs Folder, openquick
+Menu, %TopMenu%, Add, Open Quick Docs Folder, OpenQuickNotesDir
 if FileExist(dopus)
 	Menu, %TopMenu%, icon, Open Quick Docs Folder, %dopus%
 else
@@ -7595,9 +7444,36 @@ Return
 ; Tempupdatecheck := A_Temp . "\version.txt" ; Temporary file to store the downloaded version
 
 
+CheckUpdatesStartup:
+if !FileExist(tempupdatecheck)
+	{
+		URLDownloadToFile, %GitHubVersionFile%, %Tempupdatecheck% ; Download the version file from GitHub
+			If (ErrorLevel)
+			{
+				MsgBox, 4112, Error!, Failed to download version info from GitHub!`n`nIf your offline that will cause this error.`nPlease try again later or visit the ECLM Repo directly., 7
+				Return
+			}
+		; Read the downloaded version
+		; FileRead, LatestVersion, %Tempupdatecheck%
+	}
+	
+	FileReadLine, LatestVersion, %Tempupdatecheck%, 1
+    LatestVersion := Trim(LatestVersion) ; Remove extra spaces/newlines
+
+    If (ScriptVersion != LatestVersion) ; Compare versions
+    {
+        MsgBox, 4161, New Version Available., A new version of ECLM is available!`n`nLast Updated: %LatestVersion%`n`nYour version: %ScriptVersion%`n`nClick OK to visit the Github Releases page where you can see the Change Log and Download the new version.`n`nReplace this directory with the new one and reload.`n`nYou can Toggle this Automatic Update Check OFF from the settings menu.,30
+		IfMsgBox OK
+			{
+			run https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases/tag/%latestversion%
+			filedelete, %tempupdatecheck%
+			}
+    }
+sleep 400
+return
+
 CheckUpdatesmanual:
-    ; Download the version file from GitHub
-    URLDownloadToFile, %GitHubVersionFile%, %Tempupdatecheck%
+    URLDownloadToFile, %GitHubVersionFile%, %Tempupdatecheck% ; Download the version file from GitHub
     If (ErrorLevel)
     {
         MsgBox, 4112, Error!, Failed to download version info from GitHub!`n`nPlease try again later or visit the ECLM Repo directly., 10
@@ -7609,15 +7485,15 @@ CheckUpdatesmanual:
 
     LatestVersion := Trim(LatestVersion) ; Remove extra spaces/newlines
 
-    ; Compare versions
-    If (ScriptVersion = LatestVersion)
+    
+    If (ScriptVersion = LatestVersion) ; Compare versions
     {
 		FileDelete, %Tempupdatecheck%
-		MsgBox, 4096, Up to Date, Your ECLM is Up To Date.`n`nVersion:  %scriptversion%`n, 10
+		MsgBox, 4096, Up to Date, Your ECLM is Up To Date.`n`nVersion:  %scriptversion%`n, 7
     }
     Else
     {
-        MsgBox, 4161, New Version Available., A new version of ECLM is available!`n`nLast Updated: %LatestVersion%`nYour version: %ScriptVersion%`n`nClick OK to visit the Github Releases page where you can see the Change Log and Download the new version.`n`nReplace this directory with the new one and reload.`n
+        MsgBox, 4161, New Version Available., A new version of ECLM is available!`n`nLast Updated: %LatestVersion%`n`nYour version: %ScriptVersion%`n`nClick OK to visit the Github Releases page where you can see the Change Log and Download the new version.`n`nReplace this directory with the new one and reload.`n`nYou Can turn ON Automatically checking for Updates in the settings menu.,30
 		IfMsgBox OK
 			run https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases/tag/%latestversion%
     }
@@ -7907,7 +7783,6 @@ AddTooltip(p1,p2:="",p3="")
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 ; END AddTooltip FUNCTION CALL
-
 
 
 

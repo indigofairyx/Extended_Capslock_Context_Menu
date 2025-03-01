@@ -2,8 +2,17 @@
 ;--------------------------------------------------
 ;!!!!!!!!!!!! IMPORTANT! THIS FILE MUST BE ENCODED WITH UTF8+BOM !!!!!!!!!!!!!!;
 ;--------------------------------------------------
+/*
+#TODO
+# GUI overhaul update
+# add toggle options panel to gui for some options that can exist outside of the menu.
+# made sub menu for File menu, put lesser used into in there, e.g. props, move, cmd stats, etc
+# add auto correct about and autostart up options
+# move hotkeys message to about gui tab
+*/
 
-ScriptVersion := "v.2025.02.01"
+
+ScriptVersion := "v.2025.02.28"
 ScriptName := "Extended CapsLock Menu" 
 global scriptversion
 global scriptname
@@ -36,13 +45,24 @@ if !FileExist(inifile)
 		; ToolTip
 		; sleep 200
 		; }
-	; }
+	; } 
+
+if (SeeErrors)
+	{
+		#warn
+		; msgbox,,, u will be annoyed with warning msgboxs,3
+	}
+else
+	{
+		Menu, Tray, UseErrorLevel
+		#warn, all, Off
+		#warn useenv, off
+		; msgbox,,, Error Warnings Are Turn Off!,3
+		; guicontrol,errorwarnings,show #todo
+	}
 
 
 
-#warn  ; enable warning to assist with detecting common errors
-Menu, Tray, UseErrorLevel
-#warn useenv, off
 #Persistent
 #SingleInstance, Force
 #InstallKeybdHook
@@ -60,8 +80,8 @@ SendMode Input
 
 
 global LiveMenuEnabled
-global OSD
-global Beep_enabled
+global Show_CAPS_OSD
+global CAPS_Beep_Enabled
 global CAPSGuiToggle
 global DarkMode
 global Double_Right
@@ -71,6 +91,14 @@ global ShiftedNumRow
 INIReadPrograms()
 INIReadGlobal_Hotkeys()
 INIReadGlobal_toggles()
+
+;--------------------------------------------------
+global StartAsAdmin
+if (StartAsAdmin)
+	{
+	If !A_IsAdmin
+		Run *RunAs "%A_ScriptFullPath%"
+	}
 
 ;--------------------------------------------------
 if (DarkMode)
@@ -109,10 +137,17 @@ GLOBAL idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, p
 
 Global filename,dir,filestem,drive,folder,lastfolder,filetoclip,highlighted,attributes ; used by exp popup menu, alt editor menu, copen menu and EV menu items 
 ; Attributes := ""
-
 IconsDir := A_ScriptDir . "\Icons" ; Path to the Icons folder
 global iconsdir
-markiconsdirasreadonly()
+clogfile = %A_ScriptDir%\ChangeLog.txt
+global clogfile
+if (A_Username != "CLOUDEN")
+	{
+	markiconsdirasreadonly()
+	markclogfileasreadonly()
+	}
+Icons := A_ScriptDir . "\Icons" ; Path to the Icons folder
+global icons
 trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
 global trayicon
 iconerror = %A_ScriptDir%\icons\view error_192x192.ico
@@ -123,6 +158,11 @@ pinoff=%A_ScriptDir%\icons\pin-off_26x26.ico
 pinon=%A_ScriptDir%\icons\pin-on_26x26.ico
 Global pinstartpic := 1  ; Variable for pin state
 Global pin   			; var for sticky notes
+global pinon, pinoff
+togNN=%A_ScriptDir%\Icons\toggle on Resources_166_24x24.ico
+togFF=%A_ScriptDir%\Icons\toggle off Resources_166_24x24.ico
+global togNN
+global togFF
 Global StickyText := ""  ; Variable for sticky note text
 Global StickyCount := 0  ; Global counter for sticky notes, GUI item
 ;; elements for the about gui
@@ -130,6 +170,7 @@ global iniload
 ; global inicontent := ""
 ; FileRead, inicontent, %inifile%
 global TabChange ; elements for the about gui
+global currentTab ; elemens for the about gui
 global selectedtab ; elements for the about gui
 global searchPos := 1 ;; gui search box
 Global ClipSaved
@@ -147,7 +188,7 @@ global control = "" ;; right click over np++
 Global ActiveFile ; alt editor menu
 saved := 0 ;; for F9, menu, alttxt, error check for unsaved files when launched outside of np++, e.g. vscode
 global targetID := "" 
-SetCapsLockState, off ;; start with caps lock keep turned off to keep it in sync with OSD
+SetCapsLockState, off ;; start with caps lock keep turned off to keep it in sync with Show_CAPS_OSD
 
 ;///////////////////////////////////////////////////////////////////////////
  ;; checks for updates via githubs releases page
@@ -261,7 +302,7 @@ menu, ctxt, add, Remove  Extra   Spaces, RemoveExtraS
 menu, ctxt, Add, RemoveALL Spaces, RASpace
 menu, ctxt, icon, RemoveALL Spaces, %A_ScriptDir%\Icons\sc_gluepercent_16x16.ico
 menu, ctxt, add, Remove Empty Lines, RemoveEmptyLines
-menu, ctxt, icon, Remove Empty Lines, C:\xsysicons\icons extracted from software\ShareX Icons\edit-vertical-alignment-middle-white_ShareX_16x16.ico
+menu, ctxt, icon, Remove Empty Lines, %icons%\edit-vertical-alignment-middle-white_ShareX_16x16.ico
 menu, ctxt, add, Sort `> 0-9`,A-Z, sorttext
 menu, ctxt, icon, Sort `> 0-9`,A-Z, %A_ScriptDir%\Icons\sort a-z accending xfav Resources_222_24x24.ico
 ; menu, ctxt, icon, Sort `> 0-9`,A-Z, %A_ScriptDir%\Icons\sort_descending__32x32.ico
@@ -280,8 +321,8 @@ menu, ctxt, icon, Remove Illegal Characters && Emojis, %A_ScriptDir%\Icons\error
 menu, ctxt, add, ; line ;-------------------------
 menu, ctxt, add, Swap @ Anchor Word or Symbol, text_swap ;swaptext
 menu, ctxt, icon, Swap @ Anchor Word or Symbol, %A_ScriptDir%\Icons\arrow_switch__32x32.ico
-menu, ctxt, add, Flip Chars @ Caret`, A2->2A`tAlt + R, letterswap
-menu, ctxt, icon, Flip Chars @ Caret`, A2->2A`tAlt + R, %A_ScriptDir%\Icons\Sync arrow_fluentColored_64x64.ico
+menu, ctxt, add, Flip Chars @ Caret`, A|2->2|A`tAlt + R, letterswap
+menu, ctxt, icon, Flip Chars @ Caret`, A|2->2|A`tAlt + R, %A_ScriptDir%\Icons\Sync arrow_fluentColored_64x64.ico
 
 ;---------------------------------------------------------------------------
 
@@ -337,10 +378,10 @@ menu, cfind, add, ; line ;-------------------------
 menu, Cfind, add, < ------ Local Searches ------ >, showfindmenu
 menu, Cfind, icon, < ------ Local Searches ------ >, %A_ScriptDir%\Icons\computer_48x48.ico,,28
 menu, cfind, add, ; line ;-------------------------
-menu, cfind, add, Everything`, Find [Selected Text], Findwitheverything
-menu, cfind, icon, Everything`, Find [Selected Text], %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
-menu, cfind, add, System Index`, Find with EveryThing 1.5a, evindex
-menu, cfind, icon,System Index`, Find with EveryThing 1.5a, %A_ScriptDir%\Icons\voidtools-07-Everything-SkyBlue.ico
+menu, cfind, add, Everything -Find via EV 1.5a, Findwitheverything
+menu, cfind, icon, Everything -Find via EV 1.5a, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
+menu, cfind, add, System Index -via EveryThing 1.5a, evindex
+menu, cfind, icon,System Index -via EveryThing 1.5a, %A_ScriptDir%\Icons\voidtools-07-Everything-SkyBlue.ico
 
 menu, cfind, add, ; line ;-------------------------
 if fileexist(notepadpp)
@@ -361,13 +402,13 @@ menu, cfind, icon, Find in Files with dnGREP, %A_ScriptDir%\Icons\dnGrep 256x256
 menu, cfind, add, ; line ------------------------- todo rename?
 menu, cfind, add, Search in AHK Help File (Local), ahkhelplocal
 menu, cfind, icon, Search in AHK Help File (Local), %A_ScriptDir%\Icons\chm help document question find hh_0_2.ico
-menu, cfind, add, ; line ;-------------------------
-menu, cfind, add, Look up on Dictionary.com && Thesaurus.com, Dictionarydotcom
+; menu, cfind, add, ; line ;-------------------------
+; menu, cfind, add, Look up on Dictionary.com && Thesaurus.com, Dictionarydotcom
 
 ;---------------------------------------------------------------------------
 
 
- menu, ctools, add, < ------ Text Tools ------ >, showtoolsmenu
+menu, ctools, add, < ------ Text Tools ------ >, showtoolsmenu
 menu, ctools, icon, < ------ Text Tools ------ >, %A_ScriptDir%\Icons\Pencil and Ruler__32x32.ico,,28
 menu, ctools, default, < ------ Text Tools ------ >
 menu, ctools, add, ; line ------------------ -------
@@ -497,27 +538,35 @@ menu, copen, icon, File Content to Clipboard (Text-Based Files), %A_ScriptDir%\I
 ; menu, copen, icon, File Content to Clipboard (Text-Based Files), %A_ScriptDir%\Icons\filetype exe binary text txt copy 20_48x48.ico ;alt icon
 menu, copen, add, File Stats (Count lines - words - etc..), TextStatsFile
 menu, copen, icon, File Stats (Count lines - words - etc..), %A_ScriptDir%\Icons\document Info_48x48.ico
+; menu, copen, add, ; line ;-------------------------
+
 menu, copen, add, ; line ;-------------------------
 
 menu, copen, add, Jump to Key in RegEdit, RegJump
 menu, copen, icon, Jump to Key in RegEdit, %A_ScriptDir%\Icons\reg blocks app 256x256.ico
 ; menu, copen, icon, Jump to Key in RegEdit, regedit.exe ; alt icon
+menu, copen, add, ; line -------------------------
 menu, copen, add, Windows Context Menu  ☰, wincontextmenu
 menu, copen, icon, Windows Context Menu  ☰, %A_ScriptDir%\Icons\windows logo xfav 48x48.ico
+menu, copen, add, Open With..., fileopenwith
+menu, copen, icon, Open With..., OpenWith.exe
+; menu, copen, icon, Open With..., C:\Windows\SysWOW64\OpenWith.exe ; or C:\Windows\System32\OpenWith.exe
+menu, copen, add, View File Properties, viewfilepropteries
+menu, copen, icon, View File Properties, C:\Windows\system32\imageres.dll, 307
 menu, copen, add, ; line ;-------------------------
 
-menu, copen, add, Visit Website [If a URL is Selected], gowebsite
-menu, copen, icon, Visit Website [If a URL is Selected], %A_ScriptDir%\Icons\web-browser xfav_24x24.ico
+menu, copen, add, Visit Website [If URL is Selected], gowebsite
+menu, copen, icon, Visit Website [If URL is Selected], %A_ScriptDir%\Icons\web-browser xfav_24x24.ico
 menu, copen, add, ; line ;-------------------------
 menu, copen, add, View Explore Folder Popup Menu, expmenu
 menu, copen, icon, View Explore Folder Popup Menu, %A_ScriptDir%\Icons\submenu JLicons_42_64x64.ico
-; menu, copen, add, View Live Folder Menu, livefoldermenu
+menu, copen, add, View Live Folder Menu, livefoldermenu
 
-menu, copen, add, If NP++ Switch to Alt Open With Menu, alttxtnppmenu
+
 if fileexist(notepadpp)
 	{
-	menu, copen, add, If NP++ Switch to Alt Open With Menu  --------------------  [ F9 ], alttxtnppmenu
-	menu, copen, icon, If NP++ Switch to Alt Open With Menu  --------------------  [ F9 ], %notepadpp%
+	menu, copen, add, If NP++ Switch to Alt Open With Menu`tF9, alttxtnppmenu
+	menu, copen, icon, If NP++ Switch to Alt Open With Menu`tF9, %notepadpp%
 	}
 
 menu, copen, add, ; line ;-------------------------
@@ -566,22 +615,42 @@ menu, gui, add, Pin \ Unpin to Top`tCtrl + P, pintotop
 ; Menu, gui, add, %A_GuiX% %A_GuiY%, menureturn ;debug test
 
 ;---------------------------------------------------------------------------
+menu, aset, add
+menu, aset, deleteall
+
+menu, aset, add, Always Run As Admin, togSTARTASADMIN
+if (StartAsAdmin)
+	{
+		menu, aset, icon, Always Run As Admin, %togNN%
+	}
+else
+	{
+		menu, aset, icon, Always Run As Admin, %togFF%
+	}
+
+if (SeeErrors)
+	{ ;; if on
+	menu, aset, add, Don't Show Error Warnings on Launch, Togglewarnings
+	menu, aset, icon, Don't Show Error Warnings on Launch, %icons%\stock_dialog-error_96x96.ico
+	}
+else
+	{ ;; if off
+	menu, aset, add, Suppressing Error Warnings!!!, togglewarnings
+	menu, aset, icon, Suppressing Error Warnings!!!, %icons%\error_attention caution delete__32x32.ico
+	}
+Menu, aset, Add, Toggle >> Dark Mode | Light Mode, DMToggle 
+Menu, aset, icon, Toggle >> Dark Mode | Light Mode, %A_ScriptDir%\Icons\darkmodetoggleshell32_284_48x48.ico
+
+;---------------------------------------------------------------------------
 menu, cset, add, < ------ Settings && About ------ >, showsettingsmenu
 menu, cset, icon, < ------ Settings && About ------ >, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico,,28
 menu, cset, default, < ------ Settings && About ------ >
 menu, cset, add, ; line -------------------------
-Menu, cset, add, Toggle Live Preview && Auto Copy, ToggleLiveMenu
-if (LiveMenuEnabled)
-	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
-else
-	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
-; Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico ; og alt icon
 
 
-Menu, cset, Add, Dark Mode | Light Mode, DMToggle 
-Menu, cset, icon, Dark Mode | Light Mode, %A_ScriptDir%\Icons\darkmodetoggleshell32_284_48x48.ico
+
 menu, cset, add, Mute Sound on Capslock Toggle, togglebeepsetting
-if (Beep_enabled)
+if (CAPS_Beep_Enabled)
 	{
 	menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound__32x32.ico ;1
 	}
@@ -591,15 +660,15 @@ else
 	}
 	
 
-menu, cset, add, Show OSD for Capslock State, osdtoggle
-if (OSD)
+menu, cset, add, Show O S D for Capslock State, osdtoggle
+if (Show_CAPS_OSD)
 	{ ;1 , SHOWS osd, ON
-	menu, cset, togglecheck, Show OSD for Capslock State
+	menu, cset, togglecheck, Show O S D for Capslock State
 	CAPSGuiToggle := false
 	}
 	else
-	{ ;0 , DOES NOT SHOW OSD, OFF
-	menu, cset, icon, Show OSD for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
+	{ ;0 , DOES NOT SHOW Show_CAPS_OSD, OFF
+	menu, cset, icon, Show O S D for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
 	CAPSGuiToggle := true
 	; gosub osdtogglereset
 	}
@@ -634,6 +703,13 @@ else
 	; menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\mouse pointer click main_10_2_32x32.ico
 	menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\settings-mouse-right-click_32x32.ico
 	}
+Menu, cset, add, Toggle Live Preview && Auto Copy, ToggleLiveMenu
+if (LiveMenuEnabled)
+	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
+else
+	Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
+; Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico ; og alt icon
+
 menu, cset, add, ; line ;-------------------------
 if !(a_isadmin)
 	{
@@ -645,7 +721,10 @@ else
 	Menu, cset, add, Script is Running as ADMIN, runasadmin
 	menu, cset, icon, Script is Running as ADMIN, %A_ScriptDir%\Icons\admin attention win11 imageres_107.ico
 	}
+menu, cset, add, Additonal Settings >>>>, :aset
+
 menu, cset, add, ; line ;-------------------------
+; menu, cset, add, ; line ;-------------------------
 if FileExist(quicknotesdir)
 	{
 	menu, cset, add, Open Quick Notes Dir, openquick
@@ -706,8 +785,8 @@ menu, tray, add, ; line ;-------------------------
 
 menu, tray, add, Reload, reload
 menu, tray, icon, Reload, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
-menu, tray, add, View Hotkeys, viewhotkeys
-menu, tray, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
+; menu, tray, add, View Hotkeys, viewhotkeys
+; menu, tray, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
 menu, tray, add, Suspend Hotkeys, suspendkeys
 menu, tray, icon, Suspend Hotkeys, %A_ScriptDir%\Icons\advert-block_64x64.ico
 menu, tray, add, ; line ;-------------------------
@@ -726,10 +805,10 @@ menu, tray, icon, Quit \ Exit  -----  Ctrl + Alt + Esc, %A_ScriptDir%\Icons\skul
 
 ;--------------------------------------------------------------------------- 
 ;---------------------------------------------------------------------------
-;;; go capslock menu, go case menu, START  caps menu, capsmenu, go menu, case
+;; go capslock menu, go case menu, START  caps menu, capsmenu, go menu, case
 ; menu, Case, Add
 ; menu, case, add, ; top line ;-------------------------
-
+global ForceLiveMenu := false
 
 
 MenuCaseShow() ;; function
@@ -749,7 +828,7 @@ MenuCaseShow() ;; function
     Menu, Case, Default, EXTENDED CAPSLOCK MENU  (Toggle Caps)
 	Menu, case, add, ; line ------------------------- menu, case, top line
 	
-    if (LiveMenuEnabled) ; Check if LiveMenu is enabled
+    if (LiveMenuEnabled || ForceLiveMenu) ;  (LiveMenuEnabled) ; Check if LiveMenu is enabled
     {
         CopyClipboardCLM()  ; Auto Copy - Only when live menu is enabled
 		if (Clipboard = "")
@@ -833,7 +912,8 @@ menu, Case, Add ; line ;-------------------------
 menu, Case, Add, Copy                                         Single Tap CAPS, basiccopy
 menu, Case, icon, Copy                                         Single Tap CAPS, %A_ScriptDir%\Icons\edit-copy_32x32.ico
 Menu, case, Add, + Copy (Add to Clipboard), appendclip
-Menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard--plus_16x16.ico
+; Menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard--plus_16x16.ico
+Menu, case, icon,  + Copy (Add to Clipboard), %Icons%\clipboard add plus append 64x64.ico
 ; menu, case, icon, + Copy (Add to Clipboard), %A_ScriptDir%\Icons\copySpecial_48x48.ico ; alt icon
 Menu, Case, add, Cut, basiccut
 menu, case, icon, Cut, %A_ScriptDir%\Icons\edit-cut_32x32.ico
@@ -954,7 +1034,7 @@ Menu_SetModeless("insert") ; make menu modeless
 
 if (isfirstrun)
 	gosub firstrunwelcome
-if (showaboutonstart)
+if (ShowAboutonStart)
 	Aboutcapswindow()
 
 Return
@@ -1002,7 +1082,7 @@ sleep 50
 if (ErrorLevel || Clipboard = "" || Clipboard = A_Tab || RegExMatch(Clipboard, "^\s+$"))
 	; if ErrorLevel
 	{
-		TrayTip, Extended Capslock Menu, Copy Failed!`nOr you did not have text selected.`nYour Previous Clipboard Content is Restored., 2, 18
+		TrayTip, Extended Capslocks Menu, Copy Failed!`nOr you did not have text selected.`nYour Previous Clipboard Content is Restored., 2, 18
 		sleep 90
 		Clipboard := ClipSaved  ; Restore the clipboard
 		ClipSaved := ""  ; clear the variable
@@ -1211,7 +1291,7 @@ Global filename, dir, ext, filestem, drive, lastfolder, activefile, highlighted
     return Clipboard
 }
 
-/*
+
 cleanupsearchforweb:
 cleanupsearchforweb()
 return
@@ -1233,7 +1313,7 @@ global clipsaved
 Clipboard := ClipSaved
 return
 }
-*/
+
 
 ;***** END ***************CLIPBOARD FUNCTIONS *************** END **********
 ;***************************************************************************
@@ -1883,17 +1963,17 @@ appendclip:
 }
 return
 
-guicaps() ;; function, gui, OSD overlay
+guicaps() ;; function, gui, Show_CAPS_OSD overlay
 {
-if (OSD)
+if (Show_CAPS_OSD)
 	{
 		GUI, CAPS: new
-	Gui, caps: +AlwaysOnTop +ToolWindow -SysMenu -Caption +LastFound
+	Gui, caps: +AlwaysOnTop +ToolWindow -sysmenu -Caption +LastFound
 	Gui, caps: Font, cffb900 s12 bold , Consolas
 	Gui, caps: Color, af001d ; changes background color
 	Gui, caps: add, picture, xm w18 h18, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico
 	Gui, caps: Add, Text, X+M ,CAPS LOCK is ON	
-	IF (Beep_Enabled)
+	IF (CAPS_Beep_Enabled)
 		Gui, Caps: Add, picture, x+m w18 h18, %A_ScriptDir%\Icons\sound__32x32.ico
 	else
 		Gui, Caps: Add, picture, x+m w18 h18, %A_ScriptDir%\Icons\sound_mute__32x32.ico
@@ -2237,8 +2317,6 @@ global clipsaved
 		}
 return
 
-
-
 TextToSpeech: ; Start Text-to-Speech
     Global ClipSaved, TTS_Voice
     iflive()
@@ -2314,8 +2392,108 @@ SaveClipboardAsTxt:
 		return
 Return
 
+TextStatsSelected()
+{
+static word := ""
+static index := ""
+    ClipSaved := ClipboardAll
+    Clipboard := ""
+    Send, ^c
+    ClipWait, 2
+    
+    ; Word Count (more robust)
+    WordCount := 0
+    WordArray := StrSplit(Clipboard, [" ", "`t", "`n", "`r"])
+    for index, word in WordArray {
+        if (RegExMatch(word, "\w+"))
+            WordCount++
+    }
+    
+    ; Character Counts
+    CharCount := StrLen(Clipboard)
+    CharNoSpaceCount := StrReplace(Clipboard, " ", "")
+    CharNoSpaceCount := StrLen(StrReplace(CharNoSpaceCount, "`n", ""))
+    CharNoSpaceCount := StrLen(StrReplace(clipboard, "`n", ""))
+    CharNoWhitespaceCount := RegExReplace(Clipboard, "\s", "")
+    
+    ; Line Count
+    LineCount := 0
+    Loop, Parse, Clipboard, `n, `r
+    {
+        if (Trim(A_LoopField) != "")
+            LineCount++
+    }
+    
+    ; Paragraph Count
+    ParagraphCount := 0
+    Loop, Parse, Clipboard, `n, `r
+    {
+        if (Trim(A_LoopField) != "")
+            ParagraphCount++
+    }
+    
+    ; Estimated Reading Time
+    AverageReadingSpeed := 200  ; words per minute
+    EstReadTimeMin := Ceil(WordCount / AverageReadingSpeed)
+    
+    ; Complexity Metrics
+    SentenceCount := 0
+    LongWordCount := 0
+    TotalWordLength := 0
+    
+    ; Split into sentences (basic approach)
+    SentenceSplitRegex := "[.!?]+"
+    Loop, Parse, Clipboard, %A_Space%
+    {
+        ; Count sentences
+        if (RegExMatch(A_LoopField, SentenceSplitRegex))
+            SentenceCount++
+        
+        ; Identify long words and calculate average word length
+        if (StrLen(A_LoopField) > 6)
+            LongWordCount++
+        
+        TotalWordLength += StrLen(A_LoopField)
+    }
+    ; Restore clipboard
+    Clipboard := ClipSaved
+    
+    AverageWordLength := TotalWordLength / WordCount
+    ComplexityScore := (LongWordCount / WordCount) * 100
+    
+    ; Prepare message
+    StatMessage := "Text Statistics:`n`n"
+    StatMessage .= "Line Count: " . LineCount . "`n"
+    StatMessage .= "Word Count: " . WordCount . "`n"
+    StatMessage .= "Character Count: " . CharCount . "`n"
+    StatMessage .= "  (without spaces): " . CharNoSpaceCount . "`n`n"
+    ; StatMessage .= "  (no whitespace): " . CharNoWhitespaceCount . "`n"
+    ; StatMessage .= "Advanced Metrics:`n"
+    StatMessage .= "Sentences: " . SentenceCount . "`n"
+    StatMessage .= "Paragraph Count: " . ParagraphCount . "`n"
+    StatMessage .= "Average Word Length: " . Round(AverageWordLength, 2) . " chars`n`n"
+    StatMessage .= "Estimated Reading Time: " . EstReadTimeMin . " minutes`n"
+    StatMessage .= "Complexity Score: " . Round(ComplexityScore, 2) . "%`n"
+    
+    ; Optional: Logging to a file
+    ; FileAppend, %A_Now% - Text Statistics`n%StatMessage%`n---`n, TextStats.log
+    
+    MsgBox, 262148, , %StatMessage%`n`nWould you like to copy to your clipboard? 
+	IfMsgBox no
+		return
+	IfMsgBox yes	
+		{
+			; copystatsselected:
+			clipboard := ""
+			clipboard = %statmessage%
+			sleep 50
+			return
+		}
+	return
+}
 
-;************************* END, CTOOLS, FUNCTIONS **************************
+
+;************************* END, MENU, CTOOLS, FUNCTIONS ********************
 ;***************************************************************************
 
 
@@ -2340,28 +2518,8 @@ ahksearchmenu:
 		restoreclipboard()
 		sleep 50
 return
-/*
-ahksearch() ;; function ;; todo clean up this double menu call, this one is not being used, here for ref
-{
-Global ClipSaved
-; = "https://www.google.com/search?q=site:ahkscript.org+$(Currentselection)"
-; = "https://www.google.com/search?q=site:ahkscript.org+$(Currentselection)"
-;; run, https://www.autohotkey.com/search/?q=%Find%
-        ClipSaved := ClipboardAll  ; Save the current clipboard content
-        Clipboard := ""  ; Clear the clipboard to prepare for new content
-sleep 175
-        Send, ^c
-        ClipWait  ; Wait for the clipboard to contain data
-        if (Clipboard = "") { ; If the clipboard is empty, use the old clipboard content
-            Clipboard := ClipSaved
-        }
-        ; Run, https://www.autohotkey.com/search/?q=%Clipboard%
-		run, "https://www.google.com/search?q=site:autohotkey.com+%Clipboard%"
-        Sleep 200
-        Clipboard := ClipSaved ; Restore the original clipboard content
-return
-}
-*/
+
+
 Dictionarydotcom:  ; added to caps\ccase menu
 IfLive()
 Word := RegExReplace(Clipboard, "[^\w\s]")
@@ -2441,6 +2599,7 @@ return
 ;     Menu, Help, Icon, % k, %A_WinDir%\hh.exe
 ; }
 ; Menu, Help, Show
+
 ahkhelplocal:
 Global ClipSaved
 iflive()
@@ -2469,11 +2628,8 @@ GetHelp(HelpFile) {
 	else
 		{
 		Run, %HelpFile%, , , ID
-
 		WinActivate, % "ahk_id " ID
-
 		}
-
     Sleep, 200
     Send, !s
 	sleep 20
@@ -2492,8 +2648,6 @@ return
 ;************************* END, MENU, CFIND, FUNCTIONS *********************
 ;*************************************************************************** 
 
-
-
 dtMenuAction:
 	; clipboard := ""
 	; clipboard := A_ThisMenuItem
@@ -2505,10 +2659,13 @@ Return
 /*
 ; [ text_swap script info]
 ; version     = 1.2
+; description = at a certain character or word, interactively text swap
+; description = at a certain character or word, swap text interactively
 ; description = swap text at a certain character or word, interactively
 ; author      = davebrny
 ; source      = https://gist.github.com/davebrny/8bdbef225aedf6478c2cb6414f4b9bce
 */
+
 
 text_swap:
 repeat_last_swap_interactive:
@@ -2517,8 +2674,9 @@ return
 
 textswap() ;; Function case menu
 {
-
 global
+CoordMode, Caret, Screen
+CoordMode, ToolTip, Screen
 selected := selected_text()
 loop, % strLen(selected) / 1.6
     div .= "- "  ; make divider
@@ -2526,7 +2684,7 @@ mouseGetPos, mx, my
 if inStr(a_thisLabel, "repeat_last")
      swapped := swap(selected, this := last_swap)
 else swapped := selected
-toolTip, % "swap at: """ . this . """`n`n" selected "`n" div "`n" swapped, mx, my+50
+toolTip, % "Swap at: """ . this . """`nPress {Enter} to Apply, {Esc} to Cancel`n`n" selected "`n" div "`n" swapped, mx, my+50
 
 loop,
     {
@@ -2540,7 +2698,8 @@ loop,
         this .= new_input
 
     swapped := swap(selected, this)
-    tooltip, % "swap at: """ . this . """`n`n" selected "`n" div "`n" swapped, mx, my+50
+	toolTip, % "Swap at: """ . this . """`nPress {Enter} to Apply, {Esc} to Cancel`n`n" selected "`n" div "`n" swapped, mx, my+50
+    ; tooltip, % "Swap at: """ . this . """`n`n" selected "`n" div "`n" swapped, mx, my+50
     }
 
 tooltip, ; clear
@@ -3043,7 +3202,48 @@ sleep 150
 	; sleep 30
 return
 }
+;; END RegJump
+;---------------------------------------------------------------------------
 
+viewfilepropteries:
+fileprop := ""
+iflive()
+cleanupPATHstring()
+fileprop = %clipboard%
+; clipboard = fileprop
+; msgbox clip:   %clipboard%`n`nfileprop:   %fileprop%
+restoreclipboard()
+sleep 100
+if fileexist(fileprop)
+	if FileExist(dopusrt)
+		run, %dopusrt% /cmd Properties "%fileprop%"
+	else
+		run, Properties "%fileprop%"
+else
+	{
+		Tooltip, ERR! @ Line#:  %A_LineNumber%`nThe file from your selection could not be found.
+		Sleep 2000
+		Tooltip
+	}
+return
+
+fileopenwith:
+fileopenw := ""
+iflive()
+cleanupPATHstring()
+fileopenw = %clipboard%
+restoreclipboard()
+if fileexist(fileopenw)
+	; run, C:\Windows\SysWOW64\OpenWith.exe "%fileopenw%" ;; both work, system32 is more basic so...
+	run, C:\Windows\System32\OpenWith.exe "%fileopenw%"
+else
+	{
+		Tooltip, ERR! @ Line#:  %A_LineNumber%`nThe file from your selection could not be found.
+		Sleep 2000
+		Tooltip
+	}
+return
+;---------------------------------------------------------------------------
 copydetails() ;; function ; menu, copen, funtion ; Use CMD to save open folder contents info to clipboard, not used
 {
 global clipsaved
@@ -3218,6 +3418,140 @@ return
 }
 
 
+
+TextStatsFile:
+iflive()
+cleanupPATHstring()
+filepath := Clipboard
+RestoreClipBoard()
+if !FileExist(filepath)
+	{
+		tooltip, ERR! That file doesn't exist.
+		sleep  1500
+		tooltip
+		return
+	}
+FileGetAttrib, Attributes, %filepath%
+if (InStr(Attributes, "D"))  ; If it's a directory
+	{
+		tooltip, This tool cannot analyze a Directory.`nTry again with a file.
+		sleep 2500
+		tooltip
+		return
+	}
+filetextstats(filepath)
+return
+
+
+FileTextStats(FilePath := "") {
+    static index := ""
+    static word := ""
+    
+    IfNotExist, %FilePath%
+    {
+        ToolTip, File does not exist: %FilePath%
+        sleep 1500
+        tooltip
+        return
+    }
+    
+    FileRead, FileContent, %FilePath%
+    if (ErrorLevel) {
+        ToolTip, ERR! Could not read file: %FilePath%
+        sleep 1500
+        tooltip
+        return
+    }
+    
+    ; Count total lines, non-empty lines, and empty lines
+    TotalLines := 0
+    NonEmptyLines := 0
+    EmptyLines := 0
+    Loop, Parse, FileContent, `n, `r
+    {
+        TotalLines++
+        if (Trim(A_LoopField) != "")
+            NonEmptyLines++
+        else
+            EmptyLines++
+    }
+    
+    ; Rest of the counting logic
+    WordCount := 0
+    WordArray := StrSplit(FileContent, [" ", "`t", "`n", "`r"])
+    for index, word in WordArray {
+        if (RegExMatch(word, "\w+"))
+            WordCount++
+    }
+    
+    CharCount := StrLen(FileContent)
+    CharNoSpaceCount := StrReplace(FileContent, " ", "")
+    CharNoSpaceCount := StrLen(StrReplace(CharNoSpaceCount, "`n", ""))
+    CharNoWhitespaceCount := RegExReplace(FileContent, "\s", "")
+    
+    ParagraphCount := 0
+    Loop, Parse, FileContent, `n, `r
+    {
+        if (Trim(A_LoopField) != "")
+            ParagraphCount++
+    }
+    
+    AverageReadingSpeed := 200
+    EstReadTimeMin := Ceil(WordCount / AverageReadingSpeed)
+    
+    SentenceCount := 0
+    LongWordCount := 0
+    TotalWordLength := 0
+    SentenceSplitRegex := "[.!?]+"
+    Loop, Parse, FileContent, %A_Space%
+    {
+        if (RegExMatch(A_LoopField, SentenceSplitRegex))
+            SentenceCount++
+        
+        if (StrLen(A_LoopField) > 6)
+            LongWordCount++
+        
+        TotalWordLength += StrLen(A_LoopField)
+    }
+    
+    AverageWordLength := TotalWordLength / WordCount
+    ComplexityScore := (LongWordCount / WordCount) * 100
+    FileGetSize, FileSize, %FilePath%, K
+    SplitPath, FilePath, FileName, FileDir, FileExt, FileNameNoExt, FileDrive
+    
+    ; Reorganized message with new line counts
+    StatMessage := "File Statistics:`n`n"
+    StatMessage .= "Filename: " . FileName . "`n"
+    StatMessage .= "Location: " . FileDir . "`n"
+    StatMessage .= "File Size: " . FileSize . " KB`n`n"
+    
+    StatMessage .= "Line Statistics:`n"
+    StatMessage .= "Total Lines: " . TotalLines . "`n"
+    StatMessage .= "Non-Empty Lines: " . NonEmptyLines . "`n"
+    StatMessage .= "Empty Lines: " . EmptyLines . "`n`n"
+    
+    StatMessage .= "Content Statistics:`n"
+    StatMessage .= "Word Count: " . WordCount . "`n"
+    StatMessage .= "Character Count: " . CharCount . "`n"
+    StatMessage .= "  (without spaces): " . CharNoSpaceCount . "`n"
+    StatMessage .= "Sentences: " . SentenceCount . "`n"
+    StatMessage .= "Paragraphs: " . ParagraphCount . "`n"
+    StatMessage .= "Average Word Length: " . Round(AverageWordLength, 2) . " chars`n"
+    StatMessage .= "Estimated Reading Time: " . EstReadTimeMin . " minutes`n"
+    StatMessage .= "Complexity Score: " . Round(ComplexityScore, 2) . "%"
+    
+    MsgBox, 262148, , %StatMessage%`n`nWould you like to copy to your clipboard?
+    IfMsgBox no
+        return
+    IfMsgBox yes
+    {
+        clipboard := ""
+        clipboard := StatMessage
+        sleep 50
+    }
+    return
+}
+
 ;************************* END menu, copen, functions, END *****************
 ;***************************************************************************
 
@@ -3226,12 +3560,6 @@ return
 ;************************** EXTRA SOFTWARE FUNCTIONS ***********************
 ;************************* MENU, CFIND, FUNCTIONS ************************** todo separte this heading to its own functions
 ;***************************************************************************
-
-
-
-
-
-
 
 evnotinstalled:
 if !FileExist(everything15a)
@@ -3567,6 +3895,16 @@ if errorlevel
 
 ; ^+N::
 runnotepadpp: ;; label
+if !FileExist(notepadpp)
+	{
+	MsgBox, 262209, ECLM - App Launcher, Notepad++ cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	IfMsgBox Ok
+		run, https://github.com/notepad-plus-plus/notepad-plus-plus
+	IfMsgBox timeout
+		Return
+	IfMsgBox Cancel
+		Return
+	}
     Global notepadpp
     IfWinExist, ahk_class Notepad++
     {
@@ -3628,7 +3966,7 @@ runtextify:
 
 if !FileExist(textify)
 	{
-	MsgBox, 262209, ECLM - App Launcher, Ditto.exe cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
+	MsgBox, 262209, ECLM - App Launcher, Texifty cannot be found.`n`nIf you have it installed try updating it location in the -SETTINGS.ini file.`n`nOr click OK to go its webpage where you can download it., 30
 	IfMsgBox Ok
 		run, %textifyurl%
 	IfMsgBox timeout
@@ -3636,11 +3974,11 @@ if !FileExist(textify)
 	IfMsgBox Cancel
 		Return
 	}
+try run, %textify%
+catch
 try run, Textify.exe
 catch
 try run, "C:\Users\%A_UserName%\AppData\Local\Programs\Textify\Textify.exe"
-catch
-try run, %textify%
 return
 
 runtextgrab:
@@ -3673,7 +4011,7 @@ if !FileExist(ditto)
 ifwinnotexist, ahk_exe Ditto.exe ; ("ahk_exe Ditto.exe")
 {
 try run %ditto%
-sleep 750
+sleep 1000
 try run, %ditto% /Open ;;1
 catch
 try run, "%ditto%" "/Open" ;;2
@@ -3785,14 +4123,12 @@ Double_Right := !Double_Right
 menu, cset, ToggleCheck, Double-Right Click to Show Menu
 if (Double_Right)
 	{
-	; iniwrite, 1, %inifile%, Double_Right, key
 	IniWrite, 1, %inifile%, Global_Toggles, Double_right
 	sleep 100
 	Hotkey, ~RButton, doublerightclick, on
 	}
 else
 	{
-	; iniwrite, 0, %inifile%, Double_Right, key
 	iniwrite, 0, %inifile%, Global_Toggles,Double_Right
 	; menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\mouse pointer click main_10_2_32x32.ico
 	menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\settings-mouse-right-click_32x32.ico
@@ -3943,8 +4279,8 @@ CopyToStickyNote()
 return
 
 
-; !Capslock:: ;; toggle capslock & OSD Overlay
-^CapsLock:: ;; toggle capslock & OSD Overlay
+; !Capslock:: ;; toggle capslock & Show_CAPS_OSD Overlay
+^CapsLock:: ;; toggle capslock & Show_CAPS_OSD Overlay
 Togglecapslock:
 ToggleCapsLock()
 return
@@ -3963,7 +4299,7 @@ CapsLockOff(){
 ; og v2 with sound beep options, works, keep safe
 CapsLockey(state := false, toggle := false)
 {
-    global CAPSGuiToggle, beep_enabled
+    global CAPSGuiToggle, CAPS_Beep_Enabled
 
     ; If toggling, flip the current CapsLock state
     if (toggle)
@@ -3979,7 +4315,7 @@ CapsLockey(state := false, toggle := false)
     if (CAPSGuiToggle)
     {
 		guicaps()
-        if (beep_enabled)  ; Check if beeping is enabled
+        if (CAPS_Beep_Enabled)  ; Check if beeping is enabled
         {
             SoundBeep, 100, 100
             SoundBeep, 200, 200
@@ -3992,7 +4328,7 @@ CapsLockey(state := false, toggle := false)
     else
     {
         Gui, caps: Hide
-        if (beep_enabled)  ; Check if beeping is enabled
+        if (CAPS_Beep_Enabled)  ; Check if beeping is enabled
         {
             SoundBeep, 200, 100
             SoundBeep, 100, 200
@@ -4006,13 +4342,12 @@ CapsLockey(state := false, toggle := false)
 } 
 
 osdtoggle:
-OSD := !OSD
-if (OSD)
-	{ ;0 , DOES NOT SHOW OSD, OFF
-	menu, cset, togglecheck, Show OSD for Capslock State
+Show_CAPS_OSD := !Show_CAPS_OSD
+if (Show_CAPS_OSD)
+	{ ;0 , DOES NOT SHOW Show_CAPS_OSD, OFF
+	menu, cset, togglecheck, Show O S D for Capslock State
 	GLOBAL CAPSGuiToggle := FALSE
-	; IniWrite, 1, %inifile%, OSD, key
-	IniWrite, 1, %inifile%, Global_Toggles, OSD
+	IniWrite, 1, %inifile%, Global_Toggles, Show_CAPS_OSD
 	SLEEP 400
 	gui, caps: hide
 	SetCapsLockState, off
@@ -4022,10 +4357,9 @@ if (OSD)
 	}
 else
 	{ ;1 , SHOWS osd, ON
-	menu, cset, icon, Show OSD for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
+	menu, cset, icon, Show O S D for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
 	GLOBAL CAPSGuiToggle := TRUE
-	; IniWrite, 0, %inifile%, OSD, key
-	IniWrite, 0, %inifile%, Global_Toggles, OSD
+	IniWrite, 0, %inifile%, Global_Toggles, Show_CAPS_OSD
 	SLEEP 400
 	gui, caps: hide
 	SetCapsLockState, off
@@ -4041,21 +4375,19 @@ SetCapsLockState, off
 return
 
 ToggleBeepSetting:
-; global beep_enabled
-    beep_enabled := !beep_enabled
-	if (beep_enabled)
+; global CAPS_Beep_Enabled
+    CAPS_Beep_Enabled := !CAPS_Beep_Enabled
+	if (CAPS_Beep_Enabled)
 	{
 		menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound__32x32.ico
 		tooltip, SoundBeeps on Capslock toggle is ON!
-		; iniwrite, 1, %inifile%, Beep_Enabled, key
-		iniwrite, 1, %inifile%, Global_Toggles,Beep_Enabled
+		iniwrite, 1, %inifile%, Global_Toggles,CAPS_Beep_Enabled
 	}
 	else
 	{
 		menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound_mute__32x32.ico
 		tooltip, SoundBeeps on Capslock Toggle is OFF - MUTED!
-		; iniwrite, 0, %inifile%, Beep_Enabled, key
-		iniwrite, 0, %inifile%, Global_Toggles, Beep_Enabled
+		iniwrite, 0, %inifile%, Global_Toggles, CAPS_Beep_Enabled
 	}
 sleep 1500
 tooltip
@@ -4181,14 +4513,12 @@ ShiftedNumRow:
         {
 		ToolTip, Shifted # Row is Enabled`n`~`!`@`#`$`%`^`&`*`(`)`_`+`{`}`|
 		menu, cset, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
-		; iniwrite, 1, %inifile%, ShiftedNumRow, key
 		iniwrite, 1, %inifile%, Global_Toggles, ShiftedNumRow
 		}
     else
         {
 		ToolTip, Shifted # Row is Disabled
 		menu, cset, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
-		; iniwrite, 0, %inifile%, ShiftedNumRow, key
 		iniwrite, 0, %inifile%, Global_Toggles, ShiftedNumRow
 		}
     Sleep, 1500
@@ -4200,7 +4530,6 @@ ToggleReplaceNPPRightClick:
 	menu, cset, togglecheck, Replace the NP++ Right Click Menu
 	if (ReplaceNPPRightClick)
 		{
-		; iniwrite, 1, %inifile%, ReplaceNPPRightClick, key
 		iniwrite, 1, %inifile%, Global_Toggles, ReplaceNPPRightClick
 		; menu, cset, togglecheck, Replace the NP++ Right Click Menu
 		tooltip, The Right Click menu of Notepad++`nhas been replaced with Extended Capslock Menu!`n`nUse with Caution`, sometimes NP++'s menu is still triggered.`nIt can cause errors at times.
@@ -4208,7 +4537,6 @@ ToggleReplaceNPPRightClick:
 		}
 	else
 		{
-		; iniwrite, 0, %inifile%, ReplaceNPPRightClick, key
 		iniwrite, 0, %inifile%, Global_Toggles, ReplaceNPPRightClick
 		menu, cset, icon, Replace the NP++ Right Click Menu, %A_ScriptDir%\Icons\context menu icon.ico
 		Tooltip, Notepad++'s Right Click Menu has been Restored.
@@ -4258,21 +4586,45 @@ send, {esc}
 return
 
 
+togSTARTASADMIN:
+startasadmin := !startasadmin
+if (startasadmin)
+	iniwrite, 1, %inifile%, Global_Toggles, StartAsAdmin
+else
+	iniwrite, 0, %inifile%, Global_Toggles, StartAsAdmin
+; gosub runasadmin
+return
 
 runasadmin:
 If !A_IsAdmin {
     Run *RunAs "%A_ScriptFullPath%" ; Relaunch script as admin
 } else {
-	MsgBox, 4420, Running As Admin, If you don't want this script running as Admin any longer you must Exit it completely and Re-Run it.`n`nWould you like to EXIT\QUIT now?`n`nYou have to Restart it Manually afterward.`n`nYES = KILL`nNO = Continue as Admin, 30
-    IfMsgBox Yes
-		exitapp
-	IfMsgBox No
-		return
-	IfMsgBox timeout
-		return
+		MsgBox, 4420, Running As Admin, If you don't want this script running as Admin any longer you must Exit it completely and Re-Run it.`n`nWould you like to EXIT\QUIT now?`n`nYou have to Restart it Manually afterward.`nThis will also toggle StartAsAdmin to Off.`n`nYES = KILL`nNO = Continue as Admin, 30
+		IfMsgBox Yes
+			{
+				; iniwrite, 1, %inifile%, Global_Toggles, ExitAdmin
+				iniwrite, 0, %inifile%, Global_Toggles, StartAsAdmin
+				sleep 750
+				exitapp
+			}
+		IfMsgBox No
+			return
+		IfMsgBox timeout
+			return
 }
 return
 
+Togglewarnings:
+SeeErrors := !SeeErrors
+if (SeeErrors)
+	iniwrite, 0, %inifile%, Global_Toggles, SeeErrors
+else
+	iniwrite, 1, %inifile%, Global_Toggles, SeeErrors
+sleep 300
+reload
+return
+
+return
 
 makeini:
 fileappend,
@@ -4280,21 +4632,23 @@ fileappend,
 
 [Global_Toggles]
 LiveMenuEnabled=0
-Beep_enabled=1
-OSD=1
+StartAsAdmin=0
+CAPS_Beep_Enabled=1
+Show_CAPS_OSD=1
 ShiftedNumRow=0
 ReplaceNPPRightClick=1
 DarkMode=0
 Double_Right=1
-showaboutonstart=0
+ShowAboutonStart=0
 isfirstrun=1
+SeeErrors=0
 
 
 
 [Programs]
 Texteditor = C:\Program Files\Notepad++\notepad++.exe
 
-ahkstudio = C:\Program Files Portable\AHK Studio V2\AHK-Studio V2.ahk
+ahkstudio = C:\Program Files\AutoHotkey\AHK Studio\AHK-Studio.exe
 astrogrep = C:\Program Files (x86)\AstroGrep\AstroGrep.exe
 bcompare = C:\Program Files\Beyond Compare 5\BCompare.exe
 ditto = C:\Program Files\Ditto\Ditto.exe
@@ -4326,12 +4680,17 @@ xnviewmp = C:\Program Files\XnViewMP\xnviewmp.exe
 
 
 [Global_Hotkeys]
+
+; there are a lot of labels\menu items in this list that you can set Global Hotkeys to in this file. To make it easier to find Hoktkey that have a setting you can search RegEx in your text editor...     .*=\s*\S+$
+
+; regex to find in .INIs hotkeys following thelabel=    .*=\s*\S+$  
+
 ;; ITEMS ON THE MAIN MENU
 ;**************************************************
 ; - Toggle the CAPSLOCK key state - Ctrl + Capslock is hard coded in the script you can set another one here.
 Togglecapslock=!capslock
 ShowTheMainMenu=~MButton
-ShowTheMainMenuALTHK=^!F3
+ShowTheMainMenuALTHK= ^!F3
 ; - Curly Brackets on New Lines
 wrapincbrackets=
 ; - Wrap selected text in Quotes
@@ -4412,7 +4771,6 @@ ahkhelplocal=
 ; - Look up on Dictionary.com & Thesaurus.com
 Dictionarydotcom=
 
-;; - ITEMS ON THE OPEN\RUN\EXPLORE\FILES... Menu
 ;**************************************************
 ; - Show the IF Files\Dirs is [Selected] Menu
 showopenmenu=
@@ -4540,7 +4898,7 @@ ToggleLiveMenu=
 DMToggle=
 ; - Mute Sound on Capslock Toggle
 togglebeepsetting=
-; - Show OSD for Capslock State
+; - Show Show_CAPS_OSD for Capslock State
 osdtoggle=
 ; - Capslock for Number Row (On\Off) ~!@#$`%^&*()_+
 shiftednumrow=
@@ -4608,7 +4966,6 @@ letterswap=
 
 )
 , %inifile%
-
 return
 
 
@@ -4618,13 +4975,12 @@ return
 
 Aboutcapswindow() ;; function GUI
 {
-global SelectedTab, scriptname, scriptversion, inifile, iniload, inicontent
+; guiname := "Extended Capslock Menu - About"
+global CurrentTab, scriptname, scriptversion, inifile, iniload, inicontent, overview
 
 
 overview := "
 (
-
-
 
 + search the web or local computer (using free software),
 + save selected text to a New Text Document(s),
@@ -4803,7 +5159,7 @@ These are just the ones I use, if you know how, the 'alttxt' menu could be edite
 
 
 )"
-
+/*
 ; " changelog = change log =
 changelog := " ;"
 (
@@ -4816,7 +5172,7 @@ changelog := " ;"
 + improved and added Quick Notes Directory as a LIVE FOLDER sub-menu to tools menu
 + put run option on alttext menu for .ahk files
 +++ added a toggle to - Show the Menu with a Double-Right Click - to the Settings menu
-+ OSD for Capslock toggle now live updates showing icons for the toggled settings
++ Show_CAPS_OSD for Capslock toggle now live updates showing icons for the toggled settings
 ++ added text statistics to tools menu. counts lines, works, characters etc of selected text or documents
 -about gui clean up & orgnization
 
@@ -4842,7 +5198,7 @@ changelog := " ;"
 
 + added Convert file:///C:/file.url to standard Path to code menu
 
-+ added improvements\expansion to file:///C:/file.url Handling
++ added improvements\expansion to file:///C:/file.url Handleing
 
 + added ( Script is Running as ADMIN ) notification to settings menu when script is elevated
 
@@ -4881,8 +5237,8 @@ changelog := " ;"
 = improved replacing NP++'s rightclick menu. this menu now will only show in the editor and not not the side panels or document tabs.
 
 ++ added an option to turn off the On Screen Display that shows when the capslock is toggled on to the settings menu
-= improved OSD to show if Sound Beeps and\or Shifted Number is Active
-= set custom font to system font on OSD
+= improved Show_CAPS_OSD to show if Sound Beeps and\or Shifted Number is Active
+= set custom font to system font on Show_CAPS_OSD
 
 ------ v.2024.11.23 ---------------------------
 
@@ -5088,7 +5444,7 @@ this option can be toggled on\off
 
 )"
 ;"
-
+*/
 ; aboutini := "
 aboutini = 
 (
@@ -5103,7 +5459,7 @@ These toggles are stored in the '.ini' file and will persist after reloading the
 	- Replace the NP++ Right Click Menu (OFF by Default)
 	- Change Dark\Light Mode (Dark OFF by default),
 	- Sound Beeps on Caplock Toggle (ON by default),
-	- Show an OSD when Capslock is Toggled (ON by Default)
+	- Show an Show_CAPS_OSD when Capslock is Toggled (ON by Default)
 	- Caplocks for Number Row (OFF by default),
 
 
@@ -5202,15 +5558,20 @@ You can use the menu to get you there. select this web address and choose " Visi
 
 )
 
+;---------------------------------------------------------------------------
 ;; start about gui
+;---------------------------------------------------------------------------
 Gui, capsa: New
+Gui, capas: Margin, 5, 5
 gui, capsa: color, 171717, 090909
 gui, capsa: font, cffb900, Consolas
+; gui, capsa: color, 171717,
+gui, capsa: font, , Consolas
 ; Create Tabs
 ; gui, capsa: add, Tab2, xm w550 h630 vSelectedTab gTabChange, Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings ; vSelectedTab gTabChange ;; the V & G labels hre are casing warnings from gpt so
 ; gui, capsa: add, Tab2, buttons xm w550 h630 -Theme , Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings
 
-gui, capsa: add, Tab2, buttons xm w550 h630 -Theme , Overview|Hotkeys && Settings|Software && Links|ChangeLog|Known Issues|Tab 6|Tab 7
+gui, capsa: add, Tab3, buttons xm w550 h630 -Theme , Overview|INI Settings|ChangeLog|Software Info|Known Issues|Tab 6|Tab 7
 
 
 gui, capsa: Tab, 1
@@ -5228,7 +5589,7 @@ gui, capsa: font, s12
 gui, capsa: Add, text, center w520, --------------------------------------------------
 gui, capsa: Add, Link, center w520, <a href="https://github.com/indigofairyx/Extended_Capslock_Context_Menu">Extended Capslock Menu Github Page</a>
 
-GUI, CAPSA: add, picture, border hwndhOSD gToggleCapsLock, %A_ScriptDir%\icons\OSD overlay_232x63.png
+GUI, CAPSA: add, picture, border hwndhOSD gToggleCapsLock, %A_ScriptDir%\icons\Show_CAPS_OSD overlay_232x63.png
 tip=
 	(ltrim
 	This On Screen Display appears over the Task Try whey CAPSlock is ON.`nThe Icons update depending on which optional Toggle Settings you have Enabled.`nThis Overlay can also be Toggle OFF if you don't want to see it.`nClick here to Toggle your Capslock to view the dispay
@@ -5236,7 +5597,8 @@ tip=
 addtooltip(hOSD,tip)
 
 
-
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
 gui, capsa: Tab, 2
 ;; hotkeys & settings tab
 ; MsgBox, INI file path: %inifile%`nContent: %inicontent%
@@ -5277,7 +5639,47 @@ gui, capsa: add, edit, w520 r12, %aboutini%
     ; FileRead, inicontent, %inifile%
 ; GuiControl,, MyEdit, %FileContents%
 ;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
 gui, capsa: Tab, 3
+ ; Changelog Tab
+; gui, capsa: font, s11,  Consolas
+; gui, capsa: font, cffb900
+; gui, capsa: add, text,center w520, *************************************************************`n************************* CHANGELOG *************************`n*************************************************************
+; gui, capsa: add, edit,  w520 r27, %changelog%
+
+; clogfile = %A_ScriptDir%\ChangeLog.txt
+global logtext := ""
+fileread, logtext, %clogfile% ; %a_scriptdir%\xlib\changelog.txt
+; global logtext
+global logedit
+global sclog
+; msgbox %log%
+
+guicontrol,, logedit, %logtext%
+if (A_Username != "CLOUDEN")
+	gui, capsa: add, edit, vlogedit w520 r27 +ReadOnly, %logtext% ; %changelog%
+Else
+	gui, capsa: add, edit, gonlogchange vlogedit w520 r27 +wanttab, %logtext% ; %changelog%
+	
+
+;gui, capsa: add, text, cyellow, Legend: (+) NEW|ADDED, (*) CHANGED, (!) FIXED, (-) REMOVED, (#) TODO
+gui, capsa: add, text, cyellow section, + NEW|ADDED, - REMOVED, ! FIXED,`n* CHANGED, # TODO, $ ISSUE|BROKEN
+
+if (A_Username = "CLOUDEN")
+	{
+	Gui, capsa: Add, Button,  x+15s+y  h20 disabled vsclog gsavelog , &Save ChangeLog
+	GuiControlGet, hwndsclog , Hwnd, sclog
+	DllCall("uxtheme\SetWindowTheme", "ptr", hwndsclog , "str", "DarkMode_Explorer", "ptr", 0)
+
+	Gui, capsa: Add, Button, X+s10 h20 veclnp geditchangeloginnpp , Edit in &NP++
+	global eclnp
+	GuiControlGet, hwndeclnp , Hwnd, eclnp
+	DllCall("uxtheme\SetWindowTheme", "ptr", hwndeclnp , "str", "DarkMode_Explorer", "ptr", 0)
+	}
+
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+gui, capsa: Tab, 4
 ;; software & links
 gui, capsa: font, cffb900, Consolas
 gui, capsa: add, edit, x+m cA0BADE w520 r13, %aboutsoftware% 
@@ -5305,16 +5707,7 @@ gui, capsa: Add, Link, , <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.
 gui, capsa: Add, Link, , <a href="https://github.com/BashTux1/AutoCorrect-AHK-2.0">AutoHotkey.com</a>
 
 ;---------------------------------------------------------------------------
-
-gui, capsa: Tab, 4
- ; Changelog Tab
-gui, capsa: font, s11,  Consolas
-gui, capsa: font, cffb900
-gui, capsa: add, text,center w520, *************************************************************`n************************* CHANGELOG *************************`n*************************************************************
-gui, capsa: add, edit,  w520 r27, %changelog%
-
 ;---------------------------------------------------------------------------
-
 gui, capsa: Tab, 5
 
 ; known issues Tab
@@ -5322,6 +5715,7 @@ gui, capsa: font, s12,  Consolas
 gui, capsa: font, cffb900
 gui, capsa: add, edit, w520 r15, %aboutcapswindow%
 
+;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 gui, capsa: tab, 6
 gui, capsa: add, text, , Tab 6 - Coming soon...
@@ -5343,50 +5737,57 @@ gui, capsa: Tab
 
 
 
-
-
 gui, capsa: font, cA0BADE, Consolas
 ; gui, capsa: add, text, xm , (Press Space to Close)
 gui, capsa: add, picture, xm w36 h36, %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
-gui, capsa: add, button, x+m gcapsclose, &Close
-guicontrol, focus, Close
+gui, capsa: add, picture, x+m w36 h36 hwndhvisitgit gVisitgithub, %A_ScriptDir%\Icons\github icon 256x256.ico
+AddToolTip(hvisitgit, "Visit ECLM Repo on Github")
+
+
 gui, capsa: add, picture, x+m w36 h36 hwndhcheckupdate gCheckUpdatesmanual, %A_ScriptDir%\Icons\globe web internet updater arrow xfav 256x256.ico
 AddToolTip(hcheckupdate, "Check for Updates")
-gui, capsa: add, button, x+m gCheckUpdatesmanual, Check for &Updates
 gui, capsa: add, picture, x+m w36 h36 hwndhreload greload, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
 AddToolTip(hreload,"Reload")
-gui, capsa: add, picture, x+m w36 h36 hwndhvisitgit gVisitgithub, %A_ScriptDir%\Icons\github icon 256x256.ico
-AddToolTip(hvisitgit, "Visit Repo on Github")
-; %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
-; gui, capsa: add, picture, x+m, %A_ScriptDir%\Icons\Screenshots\menus_caps_464x57.png
+
+; gui, capsa: add, picture, x+m W36 h36 hwndhcodespark gpreviewalttxtmenu, %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
+; AddToolTip(hcodespark, "Just here for fun flair.")
 
 
+; gui, capsa: add, button, x+m gCheckUpdatesmanual, Check for &Updates
+; gui, capsa: add, button, x+m gcapsclose, &Close
+static closebut
+Gui, Add, Button, X+M vclosebut gcapsclose , &Close
+GuiControlGet, hwndclosebut , Hwnd, closebut
+DllCall("uxtheme\SetWindowTheme", "ptr", hwndclosebut , "str", "DarkMode_Explorer", "ptr", 0)
+;---------------------------------------------------------------------------
 
-gui, capsa: +Border +Resize -MaximizeBox ; +hwndidDisplayWin
-		; Gui, Color, 131313
 ; gui, capsa: show,, Extended CAPS Menu - About
-gui, capsa: +Border +Resize -MaximizeBox ; +Dpiscale
+gui, capsa: +Border +Resize -MaximizeBox ; +Dpiscale ; +hwndidDisplayWin
 gui, capsa: show,, Extended Capslock Menu - About 
-sleep 500
-sendinput {up}
+winwaitactive Extended Capslock Menu - About 
+; sleep 300
+; sendinput ^{Home}
 
-return
+; return
 ;; end about caps gui
+; sleep 300
+guicontrol, focus, closebut ; darkbutton1 ; Close ;; this needs to be the controls Var, not logical name
 } 
 
 
+previewalttxtmenu:
+activefile = %inifile%
+gosub alttxtuseclip
+return
 capsclose:
-; gui capsa: hide
 gui capsa: Destroy
 return
 close:
-; gui, hide
 gui capsa: Destroy
 return
 OnChange: ; Triggered when the content of the edit box changes
 Gui, capsa: Submit, NoHide
 If (iniEdit != iniContent)
-; If (iniEdit != "") ; Enable the button if there's text in the edit box
     GuiControl, capsa: Enable, allowsave
 Else ; Disable the button if the edit box is not changed
     GuiControl, capsa: Disable, allowsave
@@ -5408,6 +5809,7 @@ return
 inibox:
 msgbox %inicontent%
 return
+/*
 TabChange:
 ; This label will trigger when a user switches tabs.
 gui, capsa: submit, nohide
@@ -5428,6 +5830,28 @@ guicontrol,,iniload, %inicontent%
 }
 return 
 
+*/
+
+OnlogChange: ; Triggered when the content of the edit box changes
+Gui, capsa: Submit, NoHide
+If (logEdit != logtext)
+    GuiControl, capsa: Enable, sclog
+Else ; Disable the button if the edit box is not changed
+    GuiControl, capsa: Disable, sclog
+Return
+
+savelog:
+GuiControl, capsa: Disable, sclog
+filecopy, %clogfile%, %a_scriptdir%\myHistory\changelogECLMBU.BAK, 1
+sleep 400
+GuiControlGet, logtext, , logedit ; Get the text from the edit box
+FileDelete, %clogfile%                ; Delete the existing file to avoid appending
+FileAppend, %logedit%, %clogfile%  ; Write the new content 
+sleep 800
+return
+editchangeloginnpp:
+run notepad++.exe "%clogfile%"
+return
 
 
 
@@ -5456,16 +5880,14 @@ DMToggle:
     {
         DarkMode := false
         MenuDark(3) ; Set to ForceLight
-	; iniwrite, 0, %inifile%, DarkMode, key
-	iniwrite, 0, %inifile%, Global_Toggles, DarkMode
+		iniwrite, 0, %inifile%, Global_Toggles, DarkMode
 		tooltip Dark Mode OFF!
     }
     else
     {
         DarkMode := true
         MenuDark(2) ; Set to ForceDark
-	; iniwrite, 1, %inifile%, DarkMode, key
-	iniwrite, 1, %inifile%, Global_Toggles, DarkMode
+		iniwrite, 1, %inifile%, Global_Toggles, DarkMode
 		tooltip Dark Mode ON!
 	}
 sleep 1500
@@ -5492,7 +5914,6 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
         Tooltip, Auto Copy when you open`nthe menu is now Turn ON!
 		sleep 2000
 		tooltip
-		; iniwrite, 1, %inifile%, LiveMenuEnabled, key
 		iniwrite, 1, %inifile%, Global_Toggles, LiveMenuEnabled
 		return
 
@@ -5503,7 +5924,6 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 		tooltip, Live Preview && Auto Copy is Turned OFF!
 		sleep 2000
 		tooltip
-		; iniwrite, 0, %inifile%, LiveMenuEnabled, key
 		iniwrite, 0, %inifile%, Global_Toggles, LiveMenuEnabled
 		return
 
@@ -5641,7 +6061,7 @@ f9:: ;;alt hotkey for open in alt editor npp menu
 gosub alttxtnppmenu
 return
 
-rbutton::
+rbutton:: ;; if NP++, replace context menu with ECLM
 if ReplaceNPPRightClick && MouseIsOver("ahk_exe notepad++.exe") && (Control = "Scintilla1") || (Control = "Scintilla2") || (Control = "Scintilla3") || (Control = "Scintilla4")
     {
 	KeyWait, RButton, T0.5  ; Wait for the button to be released, with a 500ms delay
@@ -5666,16 +6086,37 @@ global
 
 ;///////////////////////////////////////////////////////////////////////////
 
-; livefoldermenu:
-; iflive()
-; cleanupPATHstring()
-; dirPath := dir    ; Store the actual path separately
-; mylibmenu := "LiveFolderMenu"    ; Use a fixed, short menu name
-; restoreclipboard()
-; sleep 100
-; gosub livefolderpopup
-; menu, %mylibmenu%, show
-; return
+livefoldermenu:
+iflive()
+cleanupPATHstring()
+if !fileexist(clipboard)
+	{
+	if !fileexist(dir) ; if file isn't found check if the dir exist
+		{
+			Tooltip, ERR! That Dirctory cannont be found.
+			sleep 1500
+			tooltip
+			restoreclipboard()
+			sleep 300
+			return
+		}
+	}
+if FileExist(clipboard)
+	{
+	FileGetAttrib, attributes, %clipboard%
+		if (InStr(Attributes, "D"))  ; If it's a directory
+			topmenu = %clipboard%
+		else ; if it's a file
+			topmenu = %dir%
+	}
+; msgbox, dir: %dir%`nlastfolder: %lastfolder%`nclip: %clipboard%`nfilename:  %filename%`n`n`ntopM: %topmenu%
+restoreclipboard()
+sleep 100
+gosub livefolderpopup
+; gosub topmenu
+menu, %topmenu%, show
+return
+; %a_scriptdir%\icons
 ;; MENU, EXP, START
 ; expmenu: ;todo add context options via approach to label
 ; Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved
@@ -6072,6 +6513,12 @@ else
 	
 ; menu, alttxt, icon, VS Code, %A_ScriptDir%\Icons\codium logo 256x256.ico ; alt icon
 ; menu, alttxt, icon, VS Code, %A_ScriptDir%\Icons\vscode.ico ; alt icon
+
+if fileexist(sublimetext)
+	{
+	menu, alttxt, add, Sublime Text, ALTOIsublimetxt
+	menu, alttxt, icon, Sublime Text, %sublimetext%
+	}
 
 menu, alttxt, add, Geany, altoigeany
 if fileexist(geany)
@@ -6513,8 +6960,6 @@ Return
 */
 ; Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved
 
-topmenu:
-Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved, quicknotesdir, topmenu
 ; topmenu = %quicknotesdir%
 
 ; if !FileExist(topmenu)
@@ -6527,29 +6972,42 @@ Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, high
 		; tooltip
 		; return
 	; }
+topmenu:
+livefolderpopup:
+Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, highlighted, ClipSaved, quicknotesdir, topmenu
 Menu, %topmenu%, Add,
 Menu, %topmenu%, deleteall
 
-menu, %topmenu%, add, Open Quick Notes Folder, opentopmenu
-if FileExist(dopus)
-	Menu, %topmenu%, icon, Open Quick Notes Folder, %dopus%
-else
-	Menu, %topmenu%, icon, Open Quick Notes Folder, explorer.exe
+if (a_thislabel = "Livefolderpopup")
+	{
+	Menu, %Mylibmenu%, Add, Open - %Lastfolder% - Folder, openLIVE
+	if fileexist(dopus)
+		Menu, %Mylibmenu%, icon, Open - %lastfolder% - Folder, %dopus%
+	else
+		Menu, %Mylibmenu%, icon, Open - %lastfolder% - Folder, explorer.exe
+	}
 
+if (A_ThisMenuItem = "topmenu")
+	{
+	menu, %topmenu%, add, Open Quick Notes Folder, opentopmenu
+	if FileExist(dopus)
+		Menu, %topmenu%, icon, Open Quick Notes Folder, %dopus%
+	else
+		Menu, %topmenu%, icon, Open Quick Notes Folder, explorer.exe
+	}
 Menu, %topmenu%, Add, ;line ;------------------------- 
 LastMenu := topmenu
 
 Loop, %topmenu%\*.*, 2,1	; add folders first, Recurse into subfolders.
 {
-	If InStr(A_LoopFileAttrib, "H") or InStr(A_LoopFileAttrib, "S")
-		Continue 
+If InStr(A_LoopFileAttrib, "H") or InStr(A_LoopFileAttrib, "S")
+	Continue 
 
 StringGetPos, pos, A_LoopFileLongPath, \, R
 if (pos <> -1) ; it has a parent
 	StringLeft, ParentFolderDirectory, A_LoopFileLongPath, %pos%
 if (pos = -1) ; it has no parent 
 	ParentFolderDirectory := rootdir
-	; ParentFolderDirectory := folder
 
 Menu, %A_LoopFileLongPath%, add
 Menu, %A_LoopFileLongPath%, deleteall
@@ -6561,16 +7019,16 @@ if (iconpath = "")
 	
 Menu, %A_LoopFileLongPath%, add, ; line -------------------------
 
-	Menu, %A_LoopFileDir%, Add, %A_LoopFileName% , Actiontopmenu
-	IconPath := GetFileIcon(A_LoopFileFullPath)
-	Menu, %A_LoopFileDir%, Icon, %A_LoopFileName%, %IconPath%
-	
-	If (A_LoopFileDir != LastMenu) and (LastMenu != topmenu)
+Menu, %A_LoopFileDir%, Add, %A_LoopFileName% , Actiontopmenu
+IconPath := GetFileIcon(A_LoopFileFullPath)
+Menu, %A_LoopFileDir%, Icon, %A_LoopFileName%, %IconPath%
+
+If (A_LoopFileDir != LastMenu) and (LastMenu != topmenu)
 	{ 
 		; MsgBox %topmenu% %LastMenu%
 		AddMenu(LastMenu)
 	}
-	LastMenu := A_LoopFileDir ; Save menu name
+LastMenu := A_LoopFileDir ; Save menu namen
 }
 menu, %topmenu%, add, ; line -------------------------
 
@@ -6718,6 +7176,7 @@ return
 ;; https://autohotkey.com/board/topic/20376-invoking-directly-contextmenu-of-files-and-folders/
 ;; source: https://autohotkey.com/board/topic/89281-ahk-l-shell-context-menu/
 ; global idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, pIContextMenu3, WPOld ;; for heading
+
 ShellContextMenu( sPath, win_hwnd = 0, pidl = 0, pIShellFolder = 0, pidlChild = 0, pt = 0, pIContextMenu = 0 )
 {
    if ( !sPath  )
@@ -6991,7 +7450,8 @@ GetDelayTime() ;; function
 }
 ;///////////////////////////////////////////////////////////////////////////
 
-;; read ini fucntions
+;; read ini functions ini read iniread () ;; Functions
+
 INIReadGlobal_Hotkeys() ;; function
 {
     global
@@ -7077,22 +7537,28 @@ INIReadGlobal_Toggles() ;; fucntion
 
 
 ; IconsDir := A_ScriptDir . "\Icons" ; Path to the Icons folder
-markiconsdirasreadonly()
+markiconsdirasreadonly() ;; function
 {
 Loop, Files, %IconsDir%\*.* ; Iterate through all files in the Icons folder
-{
-    FileGetAttrib, attrib, %A_LoopFileFullPath% ; Get the file's attributes
-    If !(InStr(attrib, "R")) ; Check if the file is NOT read-only
-    {
-        FileSetAttrib, +R, %A_LoopFileFullPath% ; Mark the file as read-only
-        ; MsgBox, File marked as read-only: %A_LoopFileName%
-    }
-}
+	{
+		FileGetAttrib, attrib, %A_LoopFileFullPath% ; Get the file's attributes
+		If !(InStr(attrib, "R")) ; Check if the file is NOT read-only
+		{
+			FileSetAttrib, +R, %A_LoopFileFullPath% ; Mark the file as read-only
+			; MsgBox, File marked as read-only: %A_LoopFileName%
+		}
+	}
 ; MsgBox, Finished processing files in`n %IconsDir%
 Return
 }
-
-
+markclogfileasreadonly() ;; function ;; 
+{
+FileGetAttrib, attrib, %clogfile%
+if !(InStr(attrib, "R"))
+	{
+	FileSetAttrib, +R, %clogfile%
+	}
+}
 
 CheckUpdates:
     ; Create and send the HTTP request
@@ -7444,249 +7910,4 @@ AddTooltip(p1,p2:="",p3="")
 
 
 
-TextStatsSelected()
-{
-static word := ""
-static index := ""
-    ClipSaved := ClipboardAll
-    Clipboard := ""
-    Send, ^c
-    ClipWait, 2
-    
-    ; Word Count (more robust)
-    WordCount := 0
-    WordArray := StrSplit(Clipboard, [" ", "`t", "`n", "`r"])
-    for index, word in WordArray {
-        if (RegExMatch(word, "\w+"))
-            WordCount++
-    }
-    
-    ; Character Counts
-    CharCount := StrLen(Clipboard)
-    CharNoSpaceCount := StrReplace(Clipboard, " ", "")
-    CharNoSpaceCount := StrLen(StrReplace(CharNoSpaceCount, "`n", ""))
-    CharNoSpaceCount := StrLen(StrReplace(clipboard, "`n", ""))
-    CharNoWhitespaceCount := RegExReplace(Clipboard, "\s", "")
-    
-    ; Line Count
-    LineCount := 0
-    Loop, Parse, Clipboard, `n, `r
-    {
-        if (Trim(A_LoopField) != "")
-            LineCount++
-    }
-    
-    ; Paragraph Count
-    ParagraphCount := 0
-    Loop, Parse, Clipboard, `n, `r
-    {
-        if (Trim(A_LoopField) != "")
-            ParagraphCount++
-    }
-    
-    ; Estimated Reading Time
-    AverageReadingSpeed := 200  ; words per minute
-    EstReadTimeMin := Ceil(WordCount / AverageReadingSpeed)
-    
-    ; Complexity Metrics
-    SentenceCount := 0
-    LongWordCount := 0
-    TotalWordLength := 0
-    
-    ; Split into sentences (basic approach)
-    SentenceSplitRegex := "[.!?]+"
-    Loop, Parse, Clipboard, %A_Space%
-    {
-        ; Count sentences
-        if (RegExMatch(A_LoopField, SentenceSplitRegex))
-            SentenceCount++
-        
-        ; Identify long words and calculate average word length
-        if (StrLen(A_LoopField) > 6)
-            LongWordCount++
-        
-        TotalWordLength += StrLen(A_LoopField)
-    }
-    ; Restore clipboard
-    Clipboard := ClipSaved
-    
-    AverageWordLength := TotalWordLength / WordCount
-    ComplexityScore := (LongWordCount / WordCount) * 100
-    
-    ; Prepare message
-    StatMessage := "Text Statistics:`n`n"
-    StatMessage .= "Line Count: " . LineCount . "`n"
-    StatMessage .= "Word Count: " . WordCount . "`n"
-    StatMessage .= "Character Count: " . CharCount . "`n"
-    StatMessage .= "  (without spaces): " . CharNoSpaceCount . "`n`n"
-    ; StatMessage .= "  (no whitespace): " . CharNoWhitespaceCount . "`n"
-    ; StatMessage .= "Advanced Metrics:`n"
-    StatMessage .= "Sentences: " . SentenceCount . "`n"
-    StatMessage .= "Paragraph Count: " . ParagraphCount . "`n"
-    StatMessage .= "Average Word Length: " . Round(AverageWordLength, 2) . " chars`n`n"
-    StatMessage .= "Estimated Reading Time: " . EstReadTimeMin . " minutes`n"
-    StatMessage .= "Complexity Score: " . Round(ComplexityScore, 2) . "%`n"
-    
-    ; Optional: Logging to a file
-    ; FileAppend, %A_Now% - Text Statistics`n%StatMessage%`n---`n, TextStats.log
-    
-    ; Display results
-    ; MsgBox, %StatMessage%
-    MsgBox, 262148, , %StatMessage%`n`nWould you like to copy to your clipboard? 
-	IfMsgBox no
-		return
-	IfMsgBox yes	
-		{
-			; copystatsselected:
-			clipboard := ""
-			clipboard = %statmessage%
-			sleep 50
-			return
-		}
-	return
-}
 
-TextStatsFile:
-iflive()
-cleanupPATHstring()
-filepath := Clipboard
-RestoreClipBoard()
-FileGetAttrib, filepath, filepath
-if !FileExist(filepath)
-	{
-		tooltip, ERR! That file doesn't exist.
-		sleep  1500
-		tooltip
-		return
-	}
-if (InStr(Attributes, "D"))  ; If it's a directory
-	{
-		tooltip, This tool cannot analyze a Directory.`nTry again with a file.
-		sleep 2500
-		tooltip
-		return
-	}
-filetextstats(filepath)
-return
-
-FileTextStats(FilePath := "") {
-; Example usage
-; FileTextStats("C:\path\to\your\document.txt")
-static index := ""
-static word := ""
-; iflive()
-; cleanupPATHstring()
-; filepath := Clipboard
-; RestoreClipBoard()
-   
-    ; if (FilePath = "") { ; If no file path provided, open file selection dialog
-        ; FileSelectFile, FilePath, 3,, "Select a text file to analyze"
-        ; if (ErrorLevel) {
-            ; MsgBox, No file selected.
-            ; return
-        ; }
-    ; }
-    
-    IfNotExist, %FilePath% ; Check if file exists
-    {
-        ToolTip, File does not exist: %FilePath%
-		sleep 1500
-		tooltip
-        return
-    }
-    
-    
-    FileRead, FileContent, %FilePath% ; Read entire file
-    if (ErrorLevel) {
-        ToolTip, ERR! Could not read file: %FilePath%
-		sleep 1500
-		tooltip
-        return
-    }
-    
-    WordCount := 0 ; Word Count
-    WordArray := StrSplit(FileContent, [" ", "`t", "`n", "`r"])
-    for index, word in WordArray {
-        if (RegExMatch(word, "\w+"))
-            WordCount++
-    }
-
-    CharCount := StrLen(FileContent) ; Character Counts
-    CharNoSpaceCount := StrReplace(FileContent, " ", "")
-    CharNoSpaceCount := StrLen(StrReplace(CharNoSpaceCount, "`n", ""))
-    CharNoWhitespaceCount := RegExReplace(FileContent, "\s", "")
-    
-    LineCount := 0 ; Line Count
-    Loop, Parse, FileContent, `n, `r
-    {
-        if (Trim(A_LoopField) != "")
-            LineCount++
-    }
-    
-    ParagraphCount := 0 ; Paragraph Count
-    Loop, Parse, FileContent, `n, `r
-    {
-        if (Trim(A_LoopField) != "")
-            ParagraphCount++
-    }
-    
-    AverageReadingSpeed := 200  ; Estimated Reading Time ; words per minute
-    EstReadTimeMin := Ceil(WordCount / AverageReadingSpeed)
-    ; Complexity Metrics
-    SentenceCount := 0
-    LongWordCount := 0
-    TotalWordLength := 0
-
-    SentenceSplitRegex := "[.!?]+" ; Split into sentences (basic approach)
-    Loop, Parse, Clipboard, %A_Space%
-    {
-        ; Count sentences
-        if (RegExMatch(A_LoopField, SentenceSplitRegex))
-            SentenceCount++
-        
-        ; Identify long words and calculate average word length
-        if (StrLen(A_LoopField) > 6)
-            LongWordCount++
-        
-        TotalWordLength += StrLen(A_LoopField)
-    }
-	
-	AverageWordLength := TotalWordLength / WordCount
-    ComplexityScore := (LongWordCount / WordCount) * 100
-
-    FileGetSize, FileSize, %FilePath%, K  ; File Details ; Size in KB
-    SplitPath, FilePath, FileName, FileDir, FileExt, FileNameNoExt, FileDrive
-    
-    ; Prepare message
-    StatMessage := "File Statistics:`n`n"
-    StatMessage .= "Filename: " . FileName . "`n"
-    StatMessage .= "Location: " . FileDir . "`n"
-    StatMessage .= "File Size: " . FileSize . " KB`n`n"
-    ; StatMessage .= "File Type: " . FileExt . "`n`n"
-	StatMessage := "Text Statistics:`n`n"
-    StatMessage .= "Line Count: " . LineCount . "`n"
-    StatMessage .= "Word Count: " . WordCount . "`n"
-    StatMessage .= "Character Count: " . CharCount . "`n"
-    StatMessage .= "  (without spaces): " . CharNoSpaceCount . "`n`n"
-    ; StatMessage .= "  (no whitespace): " . CharNoWhitespaceCount . "`n"
-    StatMessage .= "Sentences: " . SentenceCount . "`n"
-    StatMessage .= "Paragraph Count: " . ParagraphCount . "`n"
-    StatMessage .= "Average Word Length: " . Round(AverageWordLength, 2) . " chars`n"
-    StatMessage .= "Estimated Reading Time: " . EstReadTimeMin . " minutes`n`n"
-	StatMessage .= "Complexity Score: " . Round(ComplexityScore, 2) . "%`n"
-    
-    ; Display results
-    ; MsgBox, %StatMessage%
-	MsgBox, 262148, , %StatMessage%`n`nWould you like to copy to your clipboard? 
-	IfMsgBox no
-		return
-	IfMsgBox yes	
-		{
-			; copystatsselected:
-			clipboard := ""
-			clipboard = %statmessage%
-			sleep 50
-			return
-		}
-	return
-}

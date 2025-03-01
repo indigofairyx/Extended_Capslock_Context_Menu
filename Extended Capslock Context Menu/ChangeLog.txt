@@ -1,0 +1,315 @@
+
+;------------------------- v.2025.02.28
+
+* GUI updates for the About & Settings window.
+* new layout of INI Settings tab & Changelog tab
+# more updates for for the GUI coming soon...
+
++ added more alttxt menu programs
+	+ sublime text
+	+ adventure ahk-editor ide
+
++ added open with to the Files Menu
++ added file properties Files Menu
+
+! Fixed Swap Text Tooltip showing at the edges of the screen
+
+- removed look up on dictionary.com menu menu item, google define search is better.
+
++ the toggle options in the settings menu is getting rather long. Added a sub menu for Additional Settings, move a couple Toggles into it.
+	+ added Always Start As Admin option to the settings menu
+	+ added Don't show AHK Warnings toggle
+		This option is on by default, it really on needs to be turn off if the user starts editing this menu themselves then its good as a debugging tool.
+
+* made a some NP++ specific menu items dynamic, e.g. they won't show if the user doesn't have NP++ installed.
+
++ Put the Github Readme.md inside of Releases Download
+
+* a handful of other code improvements
+
+;-------------------------  v.2025.02.01 
+
++ added swap letter hotkey Alt + R
++ added removed empty lines to text formatting menu
++ improved and added Quick Notes Directory as a LIVE FOLDER sub-menu to tools menu
++ put run option on alttext menu for .ahk files
++++ added a toggle option to - Show the Menu with a Double-Right Click - to the Settings menu
++ OSD for Capslock toggle now updates live showing icons for the toggled settings
+++ added text statistics to tools menu. counts lines, works, characters etc of selected text or documents paths
+
+* about gui clean up & orgnization
+
+;-------------------------  v.2025.01.28 
+
++++ Improved \ Shortened the copy time when using a single tap on the Capslock key to copy !!!
+
++++ Added the ability to set global hotkeys that be added, changed & saved in the .INI for most menu items
+
++++ added a Dynamic sleep function into the the RestoreClipBoard Fuctions for better handling of the clipboard being restored correctly
+
++ added DPI-Awareness DllCall to fix the context menu show in the wrong spot on multi-montier setup with mixed DPIs.
+
++ added Modeless Menu Function, a windows DllCall that allow you use hotkeys from the script when the menu is open! Usually AHK blocks hotkeys when its busy showing a menu.
+
++ added UseErrorLevel to the menu so if there's an error detected on a sinlge menu item, the menu will still show without being killed by AHK
+
++ added 123 < to > !@#`, Convert Between Numbers<&&>Symbols to text menu
+
++ added expand %A_ScriptDir% to code menu
+
++ added Encode & Decode XML to code menu ( todo these need be error check some more but they're there for now )
+
++ added Convert file:///C:/file.url to standard Path to code menu
+
++ added improvements\expansion to file:///C:/file.url Handleing
+
++ added ( Script is Running as ADMIN ) notification to settings menu when script is elevated
+
++ improvements to error levels & handling of windows %System Environment Variables%
+
++ updated About GUI with tabs to spread out all the info provided
+
++ added the ability to edit settings in the '-SETTINGS.ini' file directly from About GUI
+
++ added the ability to check github for updates from the about window
+
++ added Quick Clip Board Editor to the Tools Menu
+
+;-------------------------  v.2024.12.19 
+
+=+ fixed a syntax error when sending a system index search to Everything
++ fixed\updated the Ctrl + Space hotkey for the explorer popup menu in everything 1.5a. -- In a recent update they added this hotkey as a default to their search bar. Its functionality is now kept in the search bar, when launched from the results panel it will show this menu :-)
+
++ added a info message box to the Edit Script menu item when chosen from the compiled version of the menu
+
++ added message boxes to tools\launchers menu for 3rd party programs. When they are not found as installed the box tells you and provides a faster link to that software website. **still have todo this to the alt editor menu
+
++ added\replacing dnGrep over astrogrep as a find in files software.
+
++ Added  a hot to Quit\Exit App, Ctrl + Alt + Esc
+
+= improved variable expansion when creating settings.ini file
+
++ a handful of small bug fix adjustments
+
+
+
+;-------------------------  v.2024.12.03 
+
+++ added open windows context menu to the selected path to the Files menu!!
+
++ added find in files using dnGREP to find menu
++ added the abiltiy to open\run windows 'shell:::' folders\apps to the files menu
+= added UTF-8 Encoding to Saving text files options
+= improved replacing NP++'s rightclick menu. this menu now will only show in the editor and not not the side panels or document tabs.
+
+++ added an option to turn off the On Screen Display that shows when the capslock is toggled on to the settings menu
+= improved OSD to show if Sound Beeps and\or Shifted Number is Active
+= set custom font to system font on OSD
+
+
+;-------------------------  v.2024.11.23 
+
+= Fixed an icon error from last update
+= Fixed a launch error for the included Auto-Correct Spelling Script
+= A few cosmetic menu headings updates
+
+;-------------------------  v.2024.11.18 
+
++ added searching selection in the local AutoHotKey.chm help file to the find\search menu!
+
++ added toggle checks to suspend hotkeys menu items, when OFF they show as checked
+
++ added live folder sub-menu for the Extended Capslock Menu QUICK Notes to Notepad++'s alternative menu
+
++ added a hotkey, {Escape}, to Stop Speaking for the Text to Speech tool.
+
++ expanded the Explore Popup Menu to also work in Everything 1.5a with the {Ctrl} + {Space} Hotkey, also, fixed clipboard not restoring from the explore popup menu, again
+
++ New hotkey added, {F9}, for showing the Open In Alt Editor Menu in NP++ & Everything 1.5a even faster
++ also added error level checks for folders and large files to this menu
+
++ added quick select numbers to the Code Formatting menu, as well as some more icons
+
++ fixed an issue when right click outside of NP++ while its  still active showing this menu rather than menu that should be appearing
+
++ added Dynamic icons that change for Directory Opus users on any Open Dir items.
+
+= the live preview menu item now only appears when auto copy mode is turned on via the settings menu
+
+= fixed a syntax error when searching the system index via Everything 1.5a
+= fixed typos causing errors when trying to run the geany text editor
+= fixed a syntax error for opening Astrogrep via the CLI with a search term
+- removed the google hotkey, Alt + G (its still in the script if you want to uncomment it)
+
+;-------------------------  v.2024.11.06 
+
+-- New Menu Items --
++ added 'Edit in Text Editor' to the Open\Run\Explore [ Files ] Menu, will try your set option first [NP++], then notepad.exe
++ added 'If NP++ Switch to Alt Open With Menu' item to the Open\Run\Explore [ Files ] Menu
+
++ the text field in temp sticky notes now resize with the window!!
+
++ added the handling of file urls e.g. 'file:///urls.ext' to the Open\Run\Explore [ Files ] Menu
+
+= fixed an error with the handling of the '.ahk' from the Run\Open File... menu item. // ahk files open in a text editor rather than running. [ if you use ahk you know why ]
+
++ added errorlevel check to append\add to clipboard function
++ added errorlevel checks to Alt Open With Menu for NP++
+
++ expanded go to website from text to handle more url types, e.g. IP address, ftp://, and Other web address that don't end in '.com', e.g. .net.org.gov.uk.fr.au etc
++ fixed the clipboard not being restored when using the 'Ctrl' + 'Space' hotkey\menu item for the explore folder popup menu
+
+
++ fixed the handling of window %Environment Vars% in file paths. e.g. '%systemroot%\notepad.exe' "%localappdata%" %userprofile%\desktop
+
++ a couple icon updates with more dynamic icons to match your Text Editor = if set in the -SETTING.ini
+
+
+;-------------------------  v.2024.11.04 
+
+=+ improved explore folder popup menu not showing icons or opening folders. navigating folders in menu now follows the location accurately.
+
++ added errorlevel check to -CopyDup file function, if duplicate already exist, ask it you want to replace it.
++ fixed all everything 1.5a search to all run with cli parms
++ fixed Explore this dir in everything not sending quotes around dir
+
++ added Read Selected Text out loud using TTS to Tools menu
+
+
+;-------------------------  v.2024.11.02
+
++++ Added Ini Settings File for Toggle Items! They Now Stay Set to the User Choice Arcoss Reloads!
+
++ added and updated settings menu toggle icons
++ a few dynamic icons dopus vs explorer
++ dynamic icons to match %texteditor%
+- removed welcome traytip on light\dark toggle.
+
++ and a copy to options for non Directory Opus users
+= fixed copy folder to... Not copying folder but dumping folder content to selected dir.
+
+= tray menu changes
+new, double click to open extend capslock menu
+
++ add option to set a default text editor, default is set as notepad++, can be changed in ini file
++ add errorlevel checks to send missing editors to windows notepad
+
++ added make duplicate -CopyDup.ext to the open\run\explore\files menu
+
++ added a errorlog function with useerrorlevel
+
++ improved searches with everything15a running from cli rather than thru multiples lines of ahk input
+
++ added search selection in files via astrogrep
+
++++ Added two special If, Notepad++ is active menus triggered by hotkeys
++ add notepad++ menus , open in alttxt editor menu with hotkey ^!N:: Ctrl + Alt + N
++ added ^{space} hotkey to notepad++ for the folder explorer menu
+	- also works in Everything 1.5a on a selected file.
+
++ added toggle to replace notepad++ right click menu with this menu as a default
+	- notepad++'s OG context menu can still be access by a mouse-hotkey Ctrl + Right Click
+
+;-------------------------  v.2024.10.28
+
++ added Copy Selection to New Notepad++ Doc to the Tools menu
++ started cleaning up the About Window GUI
++ new cleaned up tray menu, double click icon to open menu, right click for quick settings
+
+;-------------------------  v.2024.10.23
+
+Fix to Save As on Sticky notes, now auto appends '.txt' to a file if user left the .ext off a name
+
+;-------------------------  v.2024.10.21
+
++ Added open Registry keys in RegEdit to the 'Open\Run\Explore...' Menu
++ Added Search File & Explore Folder With Everything to the 'Open\Run\Explore...' Menu
++ Added Copy to Folder option for user who don't have Directory Opus
+= Fixed 'Warp in Quotes' not restoring clipboard after function
+
++ Improved save functions from Sticky GUI
+- Removed (extra) buttons from Sticky Notes GUI, Replaced them with a single button containing Save Options
++ Added Tab ability inside of text box Sticky GUI
+
++ Added Hotkeys to the Sticky Note GUI Windows
+	Alt + M = Show Sticky GUI Quick Menu
+	Ctrl + S = Save Sticky As
+	Ctrl + Shift + S = Quick Save As
+	Ctrl + N = Create New Empty Temp Sticky
+	Ctrl + Shift + O = Open Quick Notes Folder
+	Ctrl + ESC = Close Stick
++++ Found a workaround to AHK not show custom Context Menus in GUI Edit Box
++++ Added Extended Capslock Menu as the Right-Click Menu in the Sticky GUI
+
++ Added a few Global hotkeys
+	Middle Mouse Button = Now shows Extended Capslock Menu (will now show in Directory Opus)
+	Ctrl + Shift + F2 = Copies Selected Text to Temp Sticky
+	Ctrl + Alt + F2 = New Empty Temp Stick
+	Ctrl + Alt + F3 = Alt hot to show Extended Capslock Menu
+
+;-------------------------  v.2024.10.15
+
+++ IMPORTANT BUG FIX - fixed an error in the Restore Clipboard function !!
+
+;-------------------------  v.2024.10.13
+
++ added Live Preview with Auto Copy when the menu is launched
++ added a Settings sub-menu
++ added a settings file for mapping 3rd party software (when note installed in their default locations) & changing a few default toggle options
+++ added a few more options for searching selected text, online and locally (requires Everything 1.5a and Notepad++)
+
++++ Improvements +++
++ shortened the amount of time it takes for the menu to appear when holding down the capslock to 0.15 seconds
++ improved the functions that handle the clipboard for better speed and consistency
++ added alt menu hotkey Ctrl + Alt + F3
++ added more options to the Modify Text & Case, and Code Formatting sub-menus
+
+++ Add Shifted Number Row Mode!!! +++
+Capslock can now also shift your NUMBER ROW, E.G.
+	1234567890-=[]\
+	~!@#$%^&*()_+{}|
+this option can be toggled on\off
+
++++ NEW Sticky Note GUIs!!! +++
++ Added GUI for quick temp sticky notes!!
++ Ctrl + Alt + F2 for a new blank note or from the menu on selected text will automatically copy the text into the note
+
++ Sound beeps on capslock toggle
++ gui overlay that hovers over the taskbar area when capslock is on
+
++ added a compiled .exe for easier running. A few script options will be limited from the exe. I still recommend the running .ahk file, especially if you want edit\customize the menu.
+
+++ Special Addition to this DOPUS EDITION ++
++ Added an Open\Run\Explore... Menu that works on a selected file address from inside a text document.
+(REQUIRES DIRCOTRY OPUS) its not free but its well worth it.
+= A few of these menu item should work through file explorer, thou I haven't fully tested them with explorer
+	- open folder
+	- run\open a file
+	- copy file to clipboard, paste them in a file manager! (REQUIRES DIRCOTRY OPUS)
+= works on true file paths, and with system variables e.g.
+ '%USERPROFILE%\Documents\AutoHotkey\'
++ copy the content of text-based file into your clipboard
+> move files into a sub-folder or up into parent folder
+
+;-------------------------  v.2024.09.28
+
++ Updated and Fixed the Insert Date & Time Menu to refresh automatically\dynamically every time the menu is launched.
++ Added a Run as Admin option to the Tools menu
+
+;-------------------------  v.2024.09.20
+
+= minor icon updates that should allow this menu to run on systems running windows 7 without errors
+
+;-------------------------  v.2024.09.13
+
+* FIRST PUBLIC RELEASE *
++ added new menu items
+	+ copy + append to clipboard
+	+ save clipboard to new document
+++ improvements ++
++ better save new document options.
++ can now save as other types of text based formats (e.g. .ahk, .css, etc) rather then strictly .txt files
++ added errorlevel escapes to stop the script when copying attempts fail
+
+

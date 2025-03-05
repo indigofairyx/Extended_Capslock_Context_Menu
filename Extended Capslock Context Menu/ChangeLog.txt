@@ -1,3 +1,6 @@
+;------------------------- v.2025.03.05
+
+!! BUGFIX, corrected a syntax error that was creating a system level hotkey inside of the Run at Start Up Shortcut.lnk
 
 ;------------------------- v.2025.03.01
 
@@ -7,7 +10,7 @@
 
 * About GUI clean up \ expansion. 
 
-! fixed broken link on software's tab
+! fixed broken links on software's tab
 
 ! changed file encoding to UTF-8 globally.
 

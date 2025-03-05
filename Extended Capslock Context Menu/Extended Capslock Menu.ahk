@@ -13,7 +13,7 @@
 */
 
 
-ScriptVersion := "v.2025.03.01"
+ScriptVersion := "v.2025.03.05"
 ScriptName := "Extended CapsLock Menu" 
 global scriptversion
 global scriptname
@@ -306,7 +306,7 @@ menu, ctxt, add, Remove  Extra   Spaces, RemoveExtraS
 menu, ctxt, Add, RemoveALL Spaces, RASpace
 menu, ctxt, icon, RemoveALL Spaces, %A_ScriptDir%\Icons\sc_gluepercent_16x16.ico
 menu, ctxt, add, Remove Empty Lines, RemoveEmptyLines
-menu, ctxt, icon, Remove Empty Lines, %icons%\edit-vertical-alignment-middle-white_ShareX_16x16.ico
+menu, ctxt, icon, Remove Empty Lines, %A_ScriptDir%\Icons\edit-vertical-alignment-middle-white_ShareX_16x16.ico
 menu, ctxt, add, Sort `> 0-9`,A-Z, sorttext
 menu, ctxt, icon, Sort `> 0-9`,A-Z, %A_ScriptDir%\Icons\sort a-z accending xfav Resources_222_24x24.ico
 ; menu, ctxt, icon, Sort `> 0-9`,A-Z, %A_ScriptDir%\Icons\sort_descending__32x32.ico
@@ -637,18 +637,18 @@ else
 
 
 menu, aset, add, Check For Updates on Start Up, togUpdatecheckonstartup
-menu, aset, icon, Check For Updates on Start Up, %icons%\globe web internet updater arrow xfav 256x256.ico
+menu, aset, icon, Check For Updates on Start Up, %A_ScriptDir%\Icons\globe web internet updater arrow xfav 256x256.ico
 if (CheckForUpdatesONStartup)
 	menu, aset, ToggleCheck, Check For Updates on Start Up
 	
 menu, aset, add, Run ECLM at Start Up, togRunonStartUp
-menu, aset, icon, Run ECLM at Start Up, %icons%\rocket_emoji_startup_64x64.ico
+menu, aset, icon, Run ECLM at Start Up, %A_ScriptDir%\Icons\rocket_emoji_startup_64x64.ico
 if (RunonStartUP)
 	{
 	menu, aset, ToggleCheck, Run ECLM at Start Up
 	; startuplink := A_StartUp "\" Scriptname ".lnk"
 	if !FileExist(startuplink)
-		FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,0
+		FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,,0
 	}
 else
 	{
@@ -669,12 +669,12 @@ menu, aset, add, ; line -------------------------
 if (SeeErrors)
 	{ ;; if on
 	menu, aset, add, Don't Show Error AHK Warnings on Launch, Togglewarnings
-	menu, aset, icon, Don't Show Error AHK Warnings on Launch, %icons%\stock_dialog-error_96x96.ico
+	menu, aset, icon, Don't Show Error AHK Warnings on Launch, %A_ScriptDir%\Icons\stock_dialog-error_96x96.ico
 	}
 else
 	{ ;; if off
 	menu, aset, add, Suppressing Error Warnings!, togglewarnings
-	menu, aset, icon, Suppressing Error Warnings!, %icons%\error_attention caution delete__32x32.ico
+	menu, aset, icon, Suppressing Error Warnings!, %A_ScriptDir%\Icons\error_attention caution delete__32x32.ico
 	}
 }
 ; menu, aset, add, ; line -------------------------
@@ -754,7 +754,7 @@ else
 	menu, cset, icon, Script is Running as ADMIN, %A_ScriptDir%\Icons\admin attention win11 imageres_107.ico
 	}
 menu, cset, add, Additonal Settings >>>>, :aset
-menu, cset, icon, Additonal Settings >>>>, %icons%\settings panel JLicons_33_64x64.ico
+menu, cset, icon, Additonal Settings >>>>, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico
 
 menu, cset, add, ; line ;-------------------------
 ; menu, cset, add, ; line ;-------------------------
@@ -944,7 +944,7 @@ menu, Case, Add, Copy                                         Single Tap CAPS, b
 menu, Case, icon, Copy                                         Single Tap CAPS, %A_ScriptDir%\Icons\edit-copy_32x32.ico
 Menu, case, Add, + Copy (Add to Clipboard), appendclip
 ; Menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard--plus_16x16.ico
-Menu, case, icon,  + Copy (Add to Clipboard), %Icons%\clipboard add plus append 64x64.ico
+Menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard add plus append 64x64.ico
 ; menu, case, icon, + Copy (Add to Clipboard), %A_ScriptDir%\Icons\copySpecial_48x48.ico ; alt icon
 Menu, Case, add, Cut, basiccut
 menu, case, icon, Cut, %A_ScriptDir%\Icons\edit-cut_32x32.ico
@@ -4629,7 +4629,7 @@ if (RunonStartUP) ;; if run on startup create a .lnk in %appdatae%\Roaming\Micro
 			; SYNTAX 4 -- FileCreateShortcut, Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]
 			; SYNTAX EXAMPLE 4 -- FileCreateShortcut, Notepad.exe, %A_Desktop%\My Shortcut.lnk, C:\, "%A_ScriptFullPath%", My Description, C:\My Icon.ico, i
 	IniWrite, 1, %inifile%, Global_Toggles, RunonStartUP
-	FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,0
+	FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,,0
 	menu, aset, togglecheck, Run ECLM at Start Up
 
 }
@@ -5419,7 +5419,7 @@ gui, capsa: add, picture, section w28 h28 hwndhshowsettingstip gshowsettingsmenu
 AddTooltip(hshowsettingstip,"Quick Settings Menu")
 gui, capsa: add, picture, ys W28 h28 hwndhcodespark gpreviewalttxtmenu, %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
 AddToolTip(hcodespark, "Edit .INI Options")
-gui, capsa: add, picture, ys, w28 h28 hwndhaset gshowasetmenu, %icons%\settings panel JLicons_33_64x64.ico
+gui, capsa: add, picture, ys, w28 h28 hwndhaset gshowasetmenu, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico
 addtooltip(haset, "Additional Settings Menu")
 
 gui, capsa: font, cDCDCDC s10, Consolas
@@ -7783,6 +7783,7 @@ AddTooltip(p1,p2:="",p3="")
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 ; END AddTooltip FUNCTION CALL
+
 
 
 

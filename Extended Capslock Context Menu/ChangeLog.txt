@@ -1,6 +1,27 @@
+;------------------------- v.2025.03.14
+
++++ Added a dynamic menu that shows the live hotkeys being read from the -SETTINGS.ini file, sorted alphabetically by description. This menus is not only a great reference, **it also run the command when clicked.** It own hotkey, which can be changed in the ini, is `Win`+`F1`.
+	$ This is BIG update that will show the set hotkeys on all the sub-menu items (if set). Check back for updates on this one. There's a lot of them (around 200) and may take a couple updates to get them all. :)
+	$ This also significatily changes the layout in the .ini, in a good way, will be easier to read and search for menu item keys
+	$ This also needs to be incorporated into the about window, coming soon on tab 3...
+
+* Consolidated the main menu by moving a few items into the sub-menus.
+
++ added Hotkey for a Quick Live Menu Option which auto-copies and displays the clipboard in the menu. sub-menu selections that work on Highlighted text (most of them) will use the live text rather than copy again before carrying out the command.
+
+! fixed an error with Paste Clipboard in "quotes" sending AHKs special characters wrong, e.g. the plus sign " + " send the shift key, it now sends a literal +
+
+! improvements the RegJump function.
+
++ added the click & drag ability to GUIs that ECLM makes, e.g. the about window (this window) and temp sticky notes
+
+- removed nag message box on Check for Updates at Startup, if unable to connect to github (or the internet) it won't bother you about it.
+
+
+
 ;------------------------- v.2025.03.05
 
-!! BUGFIX, corrected a syntax error that was creating a system level hotkey inside of the Run at Start Up Shortcut.lnk
+!! BUGFIX, corrected a syntax error that was creating a system level hotkey to launch ECLM inside of the Run at Start Up Shortcut.lnk
 
 ;------------------------- v.2025.03.01
 

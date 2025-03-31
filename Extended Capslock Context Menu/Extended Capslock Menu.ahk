@@ -9,11 +9,12 @@
 # made sub menu for File menu, put lesser used into in there, e.g. props, move, cmd stats, etc
 # add auto correct about and autostart up options
 # change + add middle mouse button live menu option here.
-	# make Dynamic fast mind menu for live menu
+	# make Dynamic fast Find menu for live menu
+
 */
 
 
-ScriptVersion := "v.2025.03.05"
+ScriptVersion := "v.2025.03.30"
 ScriptName := "Extended CapsLock Menu" 
 global scriptversion
 global scriptname
@@ -48,19 +49,7 @@ if !FileExist(inifile)
 		; }
 	; } 
 
-if (SeeErrors)
-	{
-		#warn
-		; msgbox,,, u will be annoyed with warning msgboxs,3
-	}
-else
-	{
-		Menu, Tray, UseErrorLevel
-		#warn, all, Off
-		#warn useenv, off
-		; msgbox,,, Error Warnings Are Turn Off!,3
-		; guicontrol,errorwarnings,show #todo
-	}
+
 
 
 
@@ -79,6 +68,26 @@ SendMode Input
 FileEncoding, UTF-8
 
 ;--------------------------------------------------
+snipdir := A_ScriptDir . "\Snippets"
+global snipdir
+if !fileExist(snipdir)
+	FileCreateDir, %snipdir%
+aboutsnipsfile := snipdir . "\Open Notepad && Click this file to learn about Snippets!.txt"
+global aboutsnipsfile
+; if !fileExist(aboutsnipsfile)
+	; gosub aboutsnips
+	
+IconsDir := A_ScriptDir . "\Icons" ; Path to the Icons folder
+global iconsdir
+clogfile = %A_ScriptDir%\ChangeLog.txt
+global clogfile
+if (A_Username != "CLOUDEN")
+	{
+	markiconsdirasreadonly()
+	markclogfileasreadonly()
+	}
+Icons := A_ScriptDir . "\Icons" ; Path to the Icons folder
+global icons
 
 
 global LiveMenuEnabled
@@ -91,9 +100,42 @@ global ReplaceNPPRightClick
 global ShiftedNumRow
 
 INIReadPrograms()
-INIReadGlobal_Hotkeys()
-INIReadGlobal_toggles()
+; INIReadGlobal_Hotkeys()
+INIReadToggles()
+INIReadHotkeySection("Global_Hotkeys")
+totalinicount := 0
 
+;-------------------------------------------------- #F12
+global ReadableHotkey, labelname, friendlyname, hotkeyvalue, totalinicount, sectionName, menuitems, HotkeyLabels
+global HotkeyLabels := {}  ; Ensure this is declared at the start of the script
+
+menu, k, add,
+menu, k, deleteall
+; menu, k, add, Live Hotkeys Menu`t⊞ + F12, showlivehotkeymenu
+; menu, k, icon, Live Hotkeys Menu`t⊞ + F12, %a_scriptdir%\icons\hotkeys.ico,,28
+; menu, k, default, Live Hotkeys Menu`t⊞ + F12
+menu, k, add, ECLM Live Hotkey Menu`t%showlivehotkeymenu%, showlivehotkeymenu
+menu, k, icon, ECLM Live Hotkey Menu`t%showlivehotkeymenu%, %a_scriptdir%\icons\hotkeys.ico,,28
+menu, k, default, ECLM Live Hotkey Menu`t%showlivehotkeymenu%
+menu, k, add, ; line ------------------------- 
+INIReadHotkeySection("Global_Hotkeys")
+menu, k, add, ; line -------------------------
+; menu, k, add, Hotkey Help, Hotkeyhelp
+; menu, k, icon, Hotkey Help, %icons%\about.ico
+menu, k, add, Edit %A_Scriptname%-Settings.ini`tKeys Set: %totaliniCount%, editsettings ;Editini
+menu, k, icon, Edit %A_Scriptname%-Settings.ini`tKeys Set: %totaliniCount%, %a_scriptdir%\icons\ini alt xfav setting document prefs setupapi_19 256x256.ico,,24
+menu, k, add, ; line -------------------------
+menu, k, add, AHK Modifier Key Symbols ..., showlivehotkeymenu
+menu, k, icon, AHK Modifier Key Symbols ..., %icons%\about.ico
+menu, k, add, Ctrl= ^ `, Alt= ! `, Shift= + `, Win= #, showlivehotkeymenu
+;--------------------------------------------------
+iniread, MaxClipboardLines, %inifile%, MenuOptions, MaxClipboardLines
+global MaxClipboardLines
+Global TotalLines := 0
+Global NonEmptyLines := 0
+Global EmptyLines := 0
+; read hotkeys again in simple format to feed main menu
+; INIReadHotkeySection("Global_Hotkeys")
 ;--------------------------------------------------
 global StartAsAdmin
 if (StartAsAdmin)
@@ -102,6 +144,27 @@ if (StartAsAdmin)
 		Run *RunAs "%A_ScriptFullPath%"
 	}
 
+;--------------------------------------------------
+if (SeeErrors)
+	{
+		#warn
+		; msgbox,,, u will be annoyed with warning msgboxs,3
+	}
+else
+	{
+		Menu, Tray, UseErrorLevel
+		#warn, all, Off
+		#warn useenv, off
+		; msgbox,,, Error Warnings Are Turn Off!,3
+		; guicontrol,errorwarnings,show #todo
+	}
+
+if (A_IsCompiled)
+	{
+		menu, tray, UseErrorLevel
+		#warn, all, Off
+		#warn useenv, off
+	}
 ;--------------------------------------------------
 if (DarkMode)
 		{
@@ -139,17 +202,7 @@ GLOBAL idn, pidl, plshellfolder, pidlChild, plContextMenu, pt, pIContextMenu2, p
 
 Global filename,dir,filestem,drive,folder,lastfolder,filetoclip,highlighted,attributes ; used by exp popup menu, alt editor menu, copen menu and EV menu items 
 ; Attributes := ""
-IconsDir := A_ScriptDir . "\Icons" ; Path to the Icons folder
-global iconsdir
-clogfile = %A_ScriptDir%\ChangeLog.txt
-global clogfile
-if (A_Username != "CLOUDEN")
-	{
-	markiconsdirasreadonly()
-	markclogfileasreadonly()
-	}
-Icons := A_ScriptDir . "\Icons" ; Path to the Icons folder
-global icons
+
 trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
 global trayicon
 iconerror = %A_ScriptDir%\icons\view error_192x192.ico
@@ -173,6 +226,11 @@ Global StickyCount := 0  ; Global counter for sticky notes, GUI item
 global iniload
 ; global inicontent := ""
 ; FileRead, inicontent, %inifile%
+OnMessage(0x0201, "WM_LBUTTONDOWNdrag")    ;;∙------∙Gui Drag Pt 1.
+;;∙======∙Gui Drag Pt 2∙==========================================∙
+WM_LBUTTONDOWNdrag() {
+   PostMessage, 0x00A1, 2, 0
+}
 global TabChange ; elements for the about gui
 global currentTab ; elemens for the about gui
 global selectedtab ; elements for the about gui
@@ -190,7 +248,10 @@ Global texteditor
 
 global control = "" ;; right click over np++
 Global ActiveFile ; alt editor menu
-saved := 0 ;; for F9, menu, alttxt, error check for unsaved files when launched outside of np++, e.g. vscode
+unSaved := 0 ;; for F9, menu, alttxt, error check for unsaved files when launched outside of np++, e.g. vscode
+global unsaved
+notatruefile := 0
+global notatruefile
 global targetID := "" 
 SetCapsLockState, off ;; start with caps lock keep turned off to keep it in sync with Show_CAPS_OSD
 
@@ -205,12 +266,11 @@ SetCapsLockState, off ;; start with caps lock keep turned off to keep it in sync
  if FileExist(localversioncheck)
 	 FileSetAttrib, +H, %localversioncheck%
 ;///////////////////////////////////////////////////////////////////////////
-
-
 ;---------------------------------------------------------------------------
 this := "" ; swap at, text, func
 div := "" ; swap at, text, func
 ;---------------------------------------------------------------------------
+
 { ; items for menu, dtmenu,
 StartTime := A_TickCount
 FormatTime, A_Time,, Time
@@ -227,9 +287,9 @@ TextMenuDate(List)
 TextMenuDate(TextOptions)
 {
 global
-menu, dtmenu, add, < ----- Insert Date && Time ----- >, showdtmenu
-menu, dtmenu, icon, < ----- Insert Date && Time ----- >, %A_ScriptDir%\Icons\ico_alpha_Clock_32x32.ico,,28
-menu, dtmenu, default, < ----- Insert Date && Time ----- >
+menu, dtmenu, add, < ----- Insert Date && Time ----- >`t%showdtmenu%, showdtmenu
+menu, dtmenu, icon, < ----- Insert Date && Time ----- >`t%showdtmenu%, %A_ScriptDir%\Icons\ico_alpha_Clock_32x32.ico,,28
+menu, dtmenu, default, < ----- Insert Date && Time ----- >`t%showdtmenu%
 menu, dtmenu, add, ; line ;-------------------------
 	 StringSplit, MenuItems, TextOptions , |
 	 Loop %MenuItems0%
@@ -272,161 +332,39 @@ DateFormats(Date)
 dtmenurefresh() ;; Function
 	{
 		global
+		menu, dtmenu, add
 		Menu, dtmenu, DeleteAll
 		Date := A_Now
 		List := DateFormats(A_Now)
 		TextMenuDate(List)
 	}
 ;---------------------------------------------------------------------------
+;///////////////////////////////////////////////////////////////////////////
 
+
+;///////////////////////////////////////////////////////////////////////////
 ;--------------------------------------------------------------------------- 
-menu, ctxt, add, < ---- Modify Text && Case ---- >, showctxtmenu
-menu, ctxt, icon, < ---- Modify Text && Case ---- >, %A_ScriptDir%\Icons\richtext_editor__32x32.ico,,28
-menu, ctxt, default, < ---- Modify Text && Case ---- >,
-menu, ctxt, add, ; line -------------------------
-menu, ctxt, Add, UPPERCASE, Upper
-menu, ctxt, icon, UPPERCASE, %A_ScriptDir%\Icons\Upper case.ico
-menu, ctxt, Add, lowercase, Lower
-menu, ctxt, icon, lowercase, %A_ScriptDir%\Icons\Lower case.ico
-menu, ctxt, Add, Title Case, Title
-menu, ctxt, Add, Sentence case, Sentence
-Menu, ctxt, Add, Capital Case, Capital
-menu, ctxt, add, ; line ;-------------------------
-menu, ctxt, add, Reverse - esreveR,  Reverse
-menu, ctxt, icon, Reverse - esreveR,  %A_ScriptDir%\Icons\action-text-direction-rtl_48x48.ico
-Menu, ctxt, Add, iNVERT cASE - Invert Case, Invert
-menu, ctxt, add, Convert Numbers<&&>Symbols`, 1@3->!2#, convertsymbols
-menu, ctxt, add, ; line ;-------------------------
-Menu, ctxt, Add, PascalCase, Pascal
-Menu, ctxt, Add, camelCase, camel
-Menu, ctxt, Add, aLtErNaTiNg cAsE, Alternating
-menu, ctxt, add, ; line ;-------------------------
-Menu, ctxt, add, S p r e a d T e x t, spread ; ccase ; spread case
-menu, ctxt, add, Remove  Extra   Spaces, RemoveExtraS
-menu, ctxt, Add, RemoveALL Spaces, RASpace
-menu, ctxt, icon, RemoveALL Spaces, %A_ScriptDir%\Icons\sc_gluepercent_16x16.ico
-menu, ctxt, add, Remove Empty Lines, RemoveEmptyLines
-menu, ctxt, icon, Remove Empty Lines, %A_ScriptDir%\Icons\edit-vertical-alignment-middle-white_ShareX_16x16.ico
-menu, ctxt, add, Sort `> 0-9`,A-Z, sorttext
-menu, ctxt, icon, Sort `> 0-9`,A-Z, %A_ScriptDir%\Icons\sort a-z accending xfav Resources_222_24x24.ico
-; menu, ctxt, icon, Sort `> 0-9`,A-Z, %A_ScriptDir%\Icons\sort_descending__32x32.ico
-menu, ctxt, add, ;line ;-------------------------
-Menu, ctxt, Add, Space to Dot.Case, addDot
-menu, ctxt, add, Remove.Dot to Space, removedot
-Menu, ctxt, Add, Space to Under_Score, addunderscore
-menu, ctxt, add, Remove_Underscore to Space, removeunderscore
-Menu, ctxt, Add, Space to Dash-Case, adddash
-menu, ctxt, add, Remove-Dash to Space, removedash
-
-menu, ctxt, add, ; line ;-------------------------
-Menu, ctxt, add, Fix Linebreaks, FixLineBreaks
-menu, ctxt, add, Remove Illegal Characters && Emojis, removeillegal
-menu, ctxt, icon, Remove Illegal Characters && Emojis, %A_ScriptDir%\Icons\error bot flow xfav_48x48.ico
-menu, ctxt, add, ; line ;-------------------------
-menu, ctxt, add, Swap @ Anchor Word or Symbol, text_swap ;swaptext
-menu, ctxt, icon, Swap @ Anchor Word or Symbol, %A_ScriptDir%\Icons\arrow_switch__32x32.ico
-menu, ctxt, add, Flip Chars @ Caret`, A|2->2|A`tAlt + R, letterswap
-menu, ctxt, icon, Flip Chars @ Caret`, A|2->2|A`tAlt + R, %A_ScriptDir%\Icons\Sync arrow_fluentColored_64x64.ico
-
-;---------------------------------------------------------------------------
-
-menu, cform, add, 1 `/`* Block Comment `*`/, commentblock
-menu, cform, icon, 1 `/`* Block Comment `*`/, %A_ScriptDir%\Icons\comment code coding com.github.jeremyvaartjes.comgen_64x64.ico
-menu, cform, add, 2 `{Wrapped}, cbrakectswrapped
-menu, cform, icon, 2 `{Wrapped}, %A_ScriptDir%\Icons\lc_symbolshapes.brace-pair_22x22.ico
-menu, cform, add, 3 (Parentheses), wrapparen
-menu, cform, icon, 3 (Parentheses), %A_ScriptDir%\Icons\lc_symbolshapes.bracket-pair_26x26.ico
-menu, cform, add, 4 [Square Brackets], squbracket
-menu, cform, icon, 4 [Square Brackets], %A_ScriptDir%\Icons\lc_symbolshapes.bracket-pair_22x22.ico
-; menu, cform, icon, 4 [Square Brackets], %A_ScriptDir%\Icons\code text brackets file_type_light_toml_32x32.ico ; alt icon
-menu, cform, add, 5 `%PercentVar`%, wrappercent
-menu, cform, icon, 5 `%PercentVar`%, %A_ScriptDir%\Icons\code format_percentage__32x32.ico
-menu, cform, Add, 6 ``Code - `Inline``, CodeLine
-menu, cform, Add, 7 ``````Code - Box``````, CodeBox
-menu, cform, icon, 7 ``````Code - Box``````, %A_ScriptDir%\Icons\selection text code Resources_200_24x24.ico
-menu, cform, add, 8 [code]Box - Forum[/code], forumcodebox
-menu, cform, Add, 9 <kbd>`K<`/kbd>, dopusK
-menu, cform, icon, 9 <kbd>`K<`/kbd>, %A_ScriptDir%\Icons\xml code_128x128.ico
-menu, cform, add, 0 `<`!-- xml Comment --`>, wrapinxmlcomment
-menu, cform, add, A ``nAHK new Line``n, ahknewline
-menu, cform, icon, A ``nAHK new Line``n, %A_ScriptDir%\Icons\083_key return enter keyboard capt_24x24.ico
-menu, cform, add, B Expand `%A_ScriptDir`%, expandscriptdir
-; menu, cform, icon, B Expand `%A_ScriptDir`%, 
-menu, cform, add, C Encode XML, Encodexml
-; menu, cform, icon,
-menu, cform, add, D Decode XML, decodexml
-; menu, cform, icon,
-menu, cform, add, E Covert file:\\\url to Std Path, convertfileurl
-
-
-;---------------------------------------------------------------------------
-
-menu, cfind, add, < ------ Web Searches ------ >, showfindmenu
-menu, cfind, icon, < ------ Web Searches ------ >, %A_ScriptDir%\Icons\web www internet globe 26 64x64.ico,,28
-menu, cfind, add, ; line ;-------------------------
-menu, cfind, add, Google This, googlethis
-menu, cfind, icon, Google This, %A_ScriptDir%\Icons\google_96x96.ico
-menu, cfind, add, Youtube This, youtubethis
-menu, cfind, icon, Youtube This, %A_ScriptDir%\Icons\youtube_64x64.ico
-menu, cfind, add, Define Word (Google), definethis
-menu, cfind, icon, define word (google), %A_ScriptDir%\Icons\Dictionary__32x32.ico
-menu, cfind, add, Wikipedia Search, wikipediasearch
-menu, cfind, icon, Wikipedia Search, %A_ScriptDir%\Icons\wikipedia.ico
-
-menu, cfind, add, AHK Site Search via Google, ahksearchmenu
-menu, cfind, icon, AHK Site Search via Google, %A_ScriptDir%\Icons\www.autohotkey.com website favcon_48x48.ico
-menu, cfind, add, ; line -------------------------
-menu, cfind, add, Visit Website [If a URL is selected], gowebsite
-menu, cfind, icon, Visit Website [If a URL is Selected], %A_ScriptDir%\Icons\web-browser xfav_24x24.ico
-menu, cfind, add, ; line ;-------------------------
-menu, Cfind, add, < ------ Local Searches ------ >, showfindmenu
-menu, Cfind, icon, < ------ Local Searches ------ >, %A_ScriptDir%\Icons\computer_48x48.ico,,28
-menu, cfind, add, ; line ;-------------------------
-menu, cfind, add, Everything -Find via EV 1.5a, Findwitheverything
-menu, cfind, icon, Everything -Find via EV 1.5a, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
-menu, cfind, add, System Index -via EveryThing 1.5a, evindex
-menu, cfind, icon,System Index -via EveryThing 1.5a, %A_ScriptDir%\Icons\voidtools-07-Everything-SkyBlue.ico
-
-menu, cfind, add, ; line ;-------------------------
-if fileexist(notepadpp)
-	{
-	menu, cfind, add, NP++ -Find in Files, findinfilesnpp
-	menu, cfind, icon, NP++ -Find in Files, %A_ScriptDir%\Icons\Find in Files.ico
-	; menu, cfind, add, NP++ -Find all in this Doc, findalllocalnpp
-	; menu, cfind, icon, NP++ -Find all in this Doc, %A_ScriptDir%\Icons\Find next.ico
-	}
-menu, cfind, add, Find in Files with AstroGrep, findastro
-menu, cfind, icon, Find in Files with AstroGrep, %A_ScriptDir%\Icons\astrogrep find search 256x256.ico
-menu, cfind, add, Find in Files with dnGREP, finddngrep
-if fileexist(dngrep)
-menu, cfind, icon, Find in Files with dnGREP, %dngrep%
-else
-menu, cfind, icon, Find in Files with dnGREP, %A_ScriptDir%\Icons\dnGrep 256x256.ico
-
-menu, cfind, add, ; line ------------------------- todo rename?
-menu, cfind, add, Search in AHK Help File (Local), ahkhelplocal
-menu, cfind, icon, Search in AHK Help File (Local), %A_ScriptDir%\Icons\chm help document question find hh_0_2.ico
-; menu, cfind, add, ; line ;-------------------------
-; menu, cfind, add, Look up on Dictionary.com && Thesaurus.com, Dictionarydotcom
 
 ;---------------------------------------------------------------------------
 
 
-menu, ctools, add, < ------ Text Tools ------ >, showtoolsmenu
-menu, ctools, icon, < ------ Text Tools ------ >, %A_ScriptDir%\Icons\Pencil and Ruler__32x32.ico,,28
-menu, ctools, default, < ------ Text Tools ------ >
+menu, ctools, add, < ------ Text Tools ------ >`t%showtoolsmenu%, showtoolsmenu
+menu, ctools, icon, < ------ Text Tools ------ >`t%showtoolsmenu%, %A_ScriptDir%\Icons\Pencil and Ruler__32x32.ico,,28
+menu, ctools, default, < ------ Text Tools ------ >`t%showtoolsmenu%
 menu, ctools, add, ; line ------------------ -------
-menu, ctools, add, Save Selection To New Document, newtxtfile
-menu, ctools, icon, Save Selection To New Document, %A_ScriptDir%\Icons\document new add FLUENT_colored_239_64x64.ico
+menu, ctools, add, Save Selection To New Document`t%newtxtfile%, newtxtfile
+menu, ctools, icon, Save Selection To New Document`t%newtxtfile%, %A_ScriptDir%\Icons\document new add FLUENT_colored_239_64x64.ico
 if fileexist(notepadpp)
 	{
-	menu, ctools, add, Copy Selected to New Np++ Document, newnpppdoc 
-	menu, ctools, icon, Copy Selected to New Np++ Document, %notepadpp%
+	menu, ctools, add, Copy Selected to New Np++ Document`t%newnpppdoc%, newnpppdoc 
+	menu, ctools, icon, Copy Selected to New Np++ Document`t%newnpppdoc%, %notepadpp%
 	menu, ctools, add, ; line -------------------------
 	; menu, ctools, icon, Copy Selected to New Np++ Document, %A_ScriptDir%\Icons\document edit notepad++ npp duplicate FLUENT_colored_452_64x64.ico  ;; IGNORE 4 SHARE
 	}
-menu, ctools, add, Quick Save Selection to New.txt File, quicktxtfile
-menu, ctools, icon, Quick Save Selection to New.txt File, %A_ScriptDir%\Icons\lc_savebasicas_26x26.ico
+menu, ctools, add, Quick Save Selection to New.txt File`t%quicktxtfile%, quicktxtfile
+menu, ctools, icon, Quick Save Selection to New.txt File`t%quicktxtfile%, %A_ScriptDir%\Icons\lc_savebasicas_26x26.ico
+if (showExtraMenusOnCAPS)
+{
 if fileExist(quicknotesdir)
 	{
 	topmenu = %quicknotesdir%
@@ -435,154 +373,342 @@ if fileExist(quicknotesdir)
 	Menu, ctools, add, Quick Notes Dir, :%topmenu%
 	Menu, ctools, icon, Quick Notes Dir, %A_ScriptDir%\Icons\folder_go__32x32.ico
 	}
+}
 menu, ctools, add, ; line ;-------------------------
-menu, ctools, add, Save Clipboard to New Document, SaveClipboardAsTxt
-menu, ctools, icon, Save Clipboard to New Document, %A_ScriptDir%\Icons\clipboard save b_xedit_48x48.ico
-menu, ctools, add, View Clipboard Text, viewclip
-menu, ctools, icon, View Clipboard Text, %A_ScriptDir%\Icons\QAP-preview_pane_c_26x26.ico
+menu, ctools, add, Save Clipboard to New Document`t%SaveClipboardAsTxt%, SaveClipboardAsTxt
+menu, ctools, icon, Save Clipboard to New Document`t%SaveClipboardAsTxt%, %A_ScriptDir%\Icons\clipboard save b_xedit_48x48.ico
+menu, ctools, add, View Clipboard Text`t%viewclip%, viewclip
+menu, ctools, icon, View Clipboard Text`t%viewclip%, %A_ScriptDir%\Icons\QAP-preview_pane_c_26x26.ico
 ; menu, ctools, icon, View Clipboard Text, %A_ScriptDir%\Icons\message Magic Box.ico ; alt icon
-menu, ctools, add, Clear Clipboard, clearclip
+menu, ctools, add, Clear Clipboard`t%clearclip%, clearclip
 ; menu, ctools, icon, Clear Clipboard, %A_ScriptDir%\Icons\Clean_fluentColored_64x64.ico ; alt icon
-menu, ctools, icon, Clear Clipboard, %A_ScriptDir%\Icons\clean_clear_clipboard_empty_xedit3_32x32.ico
+menu, ctools, icon, Clear Clipboard`t%clearclip%, %A_ScriptDir%\Icons\clean_clear_clipboard_empty_xedit3_32x32.ico
+menu, ctools, add, ; line ;-------------------------
+Menu, ctools, Add, + Copy (Add to Clipboard)`t%appendclip%, appendclip
+Menu, ctools, icon,  + Copy (Add to Clipboard)`t%appendclip%, %A_ScriptDir%\Icons\clipboard add plus append 64x64.ico
+MENU, ctools, ADD, Paste As Plain Text`t%pasteasplaintext%, pasteasplaintext
+MENU, ctools, icon, Paste As Plain Text`t%pasteasplaintext%, %A_ScriptDir%\Icons\plaintextdoc_64x64.ico
+menu, ctools, Add, Wrap in Selection "&Quotes"`t%ClipQuote%, ClipQuote ; ;10 %A_Space% in menu
+menu, ctools, icon, Wrap in Selection "&Quotes"`t%ClipQuote%, %A_ScriptDir%\Icons\format quote_24x24.ico ; "
 
 menu, ctools, add, ;line ;-------------------------
-menu, ctools, add, Grab Location Bar Address (Copy), copylocationbar
-menu, ctools, icon, Grab Location Bar Address (Copy), %A_ScriptDir%\Icons\address_bar_red__32x32.ico
-menu, ctools, add, Copy Selection to Temp Sticky, CopyToStickyNote
-menu, ctools, icon, Copy Selection to Temp Sticky, %A_ScriptDir%\Icons\classicStickyNotes_0_6 48x48.ico
+menu, ctools, add, Grab Location Bar Address (Copy)`t%copylocationbar%, copylocationbar
+menu, ctools, icon, Grab Location Bar Address (Copy)`t%copylocationbar%, %A_ScriptDir%\Icons\address_bar_red__32x32.ico
+menu, ctools, add, Copy Selection to Temp Sticky`t%CopyToStickyNote%, CopyToStickyNote
+menu, ctools, icon, Copy Selection to Temp Sticky`t%CopyToStickyNote%, %A_ScriptDir%\Icons\classicStickyNotes_0_6 48x48.ico
 menu, ctools, add, ;line ;-------------------------
 
-menu, ctools, add, Text Statistics on Selection, TextStatsSelected
-menu, ctools, icon, Text Statistics on Selection, %A_ScriptDir%\Icons\document Info_48x48.ico
-menu, ctools, add, Read [*Selected Text*] Out Loud, TextToSpeech
-menu, ctools, icon, Read [*Selected Text*] Out Loud, %A_ScriptDir%\Icons\loudspeaker_emoji_64x64.ico
+menu, ctools, add, Text Statistics on Selection`t%TextStatsSelected%, TextStatsSelected
+menu, ctools, icon, Text Statistics on Selection`t%TextStatsSelected%, %A_ScriptDir%\Icons\document Info_48x48.ico
+menu, ctools, add, Read [*Selected Text*] Out Loud`t%TextToSpeech%, TextToSpeech
+menu, ctools, icon, Read [*Selected Text*] Out Loud`t%TextToSpeech%, %A_ScriptDir%\Icons\loudspeaker_emoji_64x64.ico
 menu, ctools, add, ; line ;-------------------------
 menu, ctools, add, < --- Software Launchers (?About) --- >, aboutsoftwareL
 menu, ctools, icon, < --- Software Launchers (?About) --- >, %A_ScriptDir%\Icons\Apps_software_48x48.ico,,24
 menu, ctools, add, ; line ;-------------------------
-MENU, ctools, add, Run AHK Auto Correct (Included), abc
-MENU, ctools, icon, Run AHK Auto Correct (Included), %A_ScriptDir%\Icons\autocorrect_icon_32x32.ico
-menu, ctools, add, Ditto Clipboard, runditto
-menu, ctools, icon, Ditto Clipboard, %A_ScriptDir%\Icons\ditto quote clipboard 128x128.ico
+MENU, ctools, add, Run AHK Auto Correct (Included)`t%runabc%, runabc
+MENU, ctools, icon, Run AHK Auto Correct (Included)`t%runabc%, %A_ScriptDir%\Icons\autocorrect_icon_32x32.ico
+menu, ctools, add, Ditto Clipboard`t%runditto%, runditto
+menu, ctools, icon, Ditto Clipboard`t%runditto%, %A_ScriptDir%\Icons\ditto quote clipboard 128x128.ico
 if FileExist(qce)
-{
-Menu, ctools, add, Quick Clipboard Editor, runQCE
-Menu, ctools, icon, Quick Clipboard Editor, %qce%
-}
+	{
+	Menu, ctools, add, Quick Clipboard Editor`t%runQCE%, runQCE
+	Menu, ctools, icon, Quick Clipboard Editor`t%runQCE%, %qce%
+	}
 else
-{
-Menu, ctools, add, Quick Clipboard Editor  -- Not Installed ?, runQCE
-Menu, ctools, icon, Quick Clipboard Editor  -- Not Installed ?, %A_ScriptDir%\Icons\clipboard JLicons_52_64x64.ico
-}
+	{
+	Menu, ctools, add, Quick Clipboard Editor  -- Not Installed ?`t%runQCE%, runQCE
+	Menu, ctools, icon, Quick Clipboard Editor  -- Not Installed ?`t%runQCE%, %A_ScriptDir%\Icons\clipboard JLicons_52_64x64.ico
+	}
 
-menu, ctools, add, Textify, runtextify
-menu, ctools, icon, Textify, %A_ScriptDir%\Icons\textify 128x128.ico
-menu, ctools, add, Text Grab, runtextgrab
-menu, ctools, icon, Text Grab, %A_ScriptDir%\Icons\text grab v4 128x128.ico
-menu, ctools, add, Notepad++, runnotepadpp
-menu, ctools, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
+menu, ctools, add, Textify`t%runtextify%, runtextify
+menu, ctools, icon, Textify`t%runtextify%, %A_ScriptDir%\Icons\textify 128x128.ico
+menu, ctools, add, Text Grab`t%runtextgrab%, runtextgrab
+menu, ctools, icon, Text Grab`t%runtextgrab%, %A_ScriptDir%\Icons\text grab v4 128x128.ico
+menu, ctools, add, Notepad++`t%runnotepadpp%, runnotepadpp
+menu, ctools, icon, Notepad++`t%runnotepadpp%, %A_ScriptDir%\Icons\notepad++_100.ico
 
 if !FileExist(dopus)
 	{
 	menu, ctools, add, Directory Opus, rundopus
 	menu, ctools, icon, Directory Opus, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico
 	}
+
+; -------------------------------------------------------------------------- 
+	
+menu, cfind, add, < --- Search Selected Text Menu --- >`t%showfindmenu%, showfindmenu
+menu, cfind, icon, < --- Search Selected Text Menu --- >`t%showfindmenu%, %A_ScriptDir%\Icons\search find Windows 11 Icon 13_256x256.ico,,28
+menu, cfind, default, < --- Search Selected Text Menu --- >`t%showfindmenu%
+menu, cfind, add, ; line ;-------------------------
+menu, Cfind, add, < ------ Local Searches ------ >`t%showfindmenu%, showfindmenu
+menu, Cfind, icon, < ------ Local Searches ------ >`t%showfindmenu%, %Icons%\computer_48x48.ico,,28
+menu, cfind, add, ; line ;-------------------------
+menu, cfind, add, Everything -Find with EV`t%Findwitheverything%, Findwitheverything
+menu, cfind, icon, Everything -Find with EV`t%Findwitheverything%, %Icons%\voidtools-15-Everything-1.5.ico
+menu, cfind, add, System Index -via EV 1.5a`t%evindex%, evindex
+menu, cfind, icon, System Index -via EV 1.5a`t%evindex%, %Icons%\voidtools-07-Everything-SkyBlue.ico
+if fileexist(winfindr)
+	{
+		menu, cfind, add, Winfindr`t%WinFindrSearch%, WinFindrSearch
+		menu, cfind, icon, Winfindr`t%WinFindrSearch%, %winfindr%	
+	}
+menu, cfind, add, ; line ;-------------------------
+if fileexist(notepadpp)
+	{
+	menu, cfind, add, NP++ -Find in Files`t%findinfilesnpp%, findinfilesnpp
+	menu, cfind, icon, NP++ -Find in Files`t%findinfilesnpp%, %Icons%\Find in Files.ico
+
+	; menu, cfind, add, NP++ -Find all in this Doc, findalllocalnpp
+	; menu, cfind, icon, NP++ -Find all in this Doc, %A_ScriptDir%\Icons\Find next.ico
+	}
+if fileExist(astrogrep)
+	{
+	menu, cfind, add, Find in Files with AstroGrep`t%findastro%, findastro
+	menu, cfind, icon, Find in Files with AstroGrep`t%findastro%, %findastro%
+	; menu, cfind, icon, Find in Files with AstroGrep, %A_ScriptDir%\Icons\astrogrep find search 256x256.ico
+	}
+
+
+menu, cfind, add, Find in Files with dnGREP`t%finddngrep%, finddngrep
+if fileexist(dngrep)
+	menu, cfind, icon, Find in Files with dnGREP`t%finddngrep%, %dngrep%
+else
+	menu, cfind, icon, Find in Files with dnGREP`t%finddngrep%, %Icons%\dnGrep 256x256.ico
+
+menu, cfind, add, ; line -------------------------
+menu, cfind, add, AHK Help File ( Local )`t%ahkhelplocal%, ahkhelplocal
+menu, cfind, icon, AHK Help File ( Local )`t%ahkhelplocal%, %Icons%\chm help document question find hh_0_2.ico
+menu, cfind, add, ; line -------------------------
+
+menu, cfind, add, < ------ Web Searches ------ >`t%showfindmenu%, showfindmenu
+menu, cfind, icon, < ------ Web Searches ------ >`t%showfindmenu%, %Icons%\web www internet globe 26 64x64.ico,,28
+menu, cfind, add, ; line ;-------------------------
+menu, cfind, add, Google This`t%googlethis%, googlethis
+menu, cfind, icon, Google This`t%googlethis%, %A_ScriptDir%\Icons\google_96x96.ico
+menu, cfind, add, Youtube This`t%youtubethis%, youtubethis
+menu, cfind, icon, Youtube This`t%youtubethis%, %Icons%\youtube_64x64.ico
+menu, cfind, add, Define Word (Google)`t%definethis%, definethis
+menu, cfind, icon, Define Word (Google)`t%definethis%, %Icons%\Dictionary__32x32.ico
+menu, cfind, add, Wikipedia Search`t%wikipediasearch%, wikipediasearch
+menu, cfind, icon, Wikipedia Search`t%wikipediasearch%, %Icons%\wikipedia.ico
+
+menu, cfind, add, ; line -------------------------
+menu, cfind, add, Visit Website [If URL]`t%gowebsite%, gowebsite
+menu, cfind, icon, Visit Website [If URL]`t%gowebsite%, %Icons%\web-browser xfav_24x24.ico
+menu, cfind, add, ; line ;-------------------------
+menu, cfind, add, AHK Site Search via Google`t%ahksearchmenu%, ahksearchmenu
+menu, cfind, icon, AHK Site Search via Google`t%ahksearchmenu%, %A_ScriptDir%\Icons\www.autohotkey.com website favcon_48x48.ico
+; menu, cfind, add, ; line ;-------------------------
+; menu, cfind, add, Look up on Dictionary.com && Thesaurus.com, Dictionarydotcom
+
+
 ; -------------------------------------------------------------------------- 
 
 
-;---------------------------------------------------------------------------
 
-
-menu, copen, add, < --- IF Files\Dirs is [*Selected*] Menu --- >, showopenmenu
+menu, copen, add, < --- IF Files\Dirs is [*Selected*] Menu --- >`t%showopenmenu%, showopenmenu
 if FileExist(dopus)
-	menu, copen, icon, < --- IF Files\Dirs is [*Selected*] Menu --- >, %A_ScriptDir%\Icons\DOpus_Spikes_256x256.ico,,28
+	menu, copen, icon, < --- IF Files\Dirs is [*Selected*] Menu --- >`t%showopenmenu%, %Icons%\DOpus_Spikes_256x256.ico,,28
 else
-	menu, copen, icon, < --- IF Files\Dirs is [*Selected*] Menu --- >, explorer.exe,,28
-menu, copen, default, < --- IF Files\Dirs is [*Selected*] Menu --- >
+	menu, copen, icon, < --- IF Files\Dirs is [*Selected*] Menu --- >`t%showopenmenu%, explorer.exe,,28
+menu, copen, default,  < --- IF Files\Dirs is [*Selected*] Menu --- >`t%showopenmenu%
 
 menu, copen, add, ; line ;-------------------------
-menu, copen, add, Open Folder, OpenDIRselection
-menu, copen, icon, Open Folder, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
+menu, copen, add, Open Folder`t%OpenDIRselection%, OpenDIRselection
+menu, copen, icon, Open Folder`t%OpenDIRselection%, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
 ; menu, copen, add, Open Folder v2 simple, openfoldersimple
-menu, copen, add, Run\Open File, RUNfromselection
-menu, copen, icon, Run\Open File, %A_ScriptDir%\Icons\JLicons_1_64x64.ico
+menu, copen, add, Run\Open File`n%RUNfromselection%, RUNfromselection
+menu, copen, icon, Run\Open File`n%RUNfromselection%, %A_ScriptDir%\Icons\JLicons_1_64x64.ico
 if FileExist(dopus)
 	{
-		menu, copen, add, Copy File\Folder to Clipboard, COPYfromselection
-		menu, copen, icon, Copy File\Folder to Clipboard, %A_ScriptDir%\Icons\importClipboard image photo picture _48x48.ico
+		menu, copen, add, Copy File\Folder to Clipboard`t%COPYfromselection%, COPYfromselection
+		menu, copen, icon, Copy File\Folder to Clipboard`t%COPYfromselection%, %Icons%\importClipboard image photo picture _48x48.ico
 	}
 else
 	{
 		menu, copen, add, Copy File\Folder to ..., COPYfromselection
-		menu, copen, icon, Copy File\Folder to ..., %A_ScriptDir%\Icons\min_copyTo_32x32.ico
+		menu, copen, icon, Copy File\Folder to ..., %Icons%\min_copyTo_32x32.ico
 	}
 menu, copen, add, ; line ;-------------------------
-menu, copen, add, Explore Folder in Everything, EVpath
-menu, copen, icon, Explore Folder in Everything, %A_ScriptDir%\Icons\voidtools-15-Everything-1.5.ico
-menu, copen, add, Search File in Everything, EVfile
-menu, copen, icon, Search File in Everything, %A_ScriptDir%\Icons\voidtools-04-Everything-Green.ico
-Menu, copen, add, Load Path into dnGREP for Searching, dngreploadpath
+menu, copen, add, Explore Folder in Everything`t%EVpath%, EVpath
+menu, copen, icon, Explore Folder in Everything`t%EVpath%, %everything15a% ; alt, if !fileexist icon, %Icons%\voidtools-15-Everything-1.5.ico
+menu, copen, add, Search File in Everything`t%EVfile%, EVfile
+menu, copen, icon, Search File in Everything`t%EVfile%, %Icons%\voidtools-04-Everything-Green.ico
+Menu, copen, add, Load Path into dnGREP for Searching`t%dngreploadpath%, dngreploadpath
 if fileexist(dngrep)
-menu, copen, icon, Load Path into dnGREP for Searching, %dngrep%
+menu, copen, icon, Load Path into dnGREP for Searching`t%dngreploadpath%, %dngrep%
 else
-menu, copen, icon, Load Path into dnGREP for Searching, %A_ScriptDir%\Icons\dnGrep 256x256.ico
+menu, copen, icon, Load Path into dnGREP for Searching`t%dngreploadpath%, %Icons%\dnGrep 256x256.ico
 
 menu, copen, add, ; line ;-------------------------
 
-menu, copen, add, Edit in Text Editor, Edittxtfile
+menu, copen, add, Edit in Text Editor`t%Edittxtfile%, Edittxtfile
 if fileexist(Texteditor)
-	menu, copen, icon, Edit in Text Editor, %texteditor%
+	menu, copen, icon, Edit in Text Editor`t%Edittxtfile%, %texteditor%
 else
-	menu, copen, icon, Edit in Text Editor, notepad.exe
+	menu, copen, icon, Edit in Text Editor`t%Edittxtfile%, notepad.exe
 
-menu, copen, add, Duplicate File as... "File Name -CopyDup.ext", makedup
-menu, copen, icon, Duplicate File as... "File Name -CopyDup.ext", %A_ScriptDir%\Icons\lc_duplicatepage_24x24.ico
-menu, copen, add, File Content to Clipboard (Text-Based Files), filetoclipboard
-menu, copen, icon, File Content to Clipboard (Text-Based Files), %A_ScriptDir%\Icons\binary text txt copy_48x48.ico
-; menu, copen, icon, File Content to Clipboard (Text-Based Files), %A_ScriptDir%\Icons\filetype exe binary text txt copy 20_48x48.ico ;alt icon
-menu, copen, add, File Stats (Count lines - words - etc..), TextStatsFile
-menu, copen, icon, File Stats (Count lines - words - etc..), %A_ScriptDir%\Icons\document Info_48x48.ico
-; menu, copen, add, ; line ;-------------------------
+menu, copen, add, Duplicate File as... "File Name -CopyDup.ext"`t%makedup%, makedup
+menu, copen, icon, Duplicate File as... "File Name -CopyDup.ext"`t%makedup%, %Icons%\lc_duplicatepage_24x24.ico
+menu, copen, add, File Content to Clipboard (Text-Based Files)`t%filetoclipboard%, filetoclipboard
+menu, copen, icon, File Content to Clipboard (Text-Based Files)`t%filetoclipboard%, %Icons%\binary text txt copy_48x48.ico
+; menu, copen, icon, File Content to Clipboard (Text-Based Files), %Icons%\filetype exe binary text txt copy 20_48x48.ico ;alt icon
+menu, copen, add, File Stats (Count lines - words - etc..)`t%TextStatsFile%, TextStatsFile
+menu, copen, icon, File Stats (Count lines - words - etc..)`t%TextStatsFile%, %Icons%\document Info_48x48.ico
 
 menu, copen, add, ; line ;-------------------------
 
-menu, copen, add, Jump to Key in RegEdit, RegJump
-menu, copen, icon, Jump to Key in RegEdit, %A_ScriptDir%\Icons\reg blocks app 256x256.ico
+menu, copen, add, Jump to Key in RegEdit`t%RegJumpmenu%, RegJumpmenu
+menu, copen, icon, Jump to Key in RegEdit`t%RegJumpmenu%, %Icons%\reg blocks app 256x256.ico
 ; menu, copen, icon, Jump to Key in RegEdit, regedit.exe ; alt icon
 menu, copen, add, ; line -------------------------
-menu, copen, add, Windows Context Menu  ☰, wincontextmenu
-menu, copen, icon, Windows Context Menu  ☰, %A_ScriptDir%\Icons\windows logo xfav 48x48.ico
-menu, copen, add, Open With..., fileopenwith
-menu, copen, icon, Open With..., OpenWith.exe
+menu, copen, add, Windows Context Menu  ☰`t%wincontextmenu%, wincontextmenu
+menu, copen, icon, Windows Context Menu  ☰`t%wincontextmenu%, %Icons%\windows logo xfav 48x48.ico
+menu, copen, add, Open With...`t%fileopenwith%, fileopenwith
+menu, copen, icon, Open With...`t%fileopenwith%, OpenWith.exe
 ; menu, copen, icon, Open With..., C:\Windows\SysWOW64\OpenWith.exe ; or C:\Windows\System32\OpenWith.exe
-menu, copen, add, View File Properties, viewfilepropteries
-menu, copen, icon, View File Properties, C:\Windows\system32\imageres.dll, 307
+menu, copen, add, View File Properties`t%viewfilepropteries%, viewfilepropteries
+menu, copen, icon, View File Properties`t%viewfilepropteries%, C:\Windows\system32\imageres.dll, 307
 menu, copen, add, ; line ;-------------------------
 
-menu, copen, add, Visit Website [If URL is Selected], gowebsite
-menu, copen, icon, Visit Website [If URL is Selected], %A_ScriptDir%\Icons\web-browser xfav_24x24.ico
+menu, copen, add, Visit Website [If URL]`t%gowebsite%, gowebsite
+menu, copen, icon, Visit Website [If URL]`t%gowebsite%, %Icons%\web-browser xfav_24x24.ico
 menu, copen, add, ; line ;-------------------------
-menu, copen, add, View Explore Folder Popup Menu, expmenu
-menu, copen, icon, View Explore Folder Popup Menu, %A_ScriptDir%\Icons\submenu JLicons_42_64x64.ico
+menu, copen, add, View Explore Folder Popup Menu`t%expmenu%, expmenu
+menu, copen, icon, View Explore Folder Popup Menu`t%expmenu%, %Icons%\submenu JLicons_42_64x64.ico
 menu, copen, add, View Live Folder Menu, livefoldermenu
 
 
 if fileexist(notepadpp)
 	{
-	menu, copen, add, If NP++ Switch to Alt Open With Menu`tF9, alttxtnppmenu
-	menu, copen, icon, If NP++ Switch to Alt Open With Menu`tF9, %notepadpp%
+	menu, copen, add, If NP++ Switch to Alt Open With Menu`t%alttxtnppmenu%, alttxtnppmenu
+	menu, copen, icon, If NP++ Switch to Alt Open With Menu`t%alttxtnppmenu%, %notepadpp%
 	}
 
-menu, copen, add, ; line ;-------------------------
+menu, copen, add, ; line -------------------------
 menu, copen, add, Put File into Subfolder (Folder takes Filename), movefiletofolder
 menu, copen, icon, Put File into Subfolder (Folder takes Filename), %A_ScriptDir%\Icons\folder new add FLUENT_colored_165_64x64.ico
 menu, copen, add, Move File Up into it's Parent Folder, movefiletoparentfolder
 menu, copen, icon, Move File Up into it's Parent Folder, %A_ScriptDir%\Icons\folder arrow up action-brown-open_32x32.ico
 menu, copen, add, Copy File Names && Details of Folder to Clipboard, copydetails
 menu, copen, icon, Copy File Names && Details of Folder to Clipboard, %A_ScriptDir%\Icons\cmd_48x48.ico
+menu, copen, add, ; line ;-------------------------
+menu, copen, add, Put File into Subfolder (Folder takes Filename)`t%movefiletofolder%, movefiletofolder
+menu, copen, icon, Put File into Subfolder (Folder takes Filename)`t%movefiletofolder%, %A_ScriptDir%\Icons\folder new add FLUENT_colored_165_64x64.ico
+menu, copen, add, Move File Up into it's Parent Folder`t%movefiletoparentfolder%, movefiletoparentfolder
+menu, copen, icon, Move File Up into it's Parent Folder`t%movefiletoparentfolder%, %A_ScriptDir%\Icons\folder arrow up action-brown-open_32x32.ico
+menu, copen, add, Copy File Names && Details of Folder to Clipboard`t%copydetails%, copydetails
+menu, copen, icon, Copy File Names && Details of Folder to Clipboard`t%copydetails%, %A_ScriptDir%\Icons\cmd_48x48.ico
+
+; -------------------------------------------------------------------------- 
+
+menu, ctxt, add, < ---- Modify Text && Case ---- >`t%showctxtmenu%, showctxtmenu
+menu, ctxt, icon, < ---- Modify Text && Case ---- >`t%showctxtmenu%, %Icons%\richtext_editor__32x32.ico,,28
+menu, ctxt, default, < ---- Modify Text && Case ---- >`t%showctxtmenu%,
+menu, ctxt, add, ; line -------------------------
+menu, ctxt, Add, UPPERCASE`t%Upper%, Upper
+menu, ctxt, icon, UPPERCASE`t%Upper%, %Icons%\Upper case.ico
+menu, ctxt, Add, lowercase`t%Lower%, Lower
+menu, ctxt, icon, lowercase`t%Lower%, %Icons%\Lower case.ico
+menu, ctxt, Add, Title Case`t%Title%, Title
+menu, ctxt, Add, Sentence case`t%Sentence%, Sentence
+Menu, ctxt, Add, Capital Case`t%Capital%, Capital
+Menu, ctxt, Add, iNVERT cASE - Invert Case`t%Invert%, Invert
+menu, ctxt, add, ; line ;-------------------------
+menu, ctxt, add, Reverse - esreveR`t%Reverse%,  Reverse
+menu, ctxt, icon, Reverse - esreveR`t%Reverse%,  %Icons%\action-text-direction-rtl_48x48.ico
+menu, ctxt, add, Convert Numbers<&&>Symbols`, 1@3->!2#`t%convertsymbols%, convertsymbols
+menu, ctxt, add, ; line ;-------------------------
+Menu, ctxt, Add, PascalCase`t%Pascal%, Pascal
+Menu, ctxt, Add, camelCase`t%camel%, camel 
+menu, ctxt, add, camelPascalCase to Spaced Words`t%UnPascal%, UnPascal
+Menu, ctxt, Add, aLtErNaTiNg cAsE`t%Alternating%, Alternating
+menu, ctxt, add, ; line ;-------------------------
+Menu, ctxt, add, S p r e a d T e x t`t%spread%, spread ; ccase ; spread case
+menu, ctxt, add, Remove  Extra   Spaces`t%RemoveExtraS%, RemoveExtraS
+menu, ctxt, Add, RemoveALL Spaces`t%RASpace%, RASpace
+menu, ctxt, icon, RemoveALL Spaces`t%RASpace%, %Icons%\sc_gluepercent_16x16.ico
+menu, ctxt, add, Add Spaces around {Input Symbol}`t%AddSpacesAroundSeparator%, AddSpacesAroundSeparator
+menu, ctxt, add, Remove Spaces around {Input Symbol}`t%RemoveSpacesAroundSeparator%, RemoveSpacesAroundSeparator
+menu, ctxt, add, Remove Empty Lines`t%RemoveEmptyLines%, RemoveEmptyLines
+menu, ctxt, icon, Remove Empty Lines`t%RemoveEmptyLines%, %icons%\edit-vertical-alignment-middle-white_ShareX_16x16.ico
+menu, ctxt, add, ;line ;-------------------------
+menu, ctxt, add, Sort `> 0-9`,A-Z`t%sorttext%, sorttext
+menu, ctxt, icon, Sort `> 0-9`,A-Z`t%sorttext%, %Icons%\sort a-z accending xfav Resources_222_24x24.ico
+; menu, ctxt, icon, Sort `> 0-9`,A-Z`t%sorttext%, %Icons%\sort_descending__32x32.ico
+menu, ctxt, add, ;line ;-------------------------
+Menu, ctxt, Add, Space to Dot.Case`t%addDot%, addDot
+menu, ctxt, add, Remove.Dot to Space`t%removedot%, removedot
+Menu, ctxt, Add, Space to Under_Score`t%addunderscore%, addunderscore
+menu, ctxt, add, Remove_Underscore to Space`t%removeunderscore%, removeunderscore
+Menu, ctxt, Add, Space to Dash-Case`t%adddash%, adddash
+menu, ctxt, add, Remove-Dash to Space`t%removedash%, removedash
+
+menu, ctxt, add, ; line ;-------------------------
+Menu, ctxt, add, Fix Line Breaks`t%FixLineBreaks%, FixLineBreaks
+menu, ctxt, add, Remove Illegal Characters && Emojis`t%removeillegal%, removeillegal
+menu, ctxt, icon, Remove Illegal Characters && Emojis`t%removeillegal%, %Icons%\error bot flow xfav_48x48.ico
+menu, ctxt, add, ; line ;-------------------------
+menu, ctxt, add, Flip at {Input Symbol}`t%FlipTextSeparator%, FlipTextSeparator
+menu, ctxt, add, Swap @ Anchor Word or Symbol`t%text_swap%, text_swap ;swaptext
+menu, ctxt, icon, Swap @ Anchor Word or Symbol`t%text_swap%, %Icons%\arrow_switch__32x32.ico
+menu, ctxt, add, Flip Chars @ Caret`, A2->2A`t%letterswap%, letterswap
+menu, ctxt, icon, Flip Chars @ Caret`, A2->2A`t%letterswap%, %Icons%\Sync arrow_fluentColored_64x64.ico
+
+;---------------------------------------------------------------------------
+menu, code, add, < --- Code Formatting Menu --- >`t%showcodemenu%, showcodemenu
+menu, code, icon,  < --- Code Formatting Menu --- >`t%showcodemenu%, %A_ScriptDir%\Icons\code spark xfav function_256x256.ico,,28
+menu, code, default,  < --- Code Formatting Menu --- >`t%showcodemenu%
+menu, code, add, ; line -------------------------
+menu, code, add, 1 `/`* Block Comment `*`/`t%commentblock%, commentblock
+menu, code, icon, 1 `/`* Block Comment `*`/`t%commentblock%, %Icons%\comment code coding com.github.jeremyvaartjes.comgen_64x64.ico
+menu, code, add, 2 `{Wrapped}`t %cbrakectswrapped%, cbrakectswrapped
+menu, code, icon, 2 `{Wrapped}`t %cbrakectswrapped%, %Icons%\lc_symbolshapes.brace-pair_22x22.ico
+menu, code, add, 3 (Parentheses)`t%wrapparen%, wrapparen
+menu, code, icon, 3 (Parentheses)`t%wrapparen%, %Icons%\lc_symbolshapes.bracket-pair_26x26.ico
+menu, code, add, 4 [Square Brackets]`t%squbracket%, squbracket
+menu, code, icon, 4 [Square Brackets]`t%squbracket%, %Icons%\lc_symbolshapes.bracket-pair_22x22.ico
+; menu, code ,icon, 4 [Square Brackets], %Icons%\code text brackets file_type_light_toml_32x32.ico ; alt icon
+menu, code, add, 5 `%PercentVar`%`t%wrappercent%, wrappercent
+menu, code, icon, 5 `%PercentVar`%`t%wrappercent%, %Icons%\code format_percentage__32x32.ico
+menu, code, Add, 6 ``Code - `Inline```t%CodeLine%, CodeLine
+menu, code, Add, 7 ``````Code - Box```````t%CodeBox%, CodeBox
+menu, code, icon, 7 ``````Code - Box```````t%CodeBox%, %Icons%\selection text code Resources_200_24x24.ico
+menu, code, add, 8 [code]Box - Forum[/code]`t%forumcodebox%, forumcodebox
+menu, code, Add, 9 <kbd>`K<`/kbd>`t%dopusK%, dopusK
+menu, code, icon, 9 <kbd>`K<`/kbd>`t%dopusK%, %Icons%\xml code_128x128.ico
+menu, code, add, 0 `<`!-- xml Comment --`>`t%wrapinxmlcomment%, wrapinxmlcomment
+menu, code, add, A ``nAHK new Line``n`t%ahknewline%, ahknewline
+menu, code, icon, A ``nAHK new Line``n`t%ahknewline%, %Icons%\083_key return enter keyboard capt_24x24.ico
+menu, code, add, B Expand `%A_ScriptDir`%`t%expandscriptdir%, expandscriptdir
+; menu, code,icon, B Expand `%A_ScriptDir`%,
+menu, code, add, C Encode XML`t%Encodexml%, Encodexml
+; menu, code, icon,
+menu, code, add, D Decode XML`t%decodexml%, decodexml
+; menu, code, icon,
+menu, code, add, E Covert file:\\\url to Std Path`t%convertfileurl%, convertfileurl
+; menu, code, icon,
+; menu, code, add, AHK Expression to `%var`%`t%DecodeAHKVar%, DecodeAHKVar
+; menu, code, icon,
+; menu, code, add, AHK `%var`% to Expression`t%EncodeAHKVar%, EncodeAHKVar
+; menu, code, icon,
+menu, code, Add, F Wrap in "&Quotes"`t%ClipQuote%, ClipQuote ; ;10 %A_Space% in menu
+menu, code, icon, F Wrap in "&Quotes"`t%ClipQuote%, %A_ScriptDir%\Icons\format quote_24x24.ico ; "
+menu, code, add, G `{..Curly &Brackets..`}`, On New Lines`t%wrapincbrackets%, wrapincbrackets
+menu, code, icon, G `{..Curly &Brackets..`}`, On New Lines`t%wrapincbrackets%, %A_ScriptDir%\Icons\coding code json filetype_24x24.ico
+
+;---------------------------------------------------------------------------
 
 
 ;---------------------------------------------------------------------------
+
+
+
+;---------------------------------------------------------------------------
+menu, gui, add, < - Temp Sticky Menu - >`tAlt + M, guimenubutton
+menu, gui, icon, < - Temp Sticky Menu - >`tAlt + M, %A_ScriptDir%\Icons\classicStickyNotes_0_6 48x48.ico,,28
+menu, gui, default, < - Temp Sticky Menu - >`tAlt + M
+menu, gui, add, ; line -------------------------
 menu, gui, add, Save As`tCtrl + S, savestickyAS
 menu, gui, icon, Save As`tCtrl + S, %A_ScriptDir%\Icons\save as floppy Resources_174_24x24.ico
 menu, gui, add, Quick Save as .txt`tCtrl + Shift + S, savestickyquick
@@ -619,33 +745,33 @@ menu, gui, add, Pin \ Unpin to Top`tCtrl + P, pintotop
 ; Menu, gui, add, %A_GuiX% %A_GuiY%, menureturn ;debug test
 
 ;---------------------------------------------------------------------------
-menu, aset, add
-menu, aset, deleteall
+menu, as, add
+menu, as, deleteall
 
-Menu, aset, Add, Toggle >> Dark Mode | Light Mode, DMToggle 
-Menu, aset, icon, Toggle >> Dark Mode | Light Mode, %A_ScriptDir%\Icons\darkmodetoggleshell32_284_48x48.ico
+menu, as, Add, Toggle >> Dark Mode | Light Mode`t%DMToggle%, DMToggle 
+menu, as, icon, Toggle >> Dark Mode | Light Mode`t%DMToggle%, %A_ScriptDir%\Icons\darkmodetoggleshell32_284_48x48.ico
 
-menu, aset, add, Always Run As Admin, togSTARTASADMIN
+menu, as, add, Always Run As Admin, togSTARTASADMIN
 if (StartAsAdmin)
 	{
-		menu, aset, icon, Always Run As Admin, %togNN%
+		menu, as, icon, Always Run As Admin, %togNN%
 	}
 else
 	{
-		menu, aset, icon, Always Run As Admin, %togFF%
+		menu, as, icon, Always Run As Admin, %togFF%
 	}
 
 
-menu, aset, add, Check For Updates on Start Up, togUpdatecheckonstartup
-menu, aset, icon, Check For Updates on Start Up, %A_ScriptDir%\Icons\globe web internet updater arrow xfav 256x256.ico
+menu, as, add, Check For Updates on Start Up, togUpdatecheckonstartup
+menu, as, icon, Check For Updates on Start Up, %A_ScriptDir%\Icons\globe web internet updater arrow xfav 256x256.ico
 if (CheckForUpdatesONStartup)
-	menu, aset, ToggleCheck, Check For Updates on Start Up
+	menu, as, ToggleCheck, Check For Updates on Start Up
 	
-menu, aset, add, Run ECLM at Start Up, togRunonStartUp
-menu, aset, icon, Run ECLM at Start Up, %A_ScriptDir%\Icons\rocket_emoji_startup_64x64.ico
+menu, as, add, Run ECLM at Start Up, togRunonStartUp
+menu, as, icon, Run ECLM at Start Up, %A_ScriptDir%\Icons\rocket_emoji_startup_64x64.ico
 if (RunonStartUP)
 	{
-	menu, aset, ToggleCheck, Run ECLM at Start Up
+	menu, as, ToggleCheck, Run ECLM at Start Up
 	; startuplink := A_StartUp "\" Scriptname ".lnk"
 	if !FileExist(startuplink)
 		FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,,0
@@ -655,152 +781,154 @@ else
 	if FileExist(startuplink)
 		FileDelete, %startuplink%
 	}
-menu, aset, add, ; line -------------------------
-Menu, aset, add, Toggle Live Preview && Auto Copy, ToggleLiveMenu
+menu, as, add, ; line -------------------------
+menu, as, add, Toggle Live Preview && Auto Copy`t%ToggleLiveMenu%, ToggleLiveMenu
 if (LiveMenuEnabled)
-	Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
+	menu, as, icon, Toggle Live Preview && Auto Copy`t%ToggleLiveMenu%, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
 else
-	Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
-; Menu, cset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico ; og alt icon
+	menu, as, icon, Toggle Live Preview && Auto Copy`t%ToggleLiveMenu%, %A_ScriptDir%\Icons\eye_half__32x32.ico
+; menu, s, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico ; og alt icon
 
 if !(A_IsCompiled)
 {
-menu, aset, add, ; line -------------------------
+menu, as, add, ; line -------------------------
 if (SeeErrors)
 	{ ;; if on
-	menu, aset, add, Don't Show Error AHK Warnings on Launch, Togglewarnings
-	menu, aset, icon, Don't Show Error AHK Warnings on Launch, %A_ScriptDir%\Icons\stock_dialog-error_96x96.ico
+	menu, as, add, Don't Show Error AHK Warnings on Launch, Togglewarnings
+	menu, as, icon, Don't Show Error AHK Warnings on Launch, %A_ScriptDir%\Icons\stock_dialog-error_96x96.ico
 	}
 else
 	{ ;; if off
-	menu, aset, add, Suppressing Error Warnings!, togglewarnings
-	menu, aset, icon, Suppressing Error Warnings!, %A_ScriptDir%\Icons\error_attention caution delete__32x32.ico
+	menu, as, add, Suppressing Error AHK Warnings!, togglewarnings
+	menu, as, icon, Suppressing Error AHK Warnings!, %A_ScriptDir%\Icons\error_attention caution delete__32x32.ico
 	}
 }
-; menu, aset, add, ; line -------------------------
-; menu, aset, add, If any Toggle options seem stuck - Reload, reload
+; menu, as, add, ; line -------------------------
+; menu, as, add, If any Toggle options seem stuck - Reload, reload
 ;---------------------------------------------------------------------------
-menu, cset, add, < ------ Settings && About ------ >, showsettingsmenu
-menu, cset, icon, < ------ Settings && About ------ >, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico,,28
-menu, cset, default, < ------ Settings && About ------ >
-menu, cset, add, ; line -------------------------
+menu, s, add, < ------ Settings && About ------ >`t%showsettingsmenu%, showsettingsmenu
+menu, s, icon, < ------ Settings && About ------ >`t%showsettingsmenu%, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico,,28
+menu, s, default, < ------ Settings && About ------ >`t%showsettingsmenu%
+menu, s, add, ; line -------------------------
 
 
-
-menu, cset, add, Mute Sound on Capslock Toggle, togglebeepsetting
+menu, s, add, Mute Sound on Capslock Toggle`t%togglebeepsetting%, togglebeepsetting
 if (CAPS_Beep_Enabled)
 	{
-	menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound__32x32.ico ;1
+	menu, s, icon, Mute Sound on Capslock Toggle`t%togglebeepsetting%, %A_ScriptDir%\Icons\sound__32x32.ico ;1
 	}
 else
 	{
-	menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound_mute__32x32.ico ;0
+	menu, s, icon, Mute Sound on Capslock Toggle`t%togglebeepsetting%, %A_ScriptDir%\Icons\sound_mute__32x32.ico ;0
 	}
 	
 
-menu, cset, add, Show O S D for Capslock State, osdtoggle
+menu, s, add, Show O S D for Capslock State, osdtoggle
 if (Show_CAPS_OSD)
 	{ ;1 , SHOWS osd, ON
-	menu, cset, togglecheck, Show O S D for Capslock State
+	menu, s, togglecheck, Show O S D for Capslock State
 	CAPSGuiToggle := false
 	}
 	else
 	{ ;0 , DOES NOT SHOW Show_CAPS_OSD, OFF
-	menu, cset, icon, Show O S D for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
+	menu, s, icon, Show O S D for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
 	CAPSGuiToggle := true
 	; gosub osdtogglereset
 	}
-menu, cset, add, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+, shiftednumrow
+menu, s, add, Capslock for Number Row ~!@#`$`%^`&&*`(`)_+, shiftednumrow
 IF (ShiftedNumRow)
 	{
-	menu, cset, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
+	menu, s, togglecheck, Capslock for Number Row ~!@#`$`%^`&&*`(`)_+
 	}
 else
 	{
-	menu, cset, icon, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+, %A_ScriptDir%\Icons\hashtag! Comment xfav crunchbang_48x48.ico
+	menu, s, icon, Capslock for Number Row ~!@#`$`%^`&&*`(`)_+, %A_ScriptDir%\Icons\hashtag! Comment xfav crunchbang_48x48.ico
 	}
 if fileexist(notepadpp)
 {
-	menu, cset, add, Replace the NP++ Right Click Menu, ToggleReplaceNPPRightClick
+	menu, s, add, Replace the NP++ Right Click Menu, ToggleReplaceNPPRightClick
 	if (ReplaceNPPRightClick)
 		{
-		menu, cset, togglecheck, Replace the NP++ Right Click Menu
+		menu, s, togglecheck, Replace the NP++ Right Click Menu
 		}
 	else
 		{
-		menu, cset, icon, Replace the NP++ Right Click Menu, %A_ScriptDir%\Icons\context menu icon.ico
+		menu, s, icon, Replace the NP++ Right Click Menu, %A_ScriptDir%\Icons\context menu icon.ico
 		}
 }
-menu, cset, add, Double-Right Click to Show Menu, ToggleDoubleRight
+menu, s, add, Double-Right Click to Show Menu, ToggleDoubleRight
 if (Double_Right)
 	{
-	menu, cset, togglecheck, Double-Right Click to Show Menu
+	menu, s, togglecheck, Double-Right Click to Show Menu
 	}
 else
 	{
-	; menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\mouse pointer click main_10_2_32x32.ico
-	menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\settings-mouse-right-click_32x32.ico
+	; menu, s, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\mouse pointer click main_10_2_32x32.ico
+	menu, s, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\settings-mouse-right-click_32x32.ico
 	}
 
-menu, cset, add, ; line ;-------------------------
+menu, s, add, Additonal Settings >>>>, :as
+menu, s, icon, Additonal Settings >>>>, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico
+menu, s, add, ; line -------------------------
+menu, s, add, Live Hotkeys Menu >>>>`t%showlivehotkeymenu%, :k
+menu, s, icon, Live Hotkeys Menu >>>>`t%showlivehotkeymenu%, %a_scriptdir%\icons\hotkeys.ico
+; menu, s, add, AHK Modifier Key Symbols ..., showsettingsmenu
+; menu, s, add, Ctrl= ^ `, Alt= ! `, Shift= + `, Win= #, showsettingsmenu
+menu, s, add, ; line ;-------------------------
 if !(a_isadmin)
 	{
-	menu, cset, add, Run as Admin, runasadmin
-	menu, cset, icon, Run as Admin, %A_ScriptDir%\Icons\admin imageres_1028.ico
+		menu, s, add, Run as Admin`t%runasadmin%, runasadmin
+		menu, s, icon, Run as Admin`t%runasadmin%, %A_ScriptDir%\Icons\admin imageres_1028.ico
 	}
 else
 	{
-	Menu, cset, add, Script is Running as ADMIN, runasadmin
-	menu, cset, icon, Script is Running as ADMIN, %A_ScriptDir%\Icons\admin attention win11 imageres_107.ico
+		menu, s, add, Script is Running as ADMIN`t%runasadmin%, runasadmin
+		menu, s, icon, Script is Running as ADMIN`t%runasadmin%, %A_ScriptDir%\Icons\admin attention win11 imageres_107.ico
 	}
-menu, cset, add, Additonal Settings >>>>, :aset
-menu, cset, icon, Additonal Settings >>>>, %A_ScriptDir%\Icons\settings panel JLicons_33_64x64.ico
-
-menu, cset, add, ; line ;-------------------------
-; menu, cset, add, ; line ;-------------------------
+menu, s, add, ; line ;-------------------------
+; menu, s, add, ; line ;-------------------------
 if FileExist(quicknotesdir)
 	{
-	menu, cset, add, Open Quick Notes Dir, OpenQuickNotesDir
+	menu, s, add, Open Quick Notes Dir`t%OpenQuickNotesDir%, OpenQuickNotesDir
 	if FileExist(dopus)
-		menu, cset, icon, Open Quick Notes Dir, %dopus%
+		menu, s, icon, Open Quick Notes Dir`t%OpenQuickNotesDir%, %dopus%
 		else
-		menu, cset, icon, Open Quick Notes Dir, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
-	menu, cset, add, ; line ;-------------------------
+		menu, s, icon, Open Quick Notes Dir`t%OpenQuickNotesDir%, %A_ScriptDir%\Icons\folder file explorer imageres_5325_256x256.ico
+	menu, s, add, ; line ;-------------------------
 	}
-else
-	{
-	; show nothing
-	}
-menu, cset, add, About Extended Caps Lock Menu, aboutcapswindow
-menu, cset, icon, About Extended Caps Lock Menu, %A_ScriptDir%\Icons\about question imageres win7_99_256x256.ico
-menu, cset, add, Visit Github Webpage, visitgithub
-menu, cset, icon, Visit Github Webpage, %A_ScriptDir%\Icons\github icon 256x256.ico
 
-menu, cset, add, ; line -------------------------
+menu, s, add, About Extended Caps Lock Menu`t%aboutcapswindow%, aboutcapswindow
+menu, s, icon, About Extended Caps Lock Menu`t%aboutcapswindow%, %A_ScriptDir%\Icons\about.ico
+menu, s, add, Visit Github Webpage`t%visitgithub%, visitgithub
+menu, s, icon, Visit Github Webpage`t%visitgithub%, %A_ScriptDir%\Icons\github icon 256x256.ico
 
+menu, s, add, ; line -------------------------
 
-menu, cset, Add, Edit Main Script, editscript
+if !(A_IsCompiled)
+{
+menu, s, Add, Edit Main Script, editscript
 if FileExist(Texteditor)
-	menu, cset, icon, Edit Main Script, %Texteditor%
+	menu, s, icon, Edit Main Script, %Texteditor%
 else
-	menu, cset, icon, Edit Main Script, notepad.exe 
+	menu, s, icon, Edit Main Script, notepad.exe 
+}
 
 
-menu, cset, add, Edit " -SETTINGS.ini " File, editsettings
-menu, cset, icon, Edit " -SETTINGS.ini " File, %A_ScriptDir%\Icons\ini alt xfav setting document prefs setupapi_19 256x256.ico
-menu, cset, add, ; line ;-------------------------
-menu, cset, add, Reload Script          --         Ctrl + Shift + R, reload
-menu, cset, icon, Reload Script          --         Ctrl + Shift + R, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
-; menu, cset, add, View Hotkeys, viewhotkeys
-; menu, cset, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
+menu, s, add, Edit " -SETTINGS.ini " File, editsettings
+menu, s, icon, Edit " -SETTINGS.ini " File, %A_ScriptDir%\Icons\ini alt xfav setting document prefs setupapi_19 256x256.ico
+menu, s, add, ; line ;-------------------------
+menu, s, add, Reload Script`t%reload%, reload
+menu, s, icon, Reload Script`t%reload%, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
+; menu, s, add, View Hotkeys, viewhotkeys
+; menu, s, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
 
-menu, cset, add, Suspend Hotkeys, suspendkeys
-menu, cset, icon, Suspend Hotkeys, %A_ScriptDir%\Icons\advert-block_64x64.ico
-; MENU, cset, add, Debug Lines, lines
-; menu, cset, icon, Debug Lines, %A_ScriptDir%\Icons\bug report FLUENT_colored_217_64x64.ico
-menu, cset, add, ; line ;-------------------------
-menu, cset, add, Quit \ Exit  -----  Ctrl + Alt + Esc, exitscript
-menu, cset, icon, Quit \ Exit  -----  Ctrl + Alt + Esc, %A_ScriptDir%\Icons\skull n bones emoji111.ico
+menu, s, add, Suspend Hotkeys`t%suspendkeys%, suspendkeys
+menu, s, icon, Suspend Hotkeys`t%suspendkeys%, %A_ScriptDir%\Icons\advert-block_64x64.ico
+; menu, s, add, Debug Lines, lines
+; menu, s, icon, Debug Lines, %A_ScriptDir%\Icons\bug report FLUENT_colored_217_64x64.ico
+menu, s, add, ; line ;-------------------------
+menu, s, add, Quit \ Exit \ Kill`t%exitscript%, exitscript
+menu, s, icon, Quit \ Exit \ Kill`t%exitscript%, %A_ScriptDir%\Icons\skull n bones emoji111.ico
 
 ;---------------------------------------------------------------------------
 trayicon = %A_ScriptDir%\icons\extended capslock menu icon 256x256.ico
@@ -812,155 +940,34 @@ menu, tray, add, Show Extended Capslock Menu, Capsmenubutton
 menu, tray, icon, Show Extended Capslock Menu, %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,32
 menu, tray,  default, Show Extended Capslock Menu
 menu, tray, add, ; line ;-------------------------
-menu, tray, add, About Extended Caps Lock Menu, aboutcapswindow
-menu, tray, icon, About Extended Caps Lock Menu, %A_ScriptDir%\Icons\about question imageres win7_99_256x256.ico
+menu, tray, add, About Extended Caps Lock Menu`t%aboutcapswindow%, aboutcapswindow
+menu, tray, icon, About Extended Caps Lock Menu`t%aboutcapswindow%, %A_ScriptDir%\Icons\about.ico
 menu, tray, add, ; line ;-------------------------
 
-menu, tray, add, Reload, reload
-menu, tray, icon, Reload, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
+menu, tray, add, Reload`t%reload%, reload
+menu, tray, icon, Reload`t%reload%, %A_ScriptDir%\Icons\Refresh reload xfave_128x128.ico
 ; menu, tray, add, View Hotkeys, viewhotkeys
 ; menu, tray, icon, View Hotkeys, %A_ScriptDir%\Icons\preferences-desktop hotkeys-keyboard-shortcuts_48x48.ico
-menu, tray, add, Suspend Hotkeys, suspendkeys
-menu, tray, icon, Suspend Hotkeys, %A_ScriptDir%\Icons\advert-block_64x64.ico
+menu, tray, add, Suspend Hotkeys`t%suspendkeys%, suspendkeys
+menu, tray, icon, Suspend Hotkeys`t%suspendkeys%, %A_ScriptDir%\Icons\advert-block_64x64.ico
 menu, tray, add, ; line ;-------------------------
-menu, tray, add, Settings && About, :cset
+menu, tray, add, Settings && About, :s
 menu, tray, icon, Settings && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
 
 Menu, AHK, Standard
 Menu, Tray, Add, AH&Ks Tray Menu, :AHK 
 Menu, Tray, icon, AH&Ks Tray Menu, %A_ahkpath%
 MENU, tray, add, ; line ;-------------------------
-menu, tray, add, Quit \ Exit  -----  Ctrl + Alt + Esc, exitscript
-menu, tray, icon, Quit \ Exit  -----  Ctrl + Alt + Esc, %A_ScriptDir%\Icons\skull n bones emoji111.ico
+menu, tray, add, Quit \ Exit \ Kill`t%exitscript%, exitscript
+menu, tray, icon, Quit \ Exit \ Kill`t%exitscript%, %A_ScriptDir%\Icons\skull n bones emoji111.ico
 
 ; Menu, Tray, MainWindow
 ; menu, tray, add, ; line ;-------------------------
 
 ;--------------------------------------------------------------------------- 
 ;---------------------------------------------------------------------------
-;; go capslock menu, go case menu, START  caps menu, capsmenu, go menu, case
-; menu, Case, Add
-; menu, case, add, ; top line ;-------------------------
+
 global ForceLiveMenu := false
-
-
-MenuCaseShow() ;; function
-{
-    global LiveMenuEnabled, targetID
-	; WinGetTitle, winTitle, A
-	; WinGetClass, winClass, A
-    targetID := ""  
-	winget, targetID, ID, A ;; get the active window ID over which the menu is shown, sometimes the window can become deactivited when showing the menu  this can be used to re-activate the window before pastes
-    dtmenurefresh()
-	
-	menu, case, add
-    Menu, case, DeleteAll ; Clear and reinitialize the menu
-    Menu, Case, Add, EXTENDED CAPSLOCK MENU  (Toggle Caps), ToggleCapsLock
-    Menu, Case, icon, EXTENDED CAPSLOCK MENU  (Toggle Caps), %A_ScriptDir%\Icons\extended capslock menu icon 256x256.ico,,27
-    Menu, Case, Default, EXTENDED CAPSLOCK MENU  (Toggle Caps)
-	Menu, case, add, ; line ------------------------- menu, case, top line
-	
-    if (LiveMenuEnabled || ForceLiveMenu) ;  (LiveMenuEnabled) ; Check if LiveMenu is enabled
-    {
-        CopyClipboardCLM()  ; Auto Copy - Only when live menu is enabled
-		if (Clipboard = "")
-		{
-		MenuItemName := "Your Clipboard is Empty. Err1"
-		Menu, case, Add, %MenuItemName%, viewclip
-        Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\error bot flow xfav_48x48.ico
-		}
-		else
-		{
-        ClipContent := Clipboard
-		; MyClipBoard := Trim(Clipboard, " `t`r`n")
-		Clipcontent := RegExReplace(RegExReplace(Clipcontent, "\r?\n"," "), "(^\s+|\s+$)")
-		MenuItemName := (StrLen(ClipContent) > 45) ? SubStr(ClipContent, 1, 42) "..." : ClipContent
-		}
-		if (MenuItemName = "" || RegExMatch(MenuItemName, "^\s*$"))
-			{
-				MenuItemName := "Auto Copy Failed. Clipboard is Empty. Err2" ; fall back error for copying empty space, aka, there's nothing to show
-				Menu, case, Add, %MenuItemName%, viewclip
-				Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\error bot flow xfav_48x48.ico
-				menu, case, add, ; line ------------------------- 
-				restoreclipboard()
-			}
-    else
-    {
-        Menu, case, Add, %MenuItemName%, viewclip
-        Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\QAP-preview_pane_c_26x26.ico
-		menu, case, add, ; line ------------------------- 
-		; Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\error bot flow xfav_48x48.ico ;alt icon
-		; Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\view error_192x192.ico ;alt icon
-    }
-}
-    else
-    {
-        ; MenuItemName := "Live Preview && Auto Copy is Disabled"
-        ; Menu, case, Add, %MenuItemName%, viewclip
-        ; Menu, case, icon, %MenuItemName%, %A_ScriptDir%\Icons\eye_close__32x32.ico
-		; Menu, case, add, ; line -------------------------
-		; this section can be comment out to completely hide this static menu item when its off, it will\\can only appear when turn on
-    }
-
-menu, case, add, Text Tools && Apps, :ctools
-menu, case, icon, Text Tools && Apps, %A_ScriptDir%\Icons\Pencil and Ruler__32x32.ico
-menu, case, add, Find\Search Selected Text..., :cfind
-menu, case, icon, Find\Search Selected Text..., %A_ScriptDir%\Icons\search find Windows 11 Icon 13_256x256.ico
-
-menu, case, add, Open\Run\Explore\Files..., :copen
-; menu, case, icon, Open\Run\Explore...   ,
-menu, case, icon, Open\Run\Explore\Files..., %A_ScriptDir%\Icons\folder tree FLUENT_colored_051_64x64.ico
-
-menu, Case, Add ; line ;-------------------------
-menu, Case, Add, Wrap in "&Quotes"                                     Ctrl + `", ClipQuote ; ;10 %A_Space% in menu
-menu, Case, icon, Wrap in "&Quotes"                                     Ctrl + `", %A_ScriptDir%\Icons\format quote_24x24.ico ; "
-menu, Case, add, `{..Curly &Brackets..`}`, On New Lines, wrapincbrackets
-menu, Case, icon, `{..Curly &Brackets..`}`, On New Lines, %A_ScriptDir%\Icons\coding code json filetype_24x24.ico
-
-
-menu, case, add, Code Formatting....., :cform
-menu, case, icon, Code Formatting....., %A_ScriptDir%\Icons\code spark xfav function_256x256.ico
-
-
-menu, case, add ; line ;-------------------------
-menu, case, add, Modify Text && Case....., :ctxt
-menu, case, icon, Modify Text && Case....., %A_ScriptDir%\Icons\richtext_editor__32x32.ico
-
-menu, case, add, ; line ;-------------------------
-
-menu, Case, add, Insert Date && Time, :dtmenu
-menu, Case, icon, Insert Date && Time, %A_ScriptDir%\Icons\clock SHELL32_16771 256x256.ico
-
-
-; menu, case, add, Insert > > >, :insert
-; menu, case, icon, Insert > > >, %A_ScriptDir%\Icons\hotkeys xfav ahk DOpus9_98_32x32.ico
-Menu, case, Add, Emoji Keyboard, OpenEmojiKeyboard
-Menu, case, icon, Emoji Keyboard, %A_ScriptDir%\Icons\emoji face smilesvg_36x36.ico
-
-menu, Case, Add ; line ;-------------------------
-
-; menu, case, add ; line ;-------------------------
-menu, Case, Add, Copy                                         Single Tap CAPS, basiccopy
-menu, Case, icon, Copy                                         Single Tap CAPS, %A_ScriptDir%\Icons\edit-copy_32x32.ico
-Menu, case, Add, + Copy (Add to Clipboard), appendclip
-; Menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard--plus_16x16.ico
-Menu, case, icon,  + Copy (Add to Clipboard), %A_ScriptDir%\Icons\clipboard add plus append 64x64.ico
-; menu, case, icon, + Copy (Add to Clipboard), %A_ScriptDir%\Icons\copySpecial_48x48.ico ; alt icon
-Menu, Case, add, Cut, basiccut
-menu, case, icon, Cut, %A_ScriptDir%\Icons\edit-cut_32x32.ico
-menu, case, add, Paste                                       Double Tap CAPS, basicpaste
-menu, case, icon, Paste                                       Double Tap CAPS, %A_ScriptDir%\Icons\edit-paste_256x256.ico
-MENU, case, ADD, Paste As Plain Text, pasteasplaintext
-MENU, case, icon, Paste As Plain Text, %A_ScriptDir%\Icons\plaintextdoc_64x64.ico
-menu, case, add ; line ;-------------------------
-menu, case, add, Settings && About, :cset
-menu, case, icon, Settings && About, %A_ScriptDir%\Icons\setting gear cog JLicons_40_64x64.ico
-menu, case, add, ; line -------------------------
-menu, case, add, Close This Menu, CloseMenu
-menu, case, icon, Close This Menu, %A_ScriptDir%\Icons\aero Close_24x24-32b.ico
-
-Menu, Case, Show
-}
 
 ;; end menus
 
@@ -971,7 +978,7 @@ Menu, Case, Show
 url := "https://github.com/indigofairyx/Extended_Capslock_Context_Menu"
 astrogrepurl := "https://astrogrep.sourceforge.net/features/"
 dittourl := "https://github.com/sabrogden/Ditto"
-everythingurl := "https://www.voidtools.com/forum2/viewtopic.php?t=9787"
+everythingurl := "https://www.voidtools.com/forum/viewtopicvoid.php?t=9787" 
 autocorrecturl := "https://github.com/BashTux1/AutoCorrect-AHK-2.0"
 textifyurl := "https://ramensoftware.com/textify"
 Textgraburl := "https://github.com/TheJoeFin/Text-Grab/"
@@ -1022,6 +1029,219 @@ Return
 
 ;---------------------------------------------------------------------------
 
+ ;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;; go capslock menu, go case menu, START  caps menu, capsmenu, go menu, case
+; menu, Case, Add
+; menu, case, add, ; top line ;-------------------------
+
+; MenuCaseShow() ;; function
+; {
+cmenu:
+global LiveMenuEnabled, targetID, xinc, mylibmenu, topmenu, double_right, forcelivemenu, sectionname, showExtraMenusonCAPS, FriendlyName, DisplayName, labelname, HotkeyValue, ReadableHotkey, MenuItems, MenuVars, ShowLiveMenus
+; WinGetTitle, winTitle, A
+; WinGetClass, winClass, A
+; targetID := ""
+; winget, targetID, ID, A ;; get the active window ID over which the menu is shown, sometimes the window can become deactivited when showing the menu  this can be used to re-activate the window before pastes
+winget, aapp, processname, A
+
+
+menu, case, add
+Menu, case, DeleteAll ; Clear and reinitialize the menu
+
+dtmenurefresh()
+
+
+Menu, Case, Add, Extended CAPSLOCK Menu  (Toggle CAPS), ToggleCapsLock
+Menu, Case, icon, Extended CAPSLOCK Menu  (Toggle CAPS), %Icons%\extended capslock menu icon 256x256.ico
+Menu, Case, Default, Extended CAPSLOCK Menu  (Toggle CAPS)
+Menu, case, add, ; line ------------------------- menu, case, top line
+
+if (LiveMenuEnabled || ForceLiveMenu) ;  (LiveMenuEnabled) ; Check if LiveMenu is enabled
+    {
+        CopyClipboardCLM()  ; Auto Copy - Only when live menu is enabled
+		if (Clipboard = "")
+			{
+				MenuItemName := "Your Clipboard is Empty. Err1"
+				Menu, case, Add, %MenuItemName%, viewclip
+				Menu, case, icon, %MenuItemName%, %Icons%\error bot flow xfav_48x48.ico
+			}
+		else
+			{
+				ClipContent := Clipboard
+				; MyClipBoard := Trim(Clipboard, " `t`r`n")
+				Clipcontent := RegExReplace(RegExReplace(Clipcontent, "\r?\n"," "), "(^\s+|\s+$)")
+				MenuItemName := (StrLen(ClipContent) > 45) ? SubStr(ClipContent, 1, 42) "..." : ClipContent
+			}
+	if (MenuItemName = "" || RegExMatch(MenuItemName, "^\s*$"))
+		{
+			MenuItemName := "Auto Copy Failed. Clipboard is Empty. Err2" ; fall back error for copying empty space, aka, there's nothing to show
+			Menu, case, Add, %MenuItemName%, viewclip
+			Menu, case, icon, %MenuItemName%, %Icons%\error bot flow xfav_48x48.ico
+			menu, case, add, ; line -------------------------
+			restoreclipboard()
+		}
+    else
+ 		{
+			Menu, case, Add, %MenuItemName%, viewclip
+			Menu, case, icon, %MenuItemName%, %Icons%\QAP-preview_pane_c_26x26.ico,,24
+			menu, case, add, ; line -------------------------
+			; Menu, case, icon, %MenuItemName%, %Icons%\error bot flow xfav_48x48.ico ;alt icon
+			; Menu, case, icon, %MenuItemName%, %Icons%\view error_192x192.ico ;alt icon
+		}
+	}
+    else
+    {
+        ; MenuItemName := "Live Preview && Auto Copy is Disabled"
+        ; Menu, case, Add, %MenuItemName%, viewclip
+        ; Menu, case, icon, %MenuItemName%, %Icons%\eye_close__32x32.ico
+		; Menu, case, add, ; line -------------------------
+		; this section can be comment out to completely hide this static menu item when its off, it will\\can only appear when turn on
+    }
+
+menu, case, add, Text Tools && Apps.....`t%showtoolsmenu%, :ctools
+menu, case, icon, Text Tools && Apps.....`t%showtoolsmenu%, %Icons%\Pencil and Ruler__32x32.ico
+menu, case, add, Find\Search Selected Text.....`t%showfindmenu%, :cfind
+menu, case, icon, Find\Search Selected Text.....`t%showfindmenu%, %Icons%\search find Windows 11 Icon 13_256x256.ico
+
+menu, case, add, Open\Run\Explore\Files.....`t%showopenmenu%, :copen
+; menu, case, icon, Open\Run\Explore...   ,
+menu, case, icon, Open\Run\Explore\Files.....`t%showopenmenu%, %Icons%\folder tree FLUENT_colored_051_64x64.ico
+
+
+
+menu, case, add ; line ;-------------------------
+menu, case, add, Modify Text && Case.....`t%showctxtmenu%, :ctxt
+menu, case, icon, Modify Text && Case.....`t%showctxtmenu%, %Icons%\richtext_editor__32x32.ico
+menu, case, add, ; line ;-------------------------
+
+
+
+; menu, Case, Add, Wrap in "&Quotes"`t%ClipQuote%, ClipQuote ; ;10 %A_Space% in menu
+; menu, Case, icon, Wrap in "&Quotes"`t%ClipQuote%, %Icons%\format quote_24x24.ico ; "
+; menu, Case, add, `{..Curly &Brackets..`}`, On New Lines`t%wrapincbrackets%, wrapincbrackets
+; menu, Case, icon, `{..Curly &Brackets..`}`, On New Lines`t%wrapincbrackets%, %Icons%\coding code json filetype_24x24.ico
+
+menu, case, add, Code Formatting.....`t%showcodemenu%, :code
+menu, case, icon, Code Formatting.....`t%showcodemenu%, %Icons%\code spark xfav function_256x256.ico
+
+menu, Case, Add ; line ;-------------------------
+
+
+menu, Case, Add, Copy     [Single Tap CAPS]`t^C, basiccopy
+menu, Case, icon, Copy     [Single Tap CAPS]`t^C, %Icons%\edit-copy_32x32.ico
+Menu, case, Add, + Copy     [Add to Clipboard]`t%appendclip%, appendclip
+Menu, case, icon, + Copy     [Add to Clipboard]`t%appendclip%, %Icons%\clipboard add plus append 64x64.ico
+; menu, case, icon, + Copy (Add to Clipboard), %Icons%\copySpecial_48x48.ico ; alt icon
+Menu, Case, add, Cut`t^X, basiccut
+menu, case, icon, Cut`t^X, %Icons%\edit-cut_32x32.ico
+menu, case, add, Paste     [Double Tap CAPS]`t^V, basicpaste
+menu, case, icon, Paste     [Double Tap CAPS]`t^V, %Icons%\edit-paste_256x256.ico
+
+
+
+if (showExtraMenusonCAPS)
+	{
+		
+		menu, case, add, ; line -------------------------
+		gosub buildClipboardMenu
+		menu, case, add, Live Clipboard Menu >>>>`t%showclipboardmenu%, :c
+		menu, case, icon, Live Clipboard Menu >>>>`t%showclipboardmenu%, %icons%\checkclipboard.ico
+		if FileExist(snipdir)
+			gosub BuildSnippetFolderMenu
+		gosub buildinsertmenu
+		menu, case, add, Insert >>>>`t%showinsertmenu%, :i
+		menu, case, icon, Insert >>>>`t%showinsertmenu%, %Icons%\lc_insertdocumentaddarrow_26x26.ico
+		menu, case, add, ; line ;-------------------------
+
+	}
+
+if (showExtraMenusonCAPS)
+	{
+		menu, case, add, Quick Save Selection to Note.txt`t%quicktxtfile%, quicktxtfile
+		menu, case, icon, Quick Save Selection to Note.txt`t%quicktxtfile%, %A_ScriptDir%\Icons\lc_savebasicas_26x26.ico
+		if fileExist(quicknotesdir)
+			{
+				topmenu = %quicknotesdir%
+				; msgbox TM:%topmenu% `n QN: %quicknotesdir%
+				gosub topmenu  ; build live menu item
+				Menu, case, add, Quick Notes Dir`t%OpenQuickNotesDir%, :%topmenu%
+				Menu, case, icon, Quick Notes Dir`t%OpenQuickNotesDir%, %A_ScriptDir%\Icons\folder_go__32x32.ico
+				menu, case, add, ; line -------------------------
+			}
+		else
+			menu, case, add, ; line ----------------------
+			
+		if (aapp = "notepad++.exe") && if FileExist(notepadpp)
+			{
+				gosub alttxtnppmenu
+				menu, case, add, NP++ Open in Alt Editor Menu >>>`t%alttxtnppmenu%, :alttxt
+				; menu, case, icon, NP++ Open in Alt Editor Menu >>>`t%alttxtnppmenu%, %A_ScriptDir%\Icons\document text edit rename FLUENT_colored_453_64x64.ico
+				menu, case, icon, NP++ Open in Alt Editor Menu >>>`t%alttxtnppmenu%, %notepadpp%
+				menu, case, add, ; line -------------------------
+			}
+
+		; menu, case, add, ; line -------------------------
+		menu, case, add, Live Hotkeys Menu >>>>`t%showlivehotkeymenu%, :k
+		menu, case, icon, Live Hotkeys Menu >>>>`t%showlivehotkeymenu%, %icons%\hotkeys.ico
+
+		menu, case, add, Settings >>>>`t%showsettingsmenu%, :s
+		menu, case, icon, Settings >>>>`t%showsettingsmenu%, %Icons%\setting gear cog JLicons_40_64x64.ico
+		menu, case, add, Showing Live Menus`t%togaddtionalmenus%, togaddtionalmenus
+		menu, case, icon, Showing Live Menus`t%togaddtionalmenus%, %togNN%
+
+		menu, case, add, ; line -------------------------
+		menu, case, add, Close This Menu`tEsc, CloseMenu
+		menu, case, icon, Close This Menu`tEsc, %Icons%\aero Close_24x24-32b.ico
+}
+
+;---------------------------------------------------------------------------
+if !(showExtraMenusonCAPS)
+	{
+	menu, case, add, ; line -------------------------
+	menu, case, add, Settings >>>>`t%showsettingsmenu%, :s
+	menu, case, icon, Settings >>>>`t%showsettingsmenu%, %Icons%\setting gear cog JLicons_40_64x64.ico
+	menu, case, add, Show Additional Live Menus`t%togaddtionalmenus%, togaddtionalmenus
+	menu, case, icon, Show Additional Live Menus`t%togaddtionalmenus%, %togff%
+	}
+return
+
+
+togaddtionalmenus:
+showExtraMenusOnCAPS := !showExtraMenusOnCAPS
+if (showExtraMenusOnCAPS)
+	{
+	IniWrite, 1, %inifile%, Toggles, showExtraMenusOnCAPS
+	sleep 300
+	; reload
+	;; i don't this this reload is need here? as least no on SHARE, this is need to repopulate live folders menus, which I'm not putting in SHARE excpt the one QUICKNOTESDIR, I'm onlly using the below toggle for the (ShowLiveMenus) for my EDIT menu mainly.
+	}
+else
+	{
+	IniWrite, 0, %inifile%, Toggles, showExtraMenusOnCAPS
+	sleep 300
+	}
+return
+
+
+toglivemenus: ;; not being used?? its not actually part of the case menu, its attached to my xahkm main menu, its loads my live folders on the the EDIT menu 
+ShowLiveMenus := ! ShowLiveMenus
+if (ShowLiveMenus)
+	{
+		IniWrite, 1, %inifile%, Toggles, ShowLiveMenus
+		sleep 300
+		reload
+	}
+else
+	{
+		IniWrite, 0, %inifile%, Toggles, ShowLiveMenus
+		sleep 300
+		Reload
+	}
+return
+
+
+
 
 ;------------------------- CAPS KEY FUCNCTIONS--------CAPSLOCK-------------------------------------
 
@@ -1062,11 +1282,12 @@ sleep 50
 if (ErrorLevel || Clipboard = "" || Clipboard = A_Tab || RegExMatch(Clipboard, "^\s+$"))
 	; if ErrorLevel
 	{
-		TrayTip, Extended Capslocks Menu, Copy Failed!`nOr you did not have text selected.`nYour Previous Clipboard Content is Restored., 2, 18
-		sleep 90
+		Tooltip Copy failed! or you didn't have text selected.`n - Extended Capslock Menu -
+		SetTimer, RemoveToolTip, -2000
 		Clipboard := ClipSaved  ; Restore the clipboard
+		sleep 300
 		ClipSaved := ""  ; clear the variable
-		sleep 90
+		sleep 30
 		return
 	}
 }
@@ -1388,7 +1609,14 @@ global ClipSaved
     Clipboard := StrReplace(Clipboard, A_Space)
     PasteClipboardCLM()
 }
-
+UnPascal() ;; Function
+{
+    global ClipSaved
+    IfLive()
+    Clipboard := RegExReplace(Clipboard, "([a-z])([A-Z])", "$1 $2")  ; Insert space before uppercase letters
+    Clipboard := RegExReplace(Clipboard, "([A-Z])([A-Z][a-z])", "$1 $2")  ; Handle acronyms followed by normal words
+    PasteClipboardCLM()
+}
 Capital() ;; Function
 {
 global ClipSaved
@@ -1665,7 +1893,7 @@ RemoveEmptyLines() {
 ;********* END *********** MENU, CTXT, FUNCTIONS ********** END ************
 
 ;***************************************************************************
-;************************* MENU, CFORM, FUNCTIONS **************************
+;************************* menu, code, FUNCTIONS **************************
 ;***************************************************************************
 
 wrapparen:
@@ -1701,11 +1929,7 @@ global ClipSaved
 }
 
 
-OpenEmojiKeyboard() ;; function
-{
-    Send {LWin down}.
-    Send {LWin up}
-}
+
 
 
 cbrakectswrapped:
@@ -1899,7 +2123,7 @@ convertsymbols:
 return
 
 
-;******** END ************ MENU, CFORM, FUNCTIONS ********* END ************
+;******** END ************ menu, code, FUNCTIONS ********* END ************
 ;***************************************************************************
 
 ;***************************************************************************
@@ -2044,7 +2268,8 @@ ahkstickygui() { ; Call this from a hotkey to create an empty sticky note
 }
 
 guimenubutton: 
-    menu, gui, show
+coordmode, menu, client
+    menu, gui, show, 10,10
 return
 
 
@@ -2177,17 +2402,19 @@ sleep 150
   SendInput, ^{vk43} ;Ctrl C
   ClipWait, 1
   if errorlevel
-	 {
-        TrayTip, CAPSkey, Copy to clipboard failed.`nAborted Auto Save., 4, 18
+	{
+
+		tooltip, Copy Failed!`nOperation Canceled.
+		SetTimer, RemoveToolTip, -2000
 		Clipboard := origClipboard  ; Restore the clipboard
+		sleep 750
         return
     }
    FileSelectFile, SavePath, S16, %A_MyDocuments%, Save Selected Text as a New Document, Text Files (*.txt) ; Prompt for where to save the file
     if SavePath =  ; If no file was selected
 		{
 			tooltip, File Path Cannot Be Blank`nSave Canceled.
-			sleep 1500
-			tooltip
+			SetTimer, RemoveToolTip, -2000
 			Clipboard := origClipboard 
         Return
 		}
@@ -2220,15 +2447,15 @@ Global ClipSaved, quicknotesdir
   if (Clipboard = "" || Clipboard = A_Tab || RegExMatch(Clipboard, "^\s+$"))
 		{
         TrayTip, CAPSkey, Your Clipboard is Empty.`nAborted Auto Save., 4, 18
-		sleep 500
+		tooltip, Copy Failed!`nSaving new quick text canecled.
+		SetTimer, RemoveToolTip, -2000
 		restoreclipboard()
         return
 		}
   inputbox, notename, Create a File Name, Give your new quick note a name.`n`nNo .ext needed. It will auto-save as a .txt file`nIt will automatically be saved to`n%quicknotesdir%`n`nYou can go there quickly from the settings menu., , ,
   if (noteName = ""){
 	tooltip, Canceled by User.
-	sleep 1500
-	tooltip
+	SetTimer, RemoveToolTip, -1500
 	restoreclipboard()
 	return
 	}
@@ -2237,9 +2464,9 @@ if !FileExist(quicknotesdir)
 	FileCreateDir, %quicknotesdir%
 sleep 750
 fileappend,%Clipboard%,%quicknotesdir%\%notename%.txt,UTF-8
-sleep 2500
+sleep 1000
 restoreclipboard()
-Sleep 250
+Sleep 400
 return
 }
 
@@ -2251,17 +2478,14 @@ try run, %notepadpp%
 if errorlevel
 	{
 	tooltip, Notepad++ was not found.
-	sleep 1500
-	tooltip
+	SetTimer, RemoveToolTip, -2000
 	restoreclipboard()
 	return
 	}
 WinWaitActive, ahk_exe notepad++.exe,,7
 if errorlevel
 	{
-	tooltip, Notepad++ could not be actived.
-	sleep 1500
-	tooltip
+	SetTimer, RemoveToolTip, -2000
 	restoreclipboard()
 	return
 	}
@@ -2292,8 +2516,7 @@ global clipsaved
 		{
 		send, {esc}
 		tooltip, Location Bar Copied
-		sleep 1500
-		tooltip
+		SetTimer, RemoveToolTip, -800
 		}
 return
 
@@ -2371,7 +2594,9 @@ SaveClipboardAsTxt:
 	Ifmsgbox timeout
 		return
 Return
-
+TextStatsSelected:
+TextStatsSelected()
+Return
 TextStatsSelected()
 {
 static word := ""
@@ -2515,13 +2740,15 @@ definethis() ;; function
 {
 		global ClipSaved
 		IfLive()
-        if (Clipboard = "") { ; If the clipboard is empty, use the old clipboard content
+        if (Clipboard = "")
+		{ ; If the clipboard is empty, use the old clipboard content
             Clipboard := ClipSaved
         }
 
 		Run, https://www.google.com/search?q=define+%Clipboard%
-        Sleep 200
+        Sleep 100
         Clipboard := ClipSaved ; Restore the original clipboard content
+		sleep 300
 return
 }
 
@@ -2551,8 +2778,9 @@ googlethis:
             Clipboard := ClipSaved
         }
         Run, http://www.google.com/search?q=%Clipboard%
-        Sleep 200
+        Sleep 100
         Clipboard := ClipSaved ; Restore the original clipboard content
+		sleep 750
 Return
 
 youtubethis() ;; function
@@ -2563,8 +2791,9 @@ youtubethis() ;; function
             Clipboard := ClipSaved
         }
         Run, http://www.youtube.com/search?q=%Clipboard%
-        Sleep 200
+        Sleep 100
         Clipboard := ClipSaved ; Restore the original clipboard content
+		sleep 750
 return
 }
 
@@ -2620,9 +2849,9 @@ GetHelp(HelpFile) {
     Send, {Enter}
 }
 
-sleep 800
+sleep 100
 restoreclipboard()
-sleep 800
+sleep 750
 return
 ;--------------------------------------------------
 ;************************* END, MENU, CFIND, FUNCTIONS *********************
@@ -2731,10 +2960,93 @@ swap(string, at_this) {
 }
 ;*************************  END text swap SECTION **************************
 ;***************************************************************************
+ FlipTextSeparator()
+{
+    global ClipSaved
+    IfLive()
+
+    ; Ask for the separator character
+    InputBox, sep, Separator, Enter the character to flip text around:
+    if (ErrorLevel || sep = "")
+        return ; Exit if canceled or empty input
+
+    ; Escape special characters for RegEx
+    escSep := RegExReplace(sep, "([\\\.\*\+\?\^\$\(\)\{\}\[\]\|])", "\$1")
+
+    ; Process each line separately
+    newText := ""
+    Loop, Parse, Clipboard, `n, `r
+    {
+        if (RegExMatch(A_LoopField, "^(.*?)" . escSep . "(.*)$", match))
+            newText .= match2 . sep . match1 "`r`n"
+        else
+            newText .= A_LoopField "`r`n" ; Keep unchanged if no separator
+    }
+
+    ; Trim and update clipboard
+    Clipboard := RTrim(newText, "`r`n")
+    PasteClipboardCLM()
+}
+
+AddSpacesAroundSeparator()
+{
+    global ClipSaved
+    IfLive()
+
+    ; Ask for the separator character
+    InputBox, sep, Separator, Enter the character to add spaces around:
+    if (ErrorLevel || sep = "")
+        return ; Exit if canceled or empty input
+
+    ; Escape special characters for RegEx
+    escSep := RegExReplace(sep, "([\\\.\*\+\?\^\$\(\)\{\}\[\]\|])", "\$1")
+
+    ; Process each line separately
+    newText := ""
+    Loop, Parse, Clipboard, `n, `r
+    {
+        newText .= RegExReplace(A_LoopField, "\s*" . escSep . "\s*", " " . sep . " ") "`r`n"
+    }
+
+    ; Trim and update clipboard
+    Clipboard := RTrim(newText, "`r`n")
+    PasteClipboardCLM()
+}
+
+
+RemoveSpacesAroundSeparator()
+{
+    global ClipSaved
+    IfLive()
+
+    ; Ask for the separator character
+    InputBox, sep, Separator, Enter the character to remove spaces around:
+    if (ErrorLevel || sep = "")
+        return ; Exit if canceled or empty input
+
+    ; Escape special characters for RegEx
+    escSep := RegExReplace(sep, "([\\\.\*\+\?\^\$\(\)\{\}\[\]\|])", "\$1")
+
+    ; Process each line separately
+    newText := ""
+    Loop, Parse, Clipboard, `n, `r
+    {
+        newText .= RegExReplace(A_LoopField, "\s*" . escSep . "\s*", sep) "`r`n"
+    }
+
+    ; Trim and update clipboard
+    Clipboard := RTrim(newText, "`r`n")
+    PasteClipboardCLM()
+}
+
 
 ;***************************************************************************
 ;*************************  MENU, COPEN, FUNCTIONS ********TODO*************
 ;*************************************************************************** 
+
+
+
+
 
 openfoldersimple() ;; Function ; xnote -not use here for ref
 ; If the copied text is a valid folder, open it in Windows Explorer
@@ -3100,86 +3412,87 @@ restoreclipboard()
 sleep 20
 return
 
+regjumpmenu:
+iflive()
+sleep 20
+cleanuppathstring()
+Clipboard := RegExReplace(Clipboard, "^\[|\]$")
+; Clipboard := RegExReplace(Clipboard, "^\[+|\]+$") ;; If there are cases where multiple brackets exist (e.g., [[text]]), and you want to remove all [[text]]
+Clipboard := RegExReplace(clipboard, "^[+-]", "")  ; Matches '-' or '+' at the start of the line
+; sleep 30
+ClipWait, 1  ; Wait up to 1 second for clipboard to be set
+regpath := Clipboard
+RestoreClipboard()
+sleep 30
+; msgbox clipboard:%clipboard%`n`nRegpath:%regpath%
+	If InStr(regpath, "HKEY_")
+		RegJump( regpath ) ;Go to Registry path
+	else
+		{
+		Tooltip ERR!  - This Doesn't seem to be`nformatted as a RegKey.
+		sleep 1500
+		tooltip
+		return
+		}
+; RegJump(RegPath)
+return
 
 ; OpenREGfromselection:
 ;Open Regedit and navigate to RegPath.
 ;RegPath accepts both HKEY_LOCAL_MACHINE and HKLM formats.
+; RegJump() essentially does the same as Microsoft's [RegJump](https://learn.microsoft.com/en-us/sysinternals/downloads/regjump), the only advantage being an AHK function it does not rely on a third-party executable to work.
 ; source: https://www.autohotkey.com/board/topic/85751-regjump-jump-to-registry-path-in-regedit/
 RegJump(RegPath)
 {
 global regeditor
 global ClipSaved
-iflive()
-sleep 20
-cleanuppathstring()
-Clipboard := RegExReplace(clipboard, "^[+-]", "")  ; Matches '-' or '+' at the start of the line
-sleep 30
-regpath := Clipboard
-sleep 30
-; sleep 30
-; clsid := RegExReplace(RegPath, ".*\\(\{[^\}]+\})$", "$1")  ; Capture the {clsid} as a var
-; sleep 30
-RegPath := RegExReplace(RegPath, "\\\{[^}]+\}", "")  ;removes the \{clsid} from base key
-;if clsid doesn't exist in ones reg it will break the path returning nothing. Same for keys, thou  clsids change more often so I'm cutting them here.
-sleep 30
-; msgbox, %clsid%
-	;NOTE, Must close Regedit so that next time it opens the target key is selected
+
+if winexist("ahk_class RegEdit_RegEdit")
+	{
 	; WinClose, Registry Editor ahk_class RegEdit_RegEdit
-	if winexist("ahk_class RegEdit_RegEdit")
-		{
-		WinClose, Registry Editor ahk_class RegEdit_RegEdit
-		; Winkill, Registry Editor ahk_class RegEdit_RegEdit
-		winwaitclose, Registry Editor ahk_class RegEdit_RegEdit,,7
-		}
-	If (SubStr(RegPath, 0) = "\") ;remove trailing "\" if present
-		RegPath := SubStr(RegPath, 1, -1)
-	;Extract RootKey part of supplied registry path
-	Loop, Parse, RegPath, \
-	{
-		RootKey := A_LoopField
-		Break
+	; winwaitclose, Registry Editor ahk_class RegEdit_RegEdit,,7
+	; Winkill, Registry Editor ahk_class RegEdit_RegEdit
+	PostMessage, 0x112, 0xF060,,, ahk_class RegEdit_RegEdit  ; Close using WM_CLOSE
+	WinWaitClose, ahk_class RegEdit_RegEdit,,5
+	sleep 200
 	}
-	;Now convert RootKey to standard long format
-	If !InStr(RootKey, "HKEY_") ;If short form, convert to long form
+If (SubStr(RegPath, 0) = "\") ;remove trailing "\" if present
+	RegPath := SubStr(RegPath, 1, -1)
+
+Loop, Parse, RegPath, \ ;Extract RootKey part of supplied registry path
+{
+	RootKey := A_LoopField
+	Break
+}
+;Now convert RootKey to standard long format
+If !InStr(RootKey, "HKEY_") ;If short form, convert to long form
+{
+	If RootKey = HKCR
+		StringReplace, RegPath, RegPath, %RootKey%, HKEY_CLASSES_ROOT
+	Else If RootKey = HKCU
+		StringReplace, RegPath, RegPath, %RootKey%, HKEY_CURRENT_USER
+	Else If RootKey = HKLM
+		StringReplace, RegPath, RegPath, %RootKey%, HKEY_LOCAL_MACHINE
+	Else If RootKey = HKU
+		StringReplace, RegPath, RegPath, %RootKey%, HKEY_USERS
+	Else If RootKey = HKCC
+		StringReplace, RegPath, RegPath, %RootKey%, HKEY_CURRENT_CONFIG
+}
+
+;Make target key the last selected key, which is the selected key next time Regedit runs
+RegWrite, REG_SZ, HKCU, Software\Microsoft\Windows\CurrentVersion\Applets\Regedit, LastKey, %RegPath%
+sleep 750 ;; adjust time as need so that the key gets written into the registry,
+Run, Regedit.exe ;; run regeidt, it will now open to the key written two lines about
+winwaitactive, ahk_class RegEdit_RegEdit,,7
+if errorlevel
 	{
-		If RootKey = HKCR
-			StringReplace, RegPath, RegPath, %RootKey%, HKEY_CLASSES_ROOT
-		Else If RootKey = HKCU
-			StringReplace, RegPath, RegPath, %RootKey%, HKEY_CURRENT_USER
-		Else If RootKey = HKLM
-			StringReplace, RegPath, RegPath, %RootKey%, HKEY_LOCAL_MACHINE
-		Else If RootKey = HKU
-			StringReplace, RegPath, RegPath, %RootKey%, HKEY_USERS
-		Else If RootKey = HKCC
-			StringReplace, RegPath, RegPath, %RootKey%, HKEY_CURRENT_CONFIG
+	tooltip, ERR! @ Line#  %A_LineNumber%`nCouldn't run Regedit`nSearch Canceled.
+	sleep 2000
+	tooltip
+	sleep 30
+	; RestoreClipboard()
+	return
 	}
-sleep 150
-	;Make target key the last selected key, which is the selected key next time Regedit runs
-	RegWrite, REG_SZ, HKCU, Software\Microsoft\Windows\CurrentVersion\Applets\Regedit, LastKey, %RegPath%
-	sleep 300
-	Run, Regedit.exe
-	winwaitactive, ahk_class RegEdit_RegEdit,,7
-	if errorlevel
-		{
-		tooltip, ERR! @ Line#  %A_LineNumber%`nCouldn't run Regedit`nSearch Canceled.
-		sleep 2000
-		tooltip
-		sleep 30
-		RestoreClipboard()
-		return
-		}
-	; ControlSend,,^{l} ahk_class RegEdit_RegEdit
-	sleep 900
-	; sendinput, ^{l}
-	; controlfocus, edit1, ahk_class RegEdit_RegEdit ; works
-	; sleep 30
-	; send, {right}
-	; sleep 30
-	; sendraw, \%clsid%
-	; sendinput, {enter}
-	; sleep 200
-	restoreclipboard()
-	; sleep 30
 return
 }
 ;; END RegJump
@@ -3567,7 +3880,31 @@ global clipsaved
 	restoreclipboard()
 	sleep 30
 return
+WinFindrSearch:
+iflive()
+; clipboard = winfindterm
+winfindrterm = %clipboard%
+restoreclipboard()
+sleep 200
 
+winfindersearchC = "
+(
+C:\`r
+HKEY_CLASSES_ROOT\`r
+HKEY_LOCAL_MACHINE\`r
+HKEY_CURRENT_USER\`r
+)"
+
+; winfindr = C:\Program Files Portable\WinFindr\WinFindr.exe
+; WinFindr.exe "search term one|term two|etc" ["ignore term one|term two|etc"] /K|E|F|D [/From:path1|path2|etc] [/Size:>10MB] [/Not:path1|path2|etc] [/In:zip|rar|doc|etc] [/A|AND] [/NOSTART]
+if WinExist("ahk_exe WinFindr.exe")
+	{
+		winkill
+		sleep 800
+	}
+	
+run %winfindr%  "%winfindrterm%" /kedf /from:%winfindersearchC%
+return
 findastro:
 if !FileExist(astrogrep)
 	{
@@ -4019,12 +4356,22 @@ if !fileexist(qce)
 	}
 try run %qce%
 return
-abc:
+runabc:
 try run, %A_ScriptDir%\AutoCorrect\AutoCorrect_2.0_ECLM.ahk
 return
 ;************************* END, MENU, APPSKEY ******************************
 
 ;***************************************************************************
+; ~MButton::
+; showQucikLiveMenu:
+showQuickLiveMenu:
+showQuickLiveMenu2:
+ForceLiveMenu := true
+; MenuCaseShow()
+gosub cmenu
+menu, case, show
+ForceLiveMenu := false
+return
 
 ;************************* global hotkeys ***********************************
 ; go hotkeys go to hotkeys
@@ -4034,14 +4381,15 @@ return
 
 ; ~MButton::
 ShowTheMainMenu:
-menucaseshow()
+; menucaseshow()
+gosub cmenu
+menu, case, show
 return
 
 ; ^space::
 ; gosub expmenu
 ; return
 #If  ;;///////////////////////// End excluding dopus condition
-
 
 
 ~Esc:: ;; Escape to stop speaking
@@ -4057,35 +4405,29 @@ sleep 30
 reload
 return
 
-; ^!f3:: ;; alt hotkey
-ShowTheMainMenuALTHK:
-showmainmenualtkey:
-menucaseshow()
-RETURN
+
+
 
 $CapsLock:: ;; show Extended CapsLock Menu!!!
     KeyWait CapsLock, T0.15
     if ErrorLevel
 		{
-		MenuCaseShow() ; hold, show menu
+		; MenuCaseShow() ; hold, show menu
+		gosub cmenu
+		menu, case, show
 		}
     else
-    {
-        KeyWait CapsLock, D T0.15
-        if ErrorLevel
-            ; CopyClipboardCLM() ; Single Tap, COPY
-			Send ^c ; Single Tap, COPY
-        else
-            Send ^v ; Double Tap, Paste clipboard content
-    }
+		{
+			KeyWait CapsLock, D T0.15
+			if ErrorLevel
+				Send ^c ; Single Tap, COPY ; CopyClipboardCLM() ; Single Tap, COPY
+			else
+				Send ^v ; Double Tap, Paste clipboard content
+		}
     KeyWait CapsLock
 return
 
-; ~RButton:: ;; double right click to show ECLM
-; if (Double_Right)
-	; Hotkey, ~RButton, doublerightclick, on
-; else
-	; Hotkey, ~RButton, doublerightclick, off
+
 doublerightclick:
 if (A_PriorHotkey != "~rbutton" or A_TimeSincePriorHotkey > 300)
 	{
@@ -4094,24 +4436,26 @@ if (A_PriorHotkey != "~rbutton" or A_TimeSincePriorHotkey > 300)
 	}
 else
 	{
-	sleep 20
-		menucaseshow() 
+		sleep 20
+		; menucaseshow() 
+		gosub cmenu
+		menu, case, show
 	}
 return
 ToggleDoubleRight:
 Double_Right := !Double_Right
-menu, cset, ToggleCheck, Double-Right Click to Show Menu
+menu, s, ToggleCheck, Double-Right Click to Show Menu
 if (Double_Right)
 	{
-	IniWrite, 1, %inifile%, Global_Toggles, Double_right
+	IniWrite, 1, %inifile%, Toggles, Double_right
 	sleep 100
 	Hotkey, ~RButton, doublerightclick, on
 	}
 else
 	{
-	iniwrite, 0, %inifile%, Global_Toggles,Double_Right
-	; menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\mouse pointer click main_10_2_32x32.ico
-	menu, cset, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\settings-mouse-right-click_32x32.ico
+	iniwrite, 0, %inifile%, Toggles, Double_Right
+	; menu, s, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\mouse pointer click main_10_2_32x32.ico
+	menu, s, icon, Double-Right Click to Show Menu, %A_ScriptDir%\Icons\settings-mouse-right-click_32x32.ico
 	sleep 100
 	Hotkey, ~RButton, doublerightclick, off
 	}
@@ -4129,7 +4473,9 @@ savestickyquick()
 return
 ~rbutton:: ;; show capslock menu on stickys
 ;; Note: Since Edit controls have their own context menu, a right-click in one of them will not launch GuiContextMenu. // workaround
-menucaseshow()
+; menucaseshow()
+gosub cmenu
+menu, case, show
 return
 ^n:: ;; new empty stick note
 gosub newsticky
@@ -4170,7 +4516,7 @@ return
 ;///////////////////////////////////////////////////////////////////////////
 ;------------------------- SHOW MENUS COMMANDS
 showsettingsmenu:
-menu, cset, show
+menu, s, show
 return
 showopenmenu:
 menu, copen, show
@@ -4180,6 +4526,9 @@ menu, ctools, show
 return
 showfindmenu:
 menu, cfind, show
+return
+showcodemenu:
+menu, code, show
 return
 showdtmenu:
 Menu, dtmenu, DeleteAll ;new ;refreshes time menu from click
@@ -4192,25 +4541,26 @@ showctxtmenu:
 menu, ctxt, show
 return
 showcformmenu:
-menu, cform, show
+menu, code, show
 return
+
+ShowTheMainMenuALTHK:
+showmainmenualtkey:
 showcapsmenu:
 Capsmenubutton:
-menucaseshow()
+; menucaseshow()
+gosub cmenu
+menu, case, show
 return
 ;///////////////////////////////////////////////////////////////////////////
 
-
-
-; ^+':: ;;paste clipboard text in "Quotes"
 pasteclipboardinquotes:
 	saved := clipboard ; save clipboard contents
-	Send, "%clipboard%" ; send clipboard content with your characters around it
+	Sendraw, "%clipboard%" ; send clipboard content with your characters around it
 	clipboard := saved ; restore clipboard
 	saved := () ; clear saved
 Return
 
-; ^':: ;; Put selected text in "Quotes"
 ClipQuote:
 global clipsaved
 copyclipboardclm()
@@ -4222,7 +4572,7 @@ pasteclipboardclm()
 sleep 100
 return
 
-; +CapsLock::    ;; Switch between UPPERCASE & lowercase
+
 switchCASE:
   origClipboard=%clipboard%
   clipboard=
@@ -4248,19 +4598,17 @@ sleep 200
   sleep 400
 return
 
-; ^!f2:: ;; my own stickies
 newsticky:
 CreateStickyNote()
 return
 
-; ^+F2:: ;; new sticky from selection
 copytostickynote:
 CopyToStickyNote()
 return
 
 
-; !Capslock:: ;; toggle capslock & Show_CAPS_OSD Overlay
-^CapsLock:: ;; toggle capslock & Show_CAPS_OSD Overlay
+
+
 Togglecapslock:
 ToggleCapsLock()
 return
@@ -4325,9 +4673,9 @@ osdtoggle:
 Show_CAPS_OSD := !Show_CAPS_OSD
 if (Show_CAPS_OSD)
 	{ ;0 , DOES NOT SHOW Show_CAPS_OSD, OFF
-	menu, cset, togglecheck, Show O S D for Capslock State
+	menu, s, togglecheck, Show O S D for Capslock State
 	GLOBAL CAPSGuiToggle := FALSE
-	IniWrite, 1, %inifile%, Global_Toggles, Show_CAPS_OSD
+	IniWrite, 1, %inifile%, Toggles, Show_CAPS_OSD
 	SLEEP 400
 	gui, caps: hide
 	SetCapsLockState, off
@@ -4337,9 +4685,9 @@ if (Show_CAPS_OSD)
 	}
 else
 	{ ;1 , SHOWS osd, ON
-	menu, cset, icon, Show O S D for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
+	menu, s, icon, Show O S D for Capslock State, %A_ScriptDir%\Icons\monitor_lightning__32x32.ico
 	GLOBAL CAPSGuiToggle := TRUE
-	IniWrite, 0, %inifile%, Global_Toggles, Show_CAPS_OSD
+	IniWrite, 0, %inifile%, Toggles, Show_CAPS_OSD
 	SLEEP 400
 	gui, caps: hide
 	SetCapsLockState, off
@@ -4359,15 +4707,15 @@ ToggleBeepSetting:
     CAPS_Beep_Enabled := !CAPS_Beep_Enabled
 	if (CAPS_Beep_Enabled)
 	{
-		menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound__32x32.ico
+		menu, s, icon, Mute Sound on Capslock Toggle`t%togglebeepsetting%, %A_ScriptDir%\Icons\sound__32x32.ico
 		tooltip, SoundBeeps on Capslock toggle is ON!
-		iniwrite, 1, %inifile%, Global_Toggles,CAPS_Beep_Enabled
+		iniwrite, 1, %inifile%, Toggles,CAPS_Beep_Enabled
 	}
 	else
 	{
-		menu, cset, icon, Mute Sound on Capslock Toggle, %A_ScriptDir%\Icons\sound_mute__32x32.ico
+		menu, s, icon, Mute Sound on Capslock Toggle`t%togglebeepsetting%, %A_ScriptDir%\Icons\sound_mute__32x32.ico
 		tooltip, SoundBeeps on Capslock Toggle is OFF - MUTED!
-		iniwrite, 0, %inifile%, Global_Toggles, CAPS_Beep_Enabled
+		iniwrite, 0, %inifile%, Toggles, CAPS_Beep_Enabled
 	}
 sleep 1500
 tooltip
@@ -4418,7 +4766,7 @@ return
 ;******* END ****************** MENU, , FUNCTIONS ********** END *************** 
 
 ;***************************************************************************
-;************************* MENU, CSET, FUNCTIONS ***************************
+;************************* menu, s, FUNCTIONS ***************************
 ;***************************************************************************
 
 Lines:
@@ -4492,14 +4840,14 @@ ShiftedNumRow:
     if (ShiftedNumRow)
         {
 		ToolTip, Shifted # Row is Enabled`n`~`!`@`#`$`%`^`&`*`(`)`_`+`{`}`|
-		menu, cset, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
-		iniwrite, 1, %inifile%, Global_Toggles, ShiftedNumRow
+		menu, s, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
+		iniwrite, 1, %inifile%, Toggles, ShiftedNumRow
 		}
     else
         {
 		ToolTip, Shifted # Row is Disabled
-		menu, cset, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
-		iniwrite, 0, %inifile%, Global_Toggles, ShiftedNumRow
+		menu, s, togglecheck, Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
+		iniwrite, 0, %inifile%, Toggles, ShiftedNumRow
 		}
     Sleep, 1500
     ToolTip
@@ -4507,18 +4855,18 @@ Return
 
 ToggleReplaceNPPRightClick: 
     ReplaceNPPRightClick := !ReplaceNPPRightClick ; Toggle the setting
-	menu, cset, togglecheck, Replace the NP++ Right Click Menu
+	menu, s, togglecheck, Replace the NP++ Right Click Menu
 	if (ReplaceNPPRightClick)
 		{
-		iniwrite, 1, %inifile%, Global_Toggles, ReplaceNPPRightClick
-		; menu, cset, togglecheck, Replace the NP++ Right Click Menu
+		iniwrite, 1, %inifile%, Toggles, ReplaceNPPRightClick
+		; menu, s, togglecheck, Replace the NP++ Right Click Menu
 		tooltip, The Right Click menu of Notepad++`nhas been replaced with Extended Capslock Menu!`n`nUse with Caution`, sometimes NP++'s menu is still triggered.`nIt can cause errors at times.
 		sleep 1000
 		}
 	else
 		{
-		iniwrite, 0, %inifile%, Global_Toggles, ReplaceNPPRightClick
-		menu, cset, icon, Replace the NP++ Right Click Menu, %A_ScriptDir%\Icons\context menu icon.ico
+		iniwrite, 0, %inifile%, Toggles, ReplaceNPPRightClick
+		menu, s, icon, Replace the NP++ Right Click Menu, %A_ScriptDir%\Icons\context menu icon.ico
 		Tooltip, Notepad++'s Right Click Menu has been Restored.
 		sleep 500
 		}
@@ -4542,7 +4890,7 @@ return
 
 suspendkeys:
 suspend
-menu, cset, ToggleCheck, Suspend Hotkeys
+menu, s, ToggleCheck, Suspend Hotkeys
 menu, tray, ToggleCheck, Suspend Hotkeys
 tooltip, Hotkeys Paused
 sleep 2500
@@ -4569,9 +4917,15 @@ return
 togSTARTASADMIN:
 startasadmin := !startasadmin
 if (startasadmin)
-	iniwrite, 1, %inifile%, Global_Toggles, StartAsAdmin
+	{
+		iniwrite, 1, %inifile%, Toggles, StartAsAdmin
+		menu, as, icon, Always Run As Admin, %togNN%
+	}
 else
-	iniwrite, 0, %inifile%, Global_Toggles, StartAsAdmin
+	{
+		iniwrite, 0, %inifile%, Toggles, StartAsAdmin
+		menu, as, icon, Always Run As Admin, %togFF%
+	}
 ; gosub runasadmin
 return
 
@@ -4582,8 +4936,8 @@ If !A_IsAdmin {
 		MsgBox, 4420, Running As Admin, If you don't want this script running as Admin any longer you must Exit it completely and Re-Run it.`n`nWould you like to EXIT\QUIT now?`n`nYou have to Restart it Manually afterward.`nThis will also toggle StartAsAdmin to Off.`n`nYES = KILL`nNO = Continue as Admin, 30
 		IfMsgBox Yes
 			{
-				; iniwrite, 1, %inifile%, Global_Toggles, ExitAdmin
-				iniwrite, 0, %inifile%, Global_Toggles, StartAsAdmin
+				; iniwrite, 1, %inifile%, Toggles, ExitAdmin
+				iniwrite, 0, %inifile%, Toggles, StartAsAdmin
 				sleep 750
 				exitapp
 			}
@@ -4597,9 +4951,9 @@ return
 Togglewarnings:
 SeeErrors := !SeeErrors
 if (SeeErrors)
-	iniwrite, 1, %inifile%, Global_Toggles, SeeErrors
+	iniwrite, 1, %inifile%, Toggles, SeeErrors
 else
-	iniwrite, 0, %inifile%, Global_Toggles, SeeErrors
+	iniwrite, 0, %inifile%, Toggles, SeeErrors
 sleep 750
 reload
 return
@@ -4608,13 +4962,13 @@ togUpdatecheckonstartup:
 CheckForUpdatesONStartup := !CheckForUpdatesONStartup
 if (CheckForUpdatesONStartup)
 	{
-	IniWrite, 1, %inifile%, Global_Toggles, CheckForUpdatesONStartup
-	menu, aset, ToggleCheck, Check For Updates on Start Up
+	IniWrite, 1, %inifile%, Toggles, CheckForUpdatesONStartup
+	menu, as, ToggleCheck, Check For Updates on Start Up
 	}
 else
 	{
-	IniWrite, 0, %inifile%, Global_Toggles, CheckForUpdatesONStartup
-	menu, aset, ToggleCheck, Check For Updates on Start Up
+	IniWrite, 0, %inifile%, Toggles, CheckForUpdatesONStartup
+	menu, as, ToggleCheck, Check For Updates on Start Up
 	}
 sleep 400
 return
@@ -4628,16 +4982,16 @@ if (RunonStartUP) ;; if run on startup create a .lnk in %appdatae%\Roaming\Micro
 			;; examples from ahkhelp
 			; SYNTAX 4 -- FileCreateShortcut, Target, LinkFile [, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState]
 			; SYNTAX EXAMPLE 4 -- FileCreateShortcut, Notepad.exe, %A_Desktop%\My Shortcut.lnk, C:\, "%A_ScriptFullPath%", My Description, C:\My Icon.ico, i
-	IniWrite, 1, %inifile%, Global_Toggles, RunonStartUP
+	IniWrite, 1, %inifile%, Toggles, RunonStartUP
 	FileCreateShortcut, %A_ScriptFullPath%, %A_Startup%\%ScriptName%.lnk,,,Runs Extended Capslock Menu at Startup,%trayicon%,,0
-	menu, aset, togglecheck, Run ECLM at Start Up
+	menu, as, togglecheck, Run ECLM at Start Up
 
 }
-else ; if dont run on startup delete the .lnk from %appdatae%\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+else ; if dont run on startup, delete the .lnk from %appdatae%\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
 {
-	IniWrite, 0, %inifile%, Global_Toggles, RunonStartUP
+	IniWrite, 0, %inifile%, Toggles, RunonStartUP
 	FileDelete, %A_StartUp%\%ScriptName%.lnk
-	menu, aset, togglecheck, Run ECLM at Start Up
+	menu, as, togglecheck, Run ECLM at Start Up
 }
 sleep 400
 return
@@ -4645,8 +4999,8 @@ return
 makeini:
 fileappend,
 (
-
-[Global_Toggles]
+;; You should always reload the app\menu after save any changes made in this settings file.
+[Toggles]
 LiveMenuEnabled=0
 ModelessMenusTOG=0
 StartAsAdmin=0
@@ -4661,6 +5015,11 @@ isfirstrun=1
 SeeErrors=0
 CheckForUpdatesONStartup=1
 RunonStartUP=0
+
+[MenuOptions]
+MaxClipboardLines= 50
+;; number of lines to show in the live clipboard menu.
+;; 50 is default, lower this number if the menu is too big for your screen.
 
 
 
@@ -4697,294 +5056,207 @@ word = C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE
 xnviewmp = C:\Program Files\XnViewMP\xnviewmp.exe
 
 
-
-
-
 [Global_Hotkeys]
+;; change your hotkeys here, more info in the about window
 
-; there are a lot of labels\menu items in this list that you can set Global Hotkeys to in this file. To make it easier to find Hoktkey that have a setting you can search RegEx in your text editor...     .*=\s*\S+$
-
-; regex to find in .INIs hotkeys following thelabel=    .*=\s*\S+$  
-
-;; ITEMS ON THE MAIN MENU
-;**************************************************
-; - Toggle the CAPSLOCK key state - Ctrl + Capslock is hard coded in the script you can set another one here.
-Togglecapslock=!capslock
-; - Show Extended Capslock Menu
-ShowTheMainMenu=~MButton
-ShowTheMainMenuALTHK= ^!F3
-Capsmenubutton=
-; - Wrap selected text in Quotes
-clipquote=^'
-; - Paste clipboard in "Quotes"
-pasteclipboardinquotes=^+'
-; - Visit Website [If a URL is selected]
-gowebsite=#!u
-; - Reload Script - Ctrl + Shift + R
-reload=^+R
-; - Quit \ Exit \ Kill - Ctrl + Alt + Esc
-exitscript=^!esc
-; - Switch CASE between UPPER & lower
-switchCASE=+CapsLock
-; - Letter Swap
-letterswap=!r
-; - + Copy (Add\Append to Clipboard)
-appendclip=^+C
+; ** hotkey layout...
+; Labelname=  <-- DO NOT CHANGE anything before the "="
+; Set, or remove, the hotkey between the = & |
+; labelname= (set your hotkey here) | Description for the live hotkey menu 
 
 
-;; - ITEMS ON THE TEXT TOOLS & APPS MENU
-;**************************************************
-; - Show the Insert Date & Time MENU
-showdtmenu=
-; - Show the Text Tools MENU
-showtoolsmenu=
-; - Save Selection To New Document
-newtxtfile=
-; - Quick Save Selection to New.txt File
-quicktxtfile=
-; - Copy Selected to New Np++ Document
-newnpppdoc=
-; - Save Clipboard to New Document
-SaveClipboardAsTxt=
-; - View Clipboard Text
-viewclip=
-; - Clear Clipboard
-clearclip=
-; - Grab Location Bar Address (Copy)
-copylocationbar=
-; - Copy Selection to Temp Sticky
-CopyToStickyNote=
-; - Read [Selected Text] Out Loud
-TextToSpeech=
-; - Software Launchers (About)
-aboutsoftwareL=
-; - Run AHK Auto Correct (Included)
-abc=
-; - Ditto Clipboard
-runditto=
-; - Quick Clipboard Editor
-runQCE=
-; - Textify
-runtextify=
-; - Text Grab
-runtextgrab=
-; - Notepad++
-runnotepadpp=
+Togglecapslock=!Capslock|Toggle Capslock
+; ** - Toggle the CAPSLOCK key state - Ctrl + Capslock is hard coded in the script you can set another one here.
 
-;; - ITEMS ON THE FIND\SEARCH SELECTED TEXT... MENU
-;**************************************************
-showfindmenu=
-; - Google This
-googlethis=
-; - Youtube This
-youtubethis=
-; - Define Word (Google)
-definethis=
-; - Wikipedia Search
-wikipediasearch=
-; - AHK Site Search via Google
-ahksearchmenu=
+;; alternative keys form showing the main menu.
+; * Holding Capslock is hardcoded, alternative key and mouse combos can be set here.
+ShowTheMainMenuALTHK= ^!F3 | Show Extended Capslock Menu
+showmainmenualtkey= | Show Extended Capslock Menu
+Capsmenubutton= | Show Extended Capslock Menu
+showcapsmenu= | Show Extended Capslock Menu
 
-; - Local Searches
-; - Everything, Find [Selected Text] Locally
-Findwitheverything=
-; - System Index, Find with EveryThing 1.5a
-evindex=
-; - NP++, Find in Files
-findinfilesnpp=
-; - Find in Files with AstroGrep
-findastro=
-; - Find in Files with dnGREP
-finddngrep=
-; - Search in AHK Help File (Local)
-ahkhelplocal=
-; - Look up on Dictionary.com & Thesaurus.com
-Dictionarydotcom=
+showQuickLiveMenu= ^MButton | Show Main Menu - with Auto Copy && Preview
 
-;**************************************************
-; - Show the IF Files\Dirs is [Selected] Menu
-showopenmenu=
-; - Open Folder
-OpenDIRselection=
-; - Run\Open File
-RUNfromselection=
-; - Copy File\Folder to
-COPYfromselection=
-; - Explore Folder in Everything
-EVpath=
-; - Search File in Everything
-EVfile=
-; - Load Path into dnGREP for Searching
-dngreploadpath=
-; - Edit in Text Editor
-Edittxtfile=
-; - Duplicate File as "File Name -CopyDup.ext"
-makedup=
-; - File Content to Clipboard (Text-Based Files)
-filetoclipboard=
-; - Jump to Key in RegEdit
-RegJump=
-; - Windows Context Menu
-wincontextmenu=
-; - View Explore Folder Popup Menu
-expmenu=
-; - If NP++ Switch to Alt Open With Menu
-alttxtnppmenu=
-; - Put File into Subfolder (Folder takes Filename)
-movefiletofolder=
-; - Copy File Names & Details of Folder to Clipboard
-copydetails=
+editsettings=  | Edit Extended Capslock Menu-SETTINGS.ini
 
-;; - ITEMS ON THE CODE FORMATTING..... MENU
-;**************************************************
-; - Curly Brackets on New Lines
-wrapincbrackets=
-; - 1 /* Block Comment */
-commentblock=
-; - 2 {Wrapped}
-cbrakectswrapped=
-; - 3 (Parentheses)
-wrapparen=
-; - 4 [Square Brackets]
-squbracket=
-; - 5 `% PercentVar `%
-wrappercent=
-; - 6 `Code - Inline`
-CodeLine=
-; - 7 ```Code - Box```
-CodeBox=
-; - 8 [code]Box - Forum[/code]
-forumcodebox=
-; - 9 <kbd>K</kbd>
-dopusK=
-; - 0 <!-- xml Comment -->
-wrapinxmlcomment=
+;; each sub-menu can also be shown by itself, independent from the main menu.
 
-; - B Expand `% A_ScriptDir `%
-expandscriptdir=
-; - C Encode XML
-Encodexml=
-; - D Decode XML
-decodexml=
-; - E Covert file:\\\url to Std Path
-convertfileurl=
-
-;; - ITEMS ON THE MODIFY TEXT & CASE MENU
-;**************************************************
-; - Show the Modify Text & Case menu
-showctxtmenu=
-; - UPPERCASE
-Upper=
-; - lowercase
-Lower=
-; - Title Case
-Title=
-; - Sentence case
-Sentence=
-; - Capital Case
-Capital=
-; - Reverse - esreveR
-Reverse=
-; - iNVERT cASE
-Invert=
-; - Convert Numbers&Symbols, 123$`%^<->!@#456
-convertsymbols=
-; - PascalCase
-Pascal=
-; - camelCase
-camel=
-; - aLtErNaTiNg cAsE
-Alternating=
-; - Remove Extra Spaces
-RemoveExtraS=
-; - RemoveALL Spaces
-RASpace=
-; - Space to Dot.Case
-addDot=
-; - Remove.Dot to Space
-removedot=
-; - Space to Under_Score
-addunderscore=
-; - Remove_Underscore to Space
-removeunderscore=
-; - Space to Dash-Case
-adddash=
-; - Remove-Dash to Space
-removedash=
-; - Sort > 0-9,A-Z
-sorttext=
-; - Fix Linebreaks
-FixLineBreaks=
-; - Remove Illegal Characters & Emojis
-removeillegal=
-; - Swap at Anchor Word
-text_swap=
-
-;; - ITEMS ON THE SETTINGS & ABOUT MENU
-;**************************************************
-; - Show the Settings & About MENU
-showsettingsmenu=
-; - Toggle Live Preview & Auto Copy
-ToggleLiveMenu=
-; - Dark Mode | Light Mode
-DMToggle=
-; - Mute Sound on Capslock Toggle
-togglebeepsetting=
-; - Show Show_CAPS_OSD for Capslock State
-osdtoggle=
-; - Capslock for Number Row (On\Off) ~!@#$`%^&*()_+
-shiftednumrow=
-; - About Extended Caps Lock Menu
-aboutcapswindow=
-; - Visit Github Webpage
-visitgithub=
-; - Edit Main Script
-editscript=
-; - Edit Settings File
-editsettings=
-; - View Hotkeys
-viewhotkeys=
-; - Suspend Hotkeys
-suspendkeys=
-
-;; - ALT-TEXT EDITOR MENU ITEMS
-; NOTE !! this menu was mainly set up to use when Notepad++ is Active. it will work in some other instances thou BE CAREFUL setting global hotkeys here, it my not work as expected in other apps.
-;**************************************************
-;**************************************************
-; - Open With Menu
-altmenualttxtshow=
-altoinppp=
-; - Notepad4
-altoinotepad4=
-; - Scite 4 AHK
-altoiscite=
-; - AHK Studio
-altoiahkstudio=
-; - VS Code
-altoivscode=
-; - Geany
-altoigeany=
-; - Word
-altoiword=
-; - Excel
-altoiexcel=
-; - Duplicate File
-altmakedup=
-; - Copy Full File Path
-altcopypath=
-; - Copy File Name
-altcopyname=
-; - Search in Everything
-altevfile=
-; - Explore in Everything
-altevexp=
+showlivehotkeymenu= #F1 | Show Menu - ECLM's Live Hotkey
+showtoolsmenu=  | Show Menu - Text Tools 
+showfindmenu=  | Show Menu - Search Selected Text 
+showopenmenu=  | Show Menu - IF Files\Dirs is [*Selected*] 
+showcodemenu= | Show Menu - Code Formatting 
+showctxtmenu=  | Show Menu - Modify Text && Case 
+showinsertmenu= | Show Menu - Insert Text
+showdtmenu=  | Show Menu - Insert Date && Time 
+ShowSnippetFolderMenu= ^Insert | Show Menu - Insert Live Snippets Folder
+ShowClipboardMenu= | Show Menu - Live Clipboard
+showinsertsymbolsmenu= | Show Menu - Insert Symbols 
+showsettingsmenu= #Capslock | Show Menu - Settings && About 
 
 
-; Other 
-; - Open the Quick Notes Directory from the menu
-OpenQuickNotesDir=
-; - Paste as Plain Text
-pasteasplaintext=
+;; Additional (semi-hidden) menus ***  meant to be used in NP++ or simialier editors
+;; This one below only works when NP++ is the Active App
+showalttxtnppmenu=   |  Show Menu - NP++`s Open With Alt Editor
+;; These live menus work on a selected folder\file paths e.g... %userprofile%
+;; *$$ Known Issues with the live folder menus blow...
+;; *If a folder is large, with 1000+ files, it can cause ECLM to slow down or crash.
+;; Unfortunately this is a windows OS limitation with building live menus. there's no fix. just use with caution &  reload the app if needed.
+expmenu=  | Show Menu - Explore Folder Popup Menu
+livefoldermenu=  | Show Menu - Live Folder Menu 
+
+; Items Listed by the menu they appear on. items with no menus at the bottom
+;--------------------------------------------------
+; items on the < ------ Text Tools ------ > Menu
+newtxtfile=  | Save Selection To New Document
+quicktxtfile=  | Quick Save Selection to New.txt File
+SaveClipboardAsTxt=  | Save Clipboard to New Document
+viewclip=  | View Clipboard Text
+clearclip=  | Clear Clipboard
+appendclip= ^+C | Copy (Add to Clipboard)
+pasteasplaintext=  | Paste As Plain Text
+ClipQuote= ^' | Wrap Selection in "Quotes"
+copylocationbar=  | Grab Location Bar Address (Copy)
+CopyToStickyNote= ^+F2 | Copy Selection to Temp Sticky
+TextStatsSelected=  | Text Statistics on Selection
+TextStatsFile=  | Text Statistics on Seleted File Path
+TextToSpeech=  | Read [*Selected Text*] Out Loud
+
+; aboutsoftwareL=  | < --- Software Launchers (?About) --- >
+runabc=  | Run AHK Auto Correct (Included)
+runditto=  | Run Ditto Clipboard
+runQCE=  | Run Quick Clipboard Editor
+runtextify=  | Run Textify
+runtextgrab=  | Run Text Grab
+runnotepadpp=  | Run Notepad++
+OpenEmojiKeyboard=  | Emoji Keyboard
+
+; items on the < --- Search Selected Text Menu --- > Menu
+;  | < ------ Local Searches ------ >
+Findwitheverything=  | Everything -Find via EV 1.5a
+evindex=  | System Index -via EveryThing 1.5a
+findastro=  | Find in Files with AstroGrep
+finddngrep=  | Find in Files with dnGREP
+ahkhelplocal=  | Search in AHK Help File (Local)
+;  | < ------ Web Searches ------ >
+googlethis=  | Google This
+youtubethis=  | Youtube This
+definethis=  | Define Word (Google)
+wikipediasearch=  | Wikipedia Search
+ahksearchmenu=  | AHK Site Search via Google
+gowebsite= !#U | Visit Website [If URL is Selected]
+
+; Items on the < --- IF Files\Dirs is [*Selected*] Menu --- >
+OpenDIRselection=  | Open Folder from Selection
+RUNfromselection=  | Run\Open File from Selection
+EVpath=  | Explore Folder in Everything
+EVfile=  | Search File in Everything
+dngreploadpath=  | Load Path into dnGREP for Searching
+Edittxtfile=  | Edit in Text Editor
+makedup=  | Duplicate File as... "File Name -CopyDup.ext"
+filetoclipboard=  | File Content to Clipboard (Text-Based Files)
+TextStatsFile=  | File Stats on Selected File Path
+RegJump= #J | Jump to Key in RegEdit
+wincontextmenu=  | Windows Context Menu ☰ from Selection
+fileopenwith=  | Open With... from Selection
+viewfilepropteries=  | View File Properties
+movefiletofolder=  | Put File into Subfolder (Folder takes Filename)
+movefiletoparentfolder=  | Move File Up into it's Parent Folder
+copydetails=  | Copy File Names && Details of Folder to Clipboard
+
+
+; items on the < --- Code Formatting Menu --- >
+commentblock= ^+; | AHK - /* Block Comment */ on New Lines
+cbrakectswrapped=  | Wrap Selection in {Curly Brackets}
+wrapparen= !0 | Wrap Selection in (Parentheses)
+squbracket= !] | Wrap Selection in [Square Brackets]
+wrappercent= !5 | Wrap Selection in `%PercentSigns`%
+CodeLine=  | `Code - Inline` .MD
+CodeBox=  | ```Code - Box``` .MD
+forumcodebox=  | [code]Box - Forum[/code] 
+dopusK=  | <kbd>`K<`/kbd> from Selection
+wrapinxmlcomment=  | <!-- xml Comment --> from Selection
+ahknewline=  | `nAHK new Line`n
+expandscriptdir=  | Expand `%A_ScriptDir`%
+Encodexml=  | Encode XML
+decodexml=  | Decode XML
+convertfileurl=  | Covert file:\\\url to Std Path
+wrapincbrackets= !{ | Wrap in {..Curly Brackets..} on New Lines
+
+; items on the <-- Modify Text && Case Menu -->
+Upper=  | UPPERCASE
+Lower=  | lowercase
+Title=  | Title Case
+Sentence=  | Sentence case
+Capital=  | Capital Case
+Reverse=  | Reverse - esreveR
+Invert=  | iNVERT cASE - Invert Case
+convertsymbols=  | Convert Numbers<&&>Symbols
+Pascal=  | PascalCase
+camel=  | camelCase
+Alternating=  | aLtErNaTiNg cAsE
+spread=  | S p r e a d T e x t
+RemoveExtraS=  | Remove  Extra   Spaces
+RASpace=  | RemoveALL Spaces
+RemoveEmptyLines=  | Remove Empty Lines
+sorttext=  | Sort Selection... 0-9, A-Z 
+addDot=  | Space to Dot.Case
+removedot=  | Remove.Dot to Space
+addunderscore=  | Space to Under_Score
+removeunderscore=  | Remove_Underscore to Space
+adddash=  | Space to Dash-Case
+removedash=  | Remove-Dash to Space
+FixLineBreaks=  | Fix Line Breaks
+removeillegal=  | Remove Illegal Characters && Emojis
+text_swap=  | Swap @ Anchor Word or Symbol
+letterswap= !R  | Flip Chars @ Caret
+
+
+
+; items on the  < ------ Settings && About ------ > Menu
+togglebeepsetting=  | Mute Sound on Capslock Toggle
+osdtoggle=  | Show O S D for Capslock State
+shiftednumrow=  | Capslock for Number Row (On\Off) ~!@#`$`%^`&&*`(`)_+
+ToggleDoubleRight=  | Double-Right Click to Show Menu
+aboutcapswindow=  | About Extended Caps Lock Menu
+visitgithub=  | Visit Github Webpage
+editscript=  | Edit Main Script
+suspendkeys=  | Suspend Hotkeys
+exitscript=^!ESC  | Quit \ Exit \ Kill ECLM
+reload= ^+R | Reload ECLM
+DMToggle=  | Toggle > Dark | Light Menus
+togSTARTASADMIN=  | Always Run As Admin
+togUpdatecheckonstartup=  | Check For Updates on Start Up
+togRunonStartUp=  | Run ECLM at Start Up
+ToggleLiveMenu=  | Toggle Live Preview && Auto Copy
+
+
+; items on the NP++ Open in alt Editor Menu
+; ** this menu is fairly fairy specific to be being used with Notepad++ at the moment.
+ALTOIdefaulttexteditor=  | Default Text Editor ( `%texteditfilename`% )
+altoinppp=  | Notepad++
+altoinotepad4=  | Notepad4
+altoiscite=  | Scite 4 AHK
+altoivscode=  | VS Code
+altoigeany=  | Geany
+altoiword=  | Word
+altoiexcel=  | Excel
+altoimarkdownmonster=  | Markdown Monster
+aboutalttxtmenu=  | -- Other Quick File Options -- (Also About)
+altmakedup=  | Duplicate File as... " `%filestem`% -CopyDup.`%ext`% "
+altcopypath=  | Copy Full Path to Clipboard
+altcopyname=  | Copy File Name to Clipboard
+altevfile=  | Search this Doc in Everything
+altevexp=  | Explore This Folder in Everything
+alttxtopenfolderalt2=  | Open Folder
+closemenu=  | Close This Menu
+
+;; labels that do not have menu items attracted to them...
+pasteclipboardinquotes= ^+' | Paste Clipboard in "Quotes"
+OpenQuickNotesDir=  | Open ECLM Quick Docs Folder
+switchCASE= +Capslock | Switch > UPPER && lower Case
+addsnip= | Copy Selection to New Snippet
+opensnipfolder= | Open the Live Snippets Dir
 
 )
 , %inifile%
@@ -5194,11 +5466,12 @@ These are just the ones I use, if you know how, the 'alttxt' menu could be edite
 ; aboutini := "
 aboutini = 
 (
+★ ALWAYS Click the Save & Reload button when making any changes you want to save to the -settings.ini file. They will be lost if you just close this window. There's no nag check that will ask you if you want to save.
 
 **************************************************
-** ABOUT [MENU_TOGGLES] **************************
+** ABOUT [Toggles] ************************
 **************************************************
-These items are toggled on Setting & About Menu
+These items are toggled on Setting & About Menu.
 These toggles are stored in the '.ini' file and will persist after reloading the menu.
 
 	- Auto Copy & Live Preview (OFF by default),
@@ -5209,6 +5482,7 @@ These toggles are stored in the '.ini' file and will persist after reloading the
 	- Caplocks for Number Row (OFF by default),
 
 
+** There might a few extra toggles used in development which do not have menu items, I'll leave them here for those you whom want to edit and run the .ahk script
 
 **************************************************
 ** ABOUT [PROGRAMS] ******************************
@@ -5249,38 +5523,47 @@ with...
 ** ABOUT [GLOBAL_HOTKEYS] *************************
 ***************************************************
 
+A handful global hotkeys are already set, you can change them here.
 
-
-A few global hotkeys are already set, you can change them here. 
 A few others are hard coded in the script which cannot or should not be set to avoid conflicts with system keys, you won't see those in this list.
 
-Any hotkeys set inside this .ini file will be GLOBAL, they will work in every application!
-To make them Context Sensitive or Program Specific they should not be set here, but rather inside the .ahk file within #IfWinActive directives
+Any hotkeys set inside of the  -SETTINGS.ini file will be GLOBAL, they will work in every application!
+
+To make them Context Sensitive for Program Specific they should not be set here, but rather inside the .ahk file within #IfWinActive directives ¢ 
 
 **************************************************
 
-Each " Menu Item Name " is listed, with the LabelName= on the line below it.
-Assign the hotkey after the " = "
+Each " Menu Item Name " is listed below in the follwing layout...
 
-NOTE !!! - The line with the " LabelName= " should NOT start with a " ; " or " # " otherwise it will be ignored by the program. You can shut off a hot key this way too.
+Labelname= (hotkey in AHK Syntax) | Disription of Menu Action or Menu Item Name Itself
 
-The Menus and Items are organized\grouped together by the menu they appear on, nearly in order here....
-It's a list! Searching Menu Items Names would be easier in a text editor. The gear icon above has an option to get you there.
-addtionally you can Copy & Paste to the top of the list below the [Global_Hotkeys] heading.
+to set your own hotkey for the menu items you use most of enter the hotkey between the "=" and "|" . Examples below...
+
+¢ DO NOT change the " Labelname= " this will cause the hotkey to break!
+You can the description after the "|" if you want, which is what displays on the Live Hotkeys Menu.
+
+There are a lot of menu items labels and toggles here (around 200). You can change them on the fly in this tab, save & Reload. The Menus and Items are organized\grouped, some what, together by the menu they appear on, nearly in order here.
+
+Thou it might be easier to open the -SETTINGS.ini file in a text editor so you can search key words from the menu items you want to change. There's a button above that will give you options to which editor to open the .ini.
+
 -------------------------
 
 Examples ... 
 for... " Google This " on the Find Menu
-googlethis=#+o
+googlethis=#+o | Search Selection on Google
 the hotkey would be... Win + Shift + O
 
 for... " Open Folder " on the Files Menu
-OpenDIRselection = #!o
+OpenDIRselection = !#o | Open Directory from Selection
 the hotkey would be... Alt + Win + O
 
 for... " 1 `/`* Block Comment `*`/ " on the Code Formatting Menu
-commentblock= ^NumpadDiv
+commentblock= ^NumpadDiv | AHK Block Comment
 the hotkey would be... Ctrl + / -- on the NumberPad --
+
+for... + Copy [Add to Clipboard] on the Text Tools Menu
+appendclip = ^!C | Copy, Append to Clipboard
+the hotkey would be Ctrl + Shift + C
 
 ;-------------------------
 
@@ -5292,10 +5575,10 @@ Win = #
 Alt = !
 ;-------------------------
 
-For a full list of {Special_KeyNames} such as ESC, Home, Mouse Buttons, Space etc... and their uses 
+¢ For a full list of {Special_KeyNames} such as ESC, Home, Mouse Buttons, Space etc... and their uses 
 visit the Docs page for reference.
 
-You can use the menu to get you there. select this web address and choose " Visit Website [If a URL is Selected] " from the Find Menu our use the hotkey " Alt + Win + U "
+You can use the menu to get you there. Select this web address and choose " Visit Website [If a URL is Selected] " from the Find Menu -OR- use the hotkey " Alt + Win + U "
 
  https://www.autohotkey.com/docs/v1/KeyList.htm 
 
@@ -5316,6 +5599,12 @@ You can use the menu to get you there. select this web address and choose " Visi
 global hotkeys
 hotkeys =
 (
+
+** This hotkey list is a bit out of date! After changing that hotkeys are stored in a .ini file you can now change them to your liking. Working on having user set hotkeys appear on all the menu items. Will leave this here for the moment as an old reference. 
+
+** This tab will be changing soon....
+
+
 -----[[[[ HOTKEYS ]]]]-----
 Extended CAPSLOCK KEY Functionality Using AutoHotkey:
 	+ Capslock, Single Tap, COPY
@@ -5370,7 +5659,7 @@ Ctrl + Alt + N or F9 -- Open Active File in Alternative Text Editor Menu
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 Gui, capsa: New
-Gui, capas: Margin, 5, 5
+Gui, capsa: Margin, 5, 5
 gui, capsa: color, 171717, 090909
 gui, capsa: font, cffb900, Consolas
 ; gui, capsa: color, 171717,
@@ -5379,7 +5668,7 @@ gui, capsa: font, , Consolas
 ; gui, capsa: add, Tab2, xm w550 h630 vSelectedTab gTabChange, Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings ; vSelectedTab gTabChange ;; the V & G labels hre are casing warnings from gpt so
 ; gui, capsa: add, Tab2, buttons xm w550 h630 -Theme , Overview|More Notes|ChangeLog|Software Links|Hotkeys && Settings
 
-gui, capsa: add, Tab3, buttons xm w550 h630 -Theme , Overview|INI Settings|Hotkeys|ChangeLog|Software Info|Known Issues ;|Tab 6
+gui, capsa: add, Tab3,  xm w550 h650 -Theme , Overview|INI Settings|Hotkeys|ChangeLog|Software Info|Known Issues ;|Tab 6
 
 
 gui, capsa: Tab, 1
@@ -5413,7 +5702,7 @@ gui, capsa: Tab, 2
 ;;  ini settings tab
 gui, capsa: font, s09, Consolas
 
-gui, capsa: add, text, section, Edit the settings in the .ini file here and\or Settings Menus Options ↓ 
+gui, capsa: add, text, section, Edit the settings in the .ini file here and\or Settings Menus Options ↓ ★ 
 
 gui, capsa: add, picture, section w28 h28 hwndhshowsettingstip gshowsettingsmenu, %A_ScriptDir%\Icons\setting edit FLUENT_colored_082_64x64.ico
 AddTooltip(hshowsettingstip,"Quick Settings Menu")
@@ -5424,7 +5713,7 @@ addtooltip(haset, "Additional Settings Menu")
 
 gui, capsa: font, cDCDCDC s10, Consolas
 gui, capsa: add, text, hWndhedinginifile gdonothing ys, %A_space%%A_scriptname%-SETTINGS.ini%A_space%%A_space%
-AddTooltip(hedinginifile,"This .ini file is loaded in the box below.`nSave & Reload to use changes.")
+AddTooltip(hedinginifile,"This .ini file is loaded in the box below.`n★ Save & Reload to use changes.")
 
 Gui, Add, Button, disabled vallowsave gsaveini h12 x+s, &Save .ini && Reload
 GuiControlGet, hwndallowsave , Hwnd, allowsave
@@ -5445,12 +5734,12 @@ gui, capsa: add, edit, xs w520 r20 gonchange viniEdit, %inicontent% ; Edit box f
 
 
 gui, capsa: font, cffb900 s09, Consolas
-; gui, capsa: add, text, , AHK Modifier Key Symbols .. Ctrl = ^ `, Alt = ! `, Shift = + `, Windows Key = #
+gui, capsa: add, text, , AHK Modifier Key Symbols .. Ctrl = ^ `, Alt = ! `, Shift = + `, Windows Key = #
 ; gui, capsa: Add, Link, , <a href="https://www.autohotkey.com/docs/v1/KeyList.htm">Click here to view the Full KeyList page on AutoHotkey.com</a>
 
-gui, capsa: add, text, , Read Me - About Stored Settings
+gui, capsa: add, text, , Read Me - About Changing Stored Settings...
 gui, capsa: font, cFFE9AC s10, Consolas
-gui, capsa: add, edit, w520 r8, %aboutini%
+gui, capsa: add, edit, w520 r9, %aboutini%
 
 
 
@@ -5618,12 +5907,13 @@ guicontrol, focus, closebut ; darkbutton1 ; Close ;; this needs to be the contro
 } 
 
 showasetmenu:
-menu, aset, show
+menu, as, show
 return
 
 previewalttxtmenu:
 activefile = %inifile%
 gosub alttxtuseclip
+menu, alttxt, show
 return
 capsclose:
 gui capsa: Destroy
@@ -5705,7 +5995,9 @@ return
 
 #IfWinActive Extended Capslock Menu - About
 ~rbutton::
-menucaseshow()
+; menucaseshow()
+gosub cmenu
+menu, case, show
 return
 #ifwinactive
 
@@ -5721,21 +6013,21 @@ return
 
 ;;;;;;;;;;;;;;;;;;;; Dark Mode Activated GUI Script ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; from Ctrl CapsLock Menu (new, ctrl capslock capslock now - removed ctrl shift capslock).ahk
-;;;;;;;;;; dark mode toggle, menu, cset,
+;;;;;;;;;; dark mode toggle, menu, s,
 ; Case "Dark Mode | Light Mode":
 DMToggle:
     If (DarkMode)
     {
         DarkMode := false
         MenuDark(3) ; Set to ForceLight
-		iniwrite, 0, %inifile%, Global_Toggles, DarkMode
+		iniwrite, 0, %inifile%, Toggles, DarkMode
 		tooltip Dark Mode OFF!
     }
     else
     {
         DarkMode := true
         MenuDark(2) ; Set to ForceDark
-		iniwrite, 1, %inifile%, Global_Toggles, DarkMode
+		iniwrite, 1, %inifile%, Toggles, DarkMode
 		tooltip Dark Mode ON!
 	}
 sleep 1500
@@ -5758,21 +6050,21 @@ ToggleLiveMenu() ;; Function to toggle the live preview with a warning message b
 
     if (LiveMenuEnabled)  ; Only show message box when turning ON
     {
-		Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
+		menu, as, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eyes_emoji_64x64.ico
         Tooltip, Auto Copy when you open`nthe menu is now Turn ON!
 		sleep 2000
 		tooltip
-		iniwrite, 1, %inifile%, Global_Toggles, LiveMenuEnabled
+		iniwrite, 1, %inifile%, Toggles, LiveMenuEnabled
 		return
 
     }
 	else
 	{
-		Menu, aset, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
+		menu, as, icon, Toggle Live Preview && Auto Copy, %A_ScriptDir%\Icons\eye_half__32x32.ico
 		tooltip, Live Preview && Auto Copy is Turned OFF!
 		sleep 2000
 		tooltip
-		iniwrite, 0, %inifile%, Global_Toggles, LiveMenuEnabled
+		iniwrite, 0, %inifile%, Toggles, LiveMenuEnabled
 		return
 
 	}
@@ -5780,13 +6072,13 @@ sleep 400
 }
 
 firstrunwelcome:
-IniWrite, 0,  %inifile%, Global_Toggles, isfirstrun
+IniWrite, 0,  %inifile%, Toggles, isfirstrun
 Aboutcapswindow()
 MsgBox, 4160, %scriptname%, Thank for checking out Extended Capslock Menu!`n`nIt looks like this is your first time running it.`n`nGive the about window a quick glance.`n`nFrom here you can read the Overview, Edit your INI settings, Find links to free softwares that this menu utilizes, scan the Changelog and Known Issues, Check for Updates, etc...`n`nTo see this about window again you can get to it from the Settings & About Menu.
 return
 
 ;***************************************************************************
-;********* END *************MENU, CSET, FUNCTION ************ END **********
+;********* END *************menu, s, FUNCTION ************ END **********
 ;***************************************************************************
 
 ;///////////////////////////////////////////////////////////////////////////
@@ -5907,14 +6199,17 @@ return
 f9:: ;;alt hotkey for open in alt editor npp menu
 ^!n:: ;;np++, open active file in alt editor
 
-gosub alttxtnppmenu
+; gosub alttxtnppmenu
+gosub showalttxtnppmenu
 return
 
 rbutton:: ;; if NP++, replace context menu with ECLM
 if ReplaceNPPRightClick && MouseIsOver("ahk_exe notepad++.exe") && (Control = "Scintilla1") || (Control = "Scintilla2") || (Control = "Scintilla3") || (Control = "Scintilla4")
     {
 	KeyWait, RButton, T0.5  ; Wait for the button to be released, with a 500ms delay
-	menucaseshow() ; Show custom menu
+	; menucaseshow() ; Show custom menu
+	gosub cmenu
+	menu, case, show
 	}
 else
     sendinput, {rbutton}
@@ -6200,12 +6495,17 @@ return
 ;--------------------------------------------------------------------------- 
 ; MENU, ALTTXT, START
 alttxtnppmenu:
-Global ClipSaved,ActiveFile,filename,dir,ext,filestem,texteditor,highlighted, quicknotesdir,topmenu
+menu, alttxt, add
+menu, alttxt, deleteall
+Global ClipSaved,ActiveFile,filename,dir,ext,filestem,texteditor,highlighted, quicknotesdir,topmenu, aapp, unsaved
+winget, aapp, ProcessName, A
 WinGetTitle ActiveFile, A
 	if RegExMatch(ActiveFile, "^\*new ")
 		{
-			MsgBox, 4112, New File Error, You cannot open an unsaved file in another editor.`n`nSave it first then try again., 3
-			return
+			; MsgBox, 4112, New File Error, You cannot open an unsaved file in another editor.`n`nSave it first then try again., 3 
+			; return ;;; ##todo!! fix this on share, i d on myine it was confusing
+			unsaved := 1
+			notatruefile := 1
 		}
 	if RegExMatch(ActiveFile, "^\*")
 		{
@@ -6217,11 +6517,11 @@ WinGetTitle ActiveFile, A
 				; sleep 250
 				; send, ^s
 				; }
-			saved := 1
+			unsaved := 1
 			if (winactive("ahk_exe VSCodium.exe"))
-				Saved := 1
+				unSaved := 0
 			if (winactive("ahk_exe code.exe"))
-				Saved := 1
+				unSaved := 0
 		}
 ActiveFile := RegexReplace(ActiveFile, "^\*", "")
 	if (instr(ActiveFile, "[Administrator]"))
@@ -6236,6 +6536,8 @@ ActiveFile := RegexReplace(ActiveFile, "^\*", "")
 
 ; folder := RegexReplace(ActiveFile, "\\[^\\]*$", "")
 alttxtuseclip:
+winget, aapp, ProcessName, A
+
 dir := RegexReplace(ActiveFile, "\\[^\\]*$", "")
 
 splitpath, ActiveFile, filename,dir,ext,filestem,drive
@@ -6289,16 +6591,20 @@ if (InStr(Attributes, "D"))  ; If it's a directory, show a the folder menu layou
 	menu, alttxt, show
 return
 }
+;---------------------------------------------------------------------------
+; END ALTTXT FOLDER MENU
+;---------------------------------------------------------------------------
+
 FileGetSize, FS, %ActiveFile%, M
 
-menu, alttxt, add
-menu, alttxt, deleteall
+; menu, alttxt, add
+; menu, alttxt, deleteall
 
 menu, alttxt, add, -Open... " %filename% "  ...With?, altmenualttxtshow
 menu, alttxt, icon, -Open... " %filename% "  ...With?, %A_ScriptDir%\Icons\document text edit rename FLUENT_colored_453_64x64.ico,,28
 menu, alttxt, default, -Open... " %filename% "  ...With?
 menu, alttxt, add, ; line -------------------------
-if (saved = 1)
+if (unsaved = 1)
 	{
 		menu, alttxt, add, * This Doc has Unsaved Changes! ~Click to Save~, savefilereopenmenu
 		menu, alttxt, icon, * This Doc has Unsaved Changes! ~Click to Save~,  %A_ScriptDir%\Icons\attention_warning_60x60.ico,,28
@@ -6311,30 +6617,40 @@ if (FS > 50)
 		menu, alttxt, add, ; line -------------------------
 	}
 ;---------------------------------------------------------------------------
-menu, alttxt, add, Default Text Editor ( %texteditfilename% ), ALTOIdefaulttexteditor
-if FileExist(texteditor)
-	menu, alttxt, icon, Default Text Editor ( %texteditfilename% ), %texteditor%
-else
-	menu, alttxt, icon, Default Text Editor ( %texteditfilename% ), notepad.exe
-; menu, alttxt, add, Open in Default Text Editor`, (If Set`, Otherwise Notepad), altoidefaulttexteditor
-; if FileExist(texteditor)
-    ; menu, alttxt, icon, Open in Default Text Editor`, (If Set`, Otherwise Notepad), %texteditor%
-; else
-    ; menu, alttxt, icon, Open in Default Text Editor`, (If Set`, Otherwise Notepad), notepad.exe
+if (texteditfilename != aapp)
+	{
+		; menu, alttxt, add, ; line ;-------------------------
+		menu, alttxt, add, Default Text Editor ( %texteditfilename% ), ALTOIdefaulttexteditor
+		if FileExist(texteditor)
+			menu, alttxt, icon, Default Text Editor ( %texteditfilename% ), %texteditor%
+		else
+			menu, alttxt, icon, Default Text Editor ( %texteditfilename% ), notepad.exe
+	}
+
 if (ext = "ahk")
 	{
-	menu, alttxt, add, ; line -------------------------
 	menu, alttxt, add, Run...  " %filename% ", runahkfile
 	if fileExist("C:\Program Files\AutoHotkey\AutoHotkey.exe")
-		menu, alttxt, icon, Run...  " %filename% ", C:\Program Files\AutoHotkey\AutoHotkey.exe   ;%A_ahkpath%
+		menu, alttxt, icon, Run...  " %filename% ", C:\Program Files\AutoHotkey\AutoHotkey.exe   ;%A_ahkpath%	
+	menu, alttxt, add, ; line -------------------------
 	}
-menu, alttxt, add, ; line -------------------------
-
-menu, alttxt, add, Notepad++, altoinppp
-if FileExist(notepadpp)
-	menu, alttxt, icon, Notepad++, %notepadpp%
-else
-	menu, alttxt, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
+if (aapp != "notepad++.exe")
+	{
+	menu, alttxt, add, Notepad++, ALTOInpp
+	if FileExist(notepadpp)
+		menu, alttxt, icon, Notepad++ , %notepadpp%
+	else
+		menu, alttxt, icon, Notepad++, %A_ScriptDir%\Icons\notepad++_100.ico
+	}
+; if (aapp = "notepad++.exe")
+	; {
+	
+	; }
+; else
+	; {
+	
+	
+	; }
 
 menu, alttxt, add, Notepad4, altoinotepad4
 if FileExist(notepad4)
@@ -6402,12 +6718,12 @@ menu, alttxt, icon, Markdown Monster, %A_ScriptDir%\Icons\MarkdownMonster logo 2
 
 menu, alttxt, add, ; line ;-------------------------
 menu, alttxt, add, -- Other Quick File Options -- (Also About), aboutalttxtmenu
-menu, alttxt, icon, -- Other Quick File Options -- (Also About), %A_ScriptDir%\Icons\about question imageres win7_99_256x256.ico
+menu, alttxt, icon, -- Other Quick File Options -- (Also About), %A_ScriptDir%\Icons\about.ico
 menu, alttxt, add, ; line ;-------------------------
 menu, alttxt, add, Duplicate File as... " %filestem% -CopyDup.%ext% ", altmakedup
 menu, alttxt, icon, Duplicate File as... " %filestem% -CopyDup.%ext% ", %A_ScriptDir%\Icons\lc_duplicatepage_24x24.ico
-menu, alttxt, add, Copy Full File Path to Clipboard, altcopypath
-menu, alttxt, icon, Copy Full File Path to Clipboard, %A_ScriptDir%\Icons\document copy f filename FLUENT_colored_387_64x64.ico
+menu, alttxt, add, Copy Full Path to Clipboard, altcopypath
+menu, alttxt, icon, Copy Full Path to Clipboard, %A_ScriptDir%\Icons\document copy f filename FLUENT_colored_387_64x64.ico
 
 menu, alttxt, add, Copy File Name to Clipboard, altcopyname
 menu, alttxt, icon, Copy File Name to Clipboard, %A_ScriptDir%\Icons\document copy n FLUENT_colored_385_64x64.ico
@@ -6438,20 +6754,25 @@ sleep 30
 menu, alttxt, add, ; line -------------------------
 menu, alttxt, add, Close This Menu, closemenu
 menu, alttxt, icon, Close This Menu, %A_ScriptDir%\Icons\aero Close_24x24-32b.ico
-menu, alttxt, show
+; menu, alttxt, show
 return
 
+showalttxtnppmenu:
+
+gosub alttxtnppmenu
+menu, alttxt, show
+return
 aboutalttxtmenu:
 msgbox,262144,, This is a custom made open with menu.`nThese are a few of the Text Editors I like to play with.`nThere are many others!`n`nIf you're Familiar with AHK I recommend editing and running the '.ahk' to add you're own favorite editors here.
 return
 
 
 
-savefilereopenmenu: 
+savefilereopenmenu:  
 sleep 500
 send, ^s
 sleep 500
-saved := 0
+unsaved := 0
 gosub alttxtnppmenu
 return
 
@@ -6827,23 +7148,24 @@ Global filename, dir, ext, filestem, drive, folder, lastfolder, filetoclip, high
 Menu, %topmenu%, Add,
 Menu, %topmenu%, deleteall
 
-if (a_thislabel = "Livefolderpopup")
-	{
-	Menu, %Mylibmenu%, Add, Open - %Lastfolder% - Folder, openLIVE
-	if fileexist(dopus)
-		Menu, %Mylibmenu%, icon, Open - %lastfolder% - Folder, %dopus%
-	else
-		Menu, %Mylibmenu%, icon, Open - %lastfolder% - Folder, explorer.exe
-	}
+; if (a_thislabel = "Livefolderpopup")
+	; {
+	; Menu, %Mylibmenu%, Add, Open - %Lastfolder% - Folder, openLIVE
+	; if fileexist(dopus)
+		; Menu, %Mylibmenu%, icon, Open - %lastfolder% - Folder, %dopus%
+	; else
+		; Menu, %Mylibmenu%, icon, Open - %lastfolder% - Folder, explorer.exe
+	; }
 
-if (A_ThisMenuItem = "topmenu")
-	{
-	menu, %topmenu%, add, Open Quick Notes Folder, opentopmenu
+; if (A_ThisMenuItem = "topmenu")
+	; {
+	menu, %topmenu%, add, Open Quick Notes Folder`t%OpenQuickNotesDir%, opentopmenu
+	menu, %topmenu%, default, Open Quick Notes Folder`t%OpenQuickNotesDir%
 	if FileExist(dopus)
-		Menu, %topmenu%, icon, Open Quick Notes Folder, %dopus%
+		Menu, %topmenu%, icon, Open Quick Notes Folder`t%OpenQuickNotesDir%, %dopus%,,24
 	else
-		Menu, %topmenu%, icon, Open Quick Notes Folder, explorer.exe
-	}
+		Menu, %topmenu%, icon, Open Quick Notes Folder`t%OpenQuickNotesDir%, explorer.exe,,24
+	; }
 Menu, %topmenu%, Add, ;line ;------------------------- 
 LastMenu := topmenu
 
@@ -7300,36 +7622,133 @@ GetDelayTime() ;; function
 ;///////////////////////////////////////////////////////////////////////////
 
 ;; read ini functions ini read iniread () ;; Functions
-
-INIReadGlobal_Hotkeys() ;; function
+INIReadHotkeySection(sectionName)
 {
     global
-    IniRead, HotkeySection, %inifile%, Global_Hotkeys
+	; global HotkeyLabels
+
+    IniRead, HotkeySection, %inifile%, %sectionName%
     if (HotkeySection = "ERROR")
         return
+
+    local inikeycount := 0  ; Local count for this section
+    local MenuItems := ""  ; String to store menu items for sorting
+    ; MenuItems := ""  ; String to store menu items for sorting
 
     Loop, Parse, HotkeySection, `n, `r
     {
         if (A_LoopField = "")
             continue
-            
+
         KeyParts := StrSplit(A_LoopField, "=")
         if (KeyParts.Length() < 2)
             continue
 
-        LabelName := KeyParts[1]
-        HotkeyValue := KeyParts[2]
-        
-        if (HotkeyValue = "" || HotkeyValue = "ERROR")
+        LabelName := Trim(KeyParts[1])
+        FullValue := Trim(KeyParts[2])
+
+        if (FullValue = "" || FullValue = "ERROR")
             continue
-            
+
+        ValueParts := StrSplit(FullValue, "|")
+        HotkeyValue := Trim(ValueParts[1])
+        FriendlyName := (ValueParts.Length() > 1 && ValueParts[2] != "") ? Trim(ValueParts[2]) : LabelName  ; Ensure fallback to LabelName
+
+        %LabelName% := HotkeyValue  ; Store hotkey as a global variable ;; og keep
+        ; HotkeyLabels[LabelName] := HotkeyValue  ; Store in global object
+		
         try {
             Hotkey, %HotkeyValue%, %LabelName%, On
+            inikeycount++
+            totaliniCount++
         } catch {
             continue
         }
+
+        ; Convert symbols to words for display
+        ReadableHotkey := ConvertAHKSymbolToWords(HotkeyValue)
+
+        ; Store in string for sorting
+        MenuItems .= FriendlyName "¦" ReadableHotkey "¦" LabelName "`n"
     }
-} 
+
+    ; Sort the menu items alphabetically by FriendlyName
+    Sort, MenuItems
+
+    ; Add sorted items to menu
+    Loop, Parse, MenuItems, `n
+    {
+        if (A_LoopField = "")
+            continue
+
+        Parts := StrSplit(A_LoopField, "¦")
+        FriendlyName := Parts[1]
+        ReadableHotkey := Parts[2]
+        LabelName := Parts[3]
+
+        Menu, k, Add, %FriendlyName%`t%ReadableHotkey%, %LabelName%
+    }
+}
+
+
+inimenukeyWrapper:
+    iniMenuItemHandler(A_ThisMenuItem)
+return
+iniMenuItemHandler(labelName) {
+    if (GetKeyState("Shift", "P")) {  ; If Shift is held
+        Clipboard := labelName
+    } else {
+        Gosub, %labelName%  ; Run the corresponding label
+    }
+}
+
+ConvertAHKSymbolToWords(hotkey)
+{
+	global
+    hotkey := StrReplace(hotkey, "+", "Shift+")
+    hotkey := StrReplace(hotkey, "^", "Ctrl+")
+    hotkey := StrReplace(hotkey, "!", "Alt+")
+    ; hotkey := StrReplace(hotkey, "#", "Win+")
+    hotkey := StrReplace(hotkey, "#", "⊞+") ; ⊞ + 
+    return hotkey
+}
+
+showlivehotkeymenu:
+; CoordMode,menu,client
+; menu, k, show,10,10
+INIReadHotkeySection("Global_Hotkeys")
+menu, k, show
+return
+
+; INIReadGlobal_Hotkeys() ;; function
+; {
+;     global
+;     IniRead, HotkeySection, %inifile%, Global_Hotkeys
+;     if (HotkeySection = "ERROR")
+;         return
+
+;     Loop, Parse, HotkeySection, `n, `r
+;     {
+;         if (A_LoopField = "")
+;             continue
+            
+;         KeyParts := StrSplit(A_LoopField, "=")
+;         if (KeyParts.Length() < 2)
+;             continue
+
+;         LabelName := KeyParts[1]
+;         HotkeyValue := KeyParts[2]
+        
+;         if (HotkeyValue = "" || HotkeyValue = "ERROR")
+;             continue
+            
+;         try {
+;             Hotkey, %HotkeyValue%, %LabelName%, On
+;         } catch {
+;             continue
+;         }
+;     }
+; } 
 
 INIReadPrograms() ;; function
 {
@@ -7357,10 +7776,10 @@ Loop, Parse, ProgramSection, `n, `r
 
 
 
-INIReadGlobal_Toggles() ;; fucntion
+INIReadToggles() ;; fucntion
 {
     global  ; Make variables global
-    IniRead, toggleSection, %inifile%, Global_Toggles
+    IniRead, toggleSection, %inifile%, Toggles
     if (toggleSection = "ERROR")
         return
         
@@ -7450,7 +7869,7 @@ if !FileExist(tempupdatecheck)
 		URLDownloadToFile, %GitHubVersionFile%, %Tempupdatecheck% ; Download the version file from GitHub
 			If (ErrorLevel)
 			{
-				MsgBox, 4112, Error!, Failed to download version info from GitHub!`n`nIf your offline that will cause this error.`nPlease try again later or visit the ECLM Repo directly., 7
+				; MsgBox, 4112, Error!, Failed to download version info from GitHub!`n`nIf your offline that will cause this error.`nPlease try again later or visit the ECLM Repo directly., 7
 				Return
 			}
 		; Read the downloaded version
@@ -7462,7 +7881,7 @@ if !FileExist(tempupdatecheck)
 
     If (ScriptVersion != LatestVersion) ; Compare versions
     {
-        MsgBox, 4161, New Version Available., A new version of ECLM is available!`n`nLast Updated: %LatestVersion%`n`nYour version: %ScriptVersion%`n`nClick OK to visit the Github Releases page where you can see the Change Log and Download the new version.`n`nReplace this directory with the new one and reload.`n`nYou can Toggle this Automatic Update Check OFF from the settings menu.,30
+        MsgBox, 4161, New Version Available., A new version of ECLM is available!`n`nLast Updated: %LatestVersion%`n`nYour version: %ScriptVersion%`n`nClick OK to visit the Github Releases page where you can see the Change Log and Download the new version.`n`nReplace this directory with the new one and reload.,30
 		IfMsgBox OK
 			{
 			run https://github.com/indigofairyx/Extended_Capslock_Context_Menu/releases/tag/%latestversion%
@@ -7501,11 +7920,1764 @@ sleep 800
 filedelete, %tempupdatecheck%
 Return
 
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------INSERT MENU LABELS--------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+
+; OpenEmojiKeyboard() ;; function ;; dup
+; {
+    ; Send {LWin down}.
+    ; Send {LWin up}
+; }
+
+
+
+;---------------------------------------------------------------------------
+;///////////////////////////////////////////////////////////////////////////
+
+; if fileExist(snipdir)
+	; gosub buildsnippetfoldermenu
+	
+
+showinsertmenu:
+gosub buildinsertmenu
+menu, i, show
+return
+
+buildinsertmenu:
+menu, i, add, 
+menu, i, DeleteAll
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+Menu, UpDownArrow, Add, Insert Arrow >>     ↑, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     ⬆, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     ⇧, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     ▲, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     △, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     🡱, InsertSymbols
+Menu, UpDownArrow, Add, Insert Ar​row >>     ⮙, InsertSymbols
+Menu, UpDownArrow, Add, Insert Ar​row >>     ⮝, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     ⌃, InsertSymbols
+Menu, UpDownArrow, Add,
+Menu, UpDownArrow, Add,
+Menu, UpDownArrow, Add, Insert Ar​row >>     ↓, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     ⬇, InsertSymbols
+Menu, UpDownArrow, Add, Insert Ar​row >>     ⇩, InsertSymbols
+Menu, UpDownArrow, Add, Insert Ar​row >>     ▼, InsertSymbols
+Menu, UpDownArrow, Add, Insert Ar​row >>     ▽, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arrow >>     🡳, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arr​ow >>     ⮛, InsertSymbols
+Menu, UpDownArrow, Add, Insert Arr​ow >>     ⮟, InsertSymbols
+Menu, UpDownArrow, Add, Insert Ar​row >>     ⌄, InsertSymbols
+;;∙-----------------------------------------∙
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ←, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⬅, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⇦, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ◀, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ◁, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     🡰, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Arr​ow >>     ⮘, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Arr​ow >>     ⮜, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⏴, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⇐, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⟪, InsertSymbols 
+Menu, LeftRightArrow, Add
+Menu, LeftRightArrow, Add
+Menu, LeftRightArrow, Add, Insert Ar​row >>     →, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ➞, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⇨, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ▶, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ▷, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     🡲, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Arr​ow >>     ⮚, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⮞, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⏵, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⇒, InsertSymbols
+Menu, LeftRightArrow, Add, Insert Ar​row >>     ⟫, InsertSymbols
+;;∙-----------------------------------------∙
+Menu, BiDirectionala, Add, Insert Ar​row >>     ↕, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     ⬍, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     ⇳, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     🡙, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     ⇕, InsertSymbols
+Menu, BiDirectionala, Add
+Menu, BiDirectionala, Add
+Menu, BiDirectionala, Add, Insert Ar​row >>     ↔, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     ⬌, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     ⬄, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     🡘, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     ⇿, InsertSymbols
+Menu, BiDirectionala, Add, Insert Ar​row >>     ⟷, InsertSymbols
+;;∙-----------------------------------------∙
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ↖, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ⬉, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ⬁, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ◤, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ◸, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     🡴, InsertSymbols
+Menu, DiagUpArrow, Add
+Menu, DiagUpArrow, Add
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ↗, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ⬈, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ⬀, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ◥, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     ◹, InsertSymbols
+Menu, DiagUpArrow, Add, Insert Ar​row >>     🡵, InsertSymbols
+;;∙-----------------------------------------∙
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ↘, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ⬊, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ⬂, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ◢, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ◿, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     🡶, InsertSymbols
+Menu, DiagDownArrow, Add
+Menu, DiagDownArrow, Add
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ↙, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ⬋, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ⬃, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ◣, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     ◺, InsertSymbols
+Menu, DiagDownArrow, Add, Insert Ar​row >>     🡷, InsertSymbols
+;;∙-----------------------------------------∙
+Menu, CircularArrow, Add, Insert Ar​row >>     ↩, InsertSymbols
+Menu, CircularArrow, Add, Insert Ar​row >>     ↪, InsertSymbols
+Menu, CircularArrow, Add
+Menu, CircularArrow, Add, Insert Ar​row >>     ↶, InsertSymbols
+Menu, CircularArrow, Add, Insert Ar​row >>     ↷, InsertSymbols
+Menu, CircularArrow, Add
+Menu, CircularArrow, Add, Insert Ar​row >>     ↺, InsertSymbols
+Menu, CircularArrow, Add, Insert Ar​row >>     ↻, InsertSymbols
+Menu, CircularArrow, Add
+Menu, CircularArrow, Add, Insert Ar​row >>     ⥀, InsertSymbols
+Menu, CircularArrow, Add, Insert Ar​row >>     ⥁, InsertSymbols
+;;∙======∙BULLETS∙==============================================∙
+Menu, Bullet, Add, Insert Bullet >>     ◦, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     •, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ●, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ◎, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ◉, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ○, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ◯, InsertSymbols
+Menu, Bullet, Add
+Menu, Bullet, Add, Insert Bullet >>     ▫, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ▪, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ☐, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ■, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ▣, InsertSymbols
+Menu, Bullet, Add
+Menu, Bullet, Add, Insert Bullet >>     ◇, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ◈, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ◆, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ✧, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ✦, InsertSymbols
+Menu, Bullet, Add
+Menu, Bullet, Add, Insert Bullet >>     ▹, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ▸, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ⪧, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     🠺, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     √, InsertSymbols
+Menu, Bullet, Add, Insert Bullet >>     ⬢, InsertSymbols
+;;∙======∙STARS∙================================================∙
+Menu, Stars, Add, Insert Star >>     ✶, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ✹, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ✸, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ★, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ✦, InsertSymbols
+Menu, Stars, Add
+Menu, Stars, Add, Insert Star >>     ❊, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ❈, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ❋, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ❉, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ✺, InsertSymbols
+Menu, Stars, Add
+Menu, Stars, Add, Insert Star >>     ⛤, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ⚝, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ⛧, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ✰, InsertSymbols
+Menu, Stars, Add, Insert Star >>     ☆, InsertSymbols
+;;∙======∙SYMBOLS∙=============================================∙
+Menu, Symbols, Add, Insert  Symbol >>     ÷, InsertSymbols
+Menu, Symbols, Add, Insert  Symbol >>     ⨯, InsertSymbols
+Menu, Symbols, Add, Insert  Symbol >>     ∓, InsertSymbols
+Menu, Symbols, Add, Insert  Symbol >>     ±, InsertSymbols
+Menu, Symbols, Add, Insert  Symbol >>     ≥, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ≤, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ≠, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ≈, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     °, InsertSymbols 
+Menu, Symbols, Add
+Menu, Symbols, Add, Insert  Symbol >>     ➕, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ➖, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ✖️, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ➗, InsertSymbols 
+Menu, Symbols, Add,
+Menu, Symbols, Add, Insert  Symbol >>     ©, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ®, InsertSymbols 
+Menu, Symbols, Add, Insert  Symbol >>     ™, InsertSymbols 
+
+/*
+
+; Menu, Arrow, Add, 🡱 Up 🡳 Down Arrows, :UpDownArrow
+; Menu, Arrow, Add, 🡰 Left 🡲 Right Arrows, :LeftRightArrow
+; Menu, Arrow, Add
+; Menu, Arrow, Add, Bi 🡙 && 🡘 Arrows, :BiDirectionala
+; Menu, Arrow, Add
+; Menu, Arrow, Add, Diagonal 🡴 Up Arrows, :DiagUpArrow
+; Menu, Arrow, Add, Diagonal 🡶 Down Arrows, :DiagDownArrow
+; Menu, Arrow, Add
+; Menu, Arrow, Add, Circular ↩ ↻ Arrows, :CircularArrow 
+
+*/
+;--------------------------------------------------
+;--------------------------------------------------
+specialChars := [ "°", "…", "∅", "⊕", "⊗", "¢", "€", "¥", "£", "ツ", "≡", "⌫", "⊞", "⌘", "∞",  "෴", "∴",  "∵", "¶", "∑", "彡", "☉", "☽", "☾", "⎋", "☨", "¦", "ʘ"]
+interval := 5  ; Add a separator after every 5 items
+for index, char in specialChars
+{
+    Menu, moreSymbols, Add, Insert Symbol >>     %char%, SendSymbol
+    if Mod(index, interval) = 0  ; Every 5 items, add a separator
+        Menu, moreSymbols, Add  ; Creates a separator line
+}
+;--------------------------------------------------
+symbols3 := ["♪", "♫", "♬", "♣", "♦", "♥", "♠","☥", "Ϟ", "♆", "⚚", "𓆙", "𐰔", "𓃠", "𓂀", "𓃗", "𓆣", "⌖", "‡", "†", "⏚", "ᛞ", "ᚦ", "⌕", "🖫", "⇆", "♂", "♀", "⚐", "⎆", "⎈", "⎊", "␦"]
+syline := 5
+for index, char in symbols3
+{
+    Menu, symbols3, Add, Insert Symbol >>     %char%, SendSymbol
+    if Mod(index, syline) = 0  ; Every 5 items, add a separator
+        Menu, symbols3, Add  ; Creates a separator line
+}
+;--------------------------------------------------
+greekchars := ["Γ", "Δ", "Θ", "Λ", "Ξ", "Π", "Σ", "Φ", "Ψ", "Ω", "α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ξ", "π", "ρ", "ς", "σ", "τ", "υ", "φ", "χ", "ψ", "ω"]
+for index, char in greekchars
+{
+    Menu, greek, Add, Insert Symbol >>     %char%, SendSymbol
+    if (char = "Ω")  ; After Ω, add a separator
+        Menu, greek, Add  ; Creates a separator line
+}
+;--------------------------------------------------
+RomanN1 := [ "ⅰ", "ⅱ", "ⅲ", "ⅳ", "ⅴ", "ⅵ", "ⅶ", "ⅷ", "ⅸ", "ⅹ", "ⅺ", "ⅻ", "ⅼ", "ⅽ", "ⅾ", "ⅿ"]
+; romanline := 16  ; Add a separator after the 16th character
+
+for index, char in RomanN1
+{
+    Menu, romanl, Add, Insert Symbol >>     %char%, SendSymbol
+}
+RomanN2 := ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ", "Ⅼ", "Ⅽ", "Ⅾ", "Ⅿ"]
+for index, char in RomanN2
+{
+    Menu, romanu, Add, Insert Symbol >>     %char%, SendSymbol
+}
+;--------------------------------------------------
+runechar := ["ᚠ", "ᚢ", "ᚦ", "ᚬ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛇ", "ᛈ", "ᛉ", "ᛋ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛦ", "ᛧ", "ᛨ"]
+for index, char in runechar
+	menu, rune, add, Insert Rune >>      %char%, sendrune
+
+
+;;∙======∙Menu, HEADERS∙=======================================∙
+
+
+menu, inssym, add, Insert Symbols Menu`t%showinsertsymbolsmenu%, showinsertsymbolsmenu
+menu, inssym, icon, Insert Symbols Menu`t%showinsertsymbolsmenu%, %icons%\emoji-symbols media play stop_256x256.ico,,28
+menu, inssym, add, ; line -------------------------
+Menu, InsSym, Add, Bullets   ▣ ● ⪧, :Bullet
+Menu, InsSym, Add, Stars   ✶ ☆ ✹, :Stars
+Menu, InsSym, Add, Symbols Set1   ≠ © ÷, :Symbols
+menu, insSym, add, Symbols Set2  ⊞ ¢ ∞, :moreSymbols
+menu, insSym, add, Symbols Set3  🖫 ␦ ♬, :symbols3
+menu, inssym, Add
+; Menu, InsSym, Add, Arrows   ⮘ ⬇ ⮚ , showinsertsymbolsmenu
+menu, inssym, Add, Arrows   🡱 Up 🡳 Down, :UpDownArrow
+menu, inssym, Add, Arrows   🡰 Left 🡲 Right, :LeftRightArrow
+menu, inssym, Add, Arrows   Bi 🡙 && 🡘, :BiDirectionala
+menu, inssym, Add, Arrows   Diagonal 🡴 Up, :DiagUpArrow
+menu, inssym, Add, Arrows   Diagonal 🡶 Down, :DiagDownArrow
+menu, inssym, Add, Arrows   Circular ↩ ↻, :CircularArrow
+menu, inssym, Add
+menu, inssym, add, Runes   ᚠ ᛋ ᛦ, :rune
+menu, inssym, add, Greek   φ Ψ θ, :greek
+menu, Inssym, add, Roman Numerals Upper Ⅳ Ⅻ, :romanu
+menu, Inssym, add, Roman Numerals Lower ⅳ ⅻ, :romanl
+
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+
+
+Menu, i, add, < --- Insert Text Menu --- >`t%showinsertmenu%, showinsertmenu
+Menu, i, icon, < --- Insert Text Menu --- >`t%showinsertmenu%, %icons%\insert-text_48x48.ico,,32
+
+
+
+Menu, i, add, ; line -------------------------
+if FileExist(snipdir)
+{
+	gosub BuildSnippetFolderMenu
+Menu, i, add, Snippets Folder Menu (Live) >>>>`t%ShowSnippetFolderMenu%, :%sf% ;; gosub BuildSnippetFolderMenu
+
+Menu, i, icon, Snippets Folder Menu (Live) >>>>`t%ShowSnippetFolderMenu%, %Icons%\edit code bliss_64x64.ico,,24
+}
+gosub buildClipboardMenu
+menu, i, add, Clipboard Menu (Live)`t%ShowClipboardMenu%, :c
+menu, i, icon, Clipboard Menu (Live)`t%ShowClipboardMenu%, %icons%\checkclipboard.ico,,24
+
+Menu, i, add, ; line -------------------------
+
+
+
+dtmenurefresh()
+Menu, i, add, Date && Time`t%showdtmenu%, :dtmenu
+Menu, i, icon, Date && Time`t%showdtmenu%, %Icons%\clock SHELL32_16771 256x256.ico,,24
+Menu, i, add, ; line -------------------------
+Menu, i, add, Insert Symbols  ᚠΞ☉•彡🡲෴`t%showinsertsymbolsmenu%, :InsSym
+Menu, i, icon, Insert Symbols  ᚠΞ☉•彡🡲෴`t%showinsertsymbolsmenu%, %icons%\emoji-symbols media play stop_256x256.ico,,24
+Menu, i, Add, Windows Emoji Keyboard`t⊞>, OpenEmojiKeyboard
+Menu, i, icon, Windows Emoji Keyboard`t⊞>, %Icons%\emoji face smilesvg_36x36.ico,,24
+
+return
+
+;///////////////////////////////////////////////////////////////////////////
+;--------------------------------------------------------------------------- 
+
+;---------------------------------------------------------------------------
+;///////////////////////////////////////////////////////////////////////////
+
+ShowSnippetFolderMenu:
+if (GetKeyState("Control", "P") && GetKeyState("Shift", "P"))
+	{
+		run %texteditor% "%A_LineFile%"
+		return
+	}
+; sf = %snipdir%
+gosub BuildSnippetFolderMenu
+menu, %sf%, show
+return
+
+BuildSnippetFolderMenu:
+; global active_id
+WinGet, active_id, ID, A  ;; Save the currently active window
+; WinActivate, ahk_id %active_id%
+sf = %snipdir%
+
+if !FileExist(sf)
+	{
+		tooltip ERR! This folder cannot be found.`n@ Line#:  %A_LineNumber%
+		sleep 2000
+		tooltip
+		Menu, %sf%, Add
+		return
+	}
+Menu, %sf%, Add
+Menu, %sf%, deleteall
+;---------------------------------------------------------------------------
+LastMenu := sf
+
+
+menu, %sf%, add, Live Snippets Menu - Click a file to paste.`t%ShowSnippetFolderMenu%, ShowSnippetFolderMenu
+menu, %sf%, icon, Live Snippets Menu - Click a file to paste.`t%ShowSnippetFolderMenu%, %Icons%\edit code bliss_64x64.ico,,28
+menu, %sf%, Default, Live Snippets Menu - Click a file to paste.`t%ShowSnippetFolderMenu%
+menu, %sf%, Add, ; line -------------------------
+
+
+Loop, %sf%\*.*, 2,1	; add folders first, Recurse into subfolders.
+{
+	If InStr(A_LoopFileAttrib, "H") or InStr(A_LoopFileAttrib, "S")
+		Continue 
+
+	StringGetPos, pos, A_LoopFileLongPath, \, R
+	if (pos <> -1) ; it has a parent
+		StringLeft, ParentFolderDirectory, A_LoopFileLongPath, %pos%
+	if (pos = -1) ; it has no parent 
+		ParentFolderDirectory := rootdir
+		; ParentFolderDirectory := folder
+
+	Menu, %A_LoopFileLongPath%, add
+	Menu, %A_LoopFileLongPath%, deleteall
+	
+	
+	Menu, %A_LoopFileLongPath%, add, Open - %A_LoopFileName% - Folder, OpenSnipHeader
+	IconPath := GetFileIcon(A_LoopFileFullPath)
+	Menu, %A_LoopFileLongPath%, icon, Open - %A_LoopFileName% - Folder, %iconpath%
+	if (iconpath = "")
+		Menu, %A_LoopFileLongPath%, icon, Open - %A_LoopFileName% - Folder, %dopus%
+		
+	Menu, %A_LoopFileLongPath%, add, ; line -------------------------
+
+	Menu, %A_LoopFileDir%, Add, %A_LoopFileName% , Snipmenuaction
+	IconPath := GetFileIcon(A_LoopFileFullPath)
+	Menu, %A_LoopFileDir%, Icon, %A_LoopFileName%, %IconPath%
+	
+	If (A_LoopFileDir != LastMenu) and (LastMenu != sf)
+	{ 
+		; MsgBox %sf% %LastMenu%
+		AddMenu(LastMenu)
+	}
+	LastMenu := A_LoopFileDir ; Save menu name
+}
+menu, %sf%, add, ; line -------------------------
+
+Loop, %sf%\*.*, 0, 1 ;; add files below folder
+{
+	If InStr(A_LoopFileAttrib, "H") or InStr(A_LoopFileAttrib, "S")  || InStr(A_LoopFileExt, "exe") ; or InStr(A_LoopFileExt, "ico") or InStr(A_LoopFileExt, "png") or InStr(A_LoopFileExt, "psd") or InStr(A_LoopFileExt, "old")	or InStr(A_LoopFileExt, "jpeg") or InStr(A_LoopFileExt, "bak")
+		Continue 
+		
+		Menu, %A_LoopFileDir%, Add, %A_LoopFileName% , Snipmenuaction
+		IconPath := GetFileIcon(A_LoopFileFullPath)
+		Menu, %A_LoopFileDir%, Icon, %A_LoopFileName%, %IconPath%	
+	
+		; If (A_LoopFileExt = "ahk" || A_LoopFileExt = "txt") 
+		; {	
+			; this is is an option that only show .ahk and .txt file, which i mostly prefer. if shared i should leave it open
+		; Menu, %A_LoopFileDir%, Add, %A_LoopFileName% , Snipmenuaction
+		; IconPath := GetFileIcon(A_LoopFileFullPath)
+		; Menu, %A_LoopFileDir%, Icon, %A_LoopFileName%, %IconPath%
+		
+		If (A_LoopFileDir != LastMenu) and (LastMenu != sf)
+		{
+			; MsgBox %sf% %LastMenu%
+			AddMenu(LastMenu)
+		}
+		LastMenu := A_LoopFileDir ; Save menu name
+		; }
+}
+   
+Menu, %sf%, Add, ;line ;-------------------------  
+Menu, %sf%, Add, ;line ;------------------------- 
+menu, %sf%, add, Save Selection + New Snippet, addsnip
+menu, %sf%, icon, Save Selection + New Snippet, %icons%\newsnipclip.ico
+menu, %sf%, add, Open Snippets Folder, opensnipfolder
+Menu, %sf%, icon, Open Snippets Folder, %icons%\newsnipfolder.ico
+Menu, %sf%, Add, ;line ;------------------------- 
+menu, %sf%, Add, ?? Mods: ^Edit`, +Copy`, ^+Run`, ⊞^Append`, ⊞+Delete, aboutsnipsmsgbox
+menu, %sf%, icon, ?? Mods: ^Edit`, +Copy`, ^+Run`, ⊞^Append`, ⊞+Delete, %icons%\about.ico
+
+
+AddMenu(LastMenu)
+; Menu, %sf%, Show
+Return
+
+;**************************************************************************
+;**************************************************************************
+Snipmenuaction:
+snipfile := A_thismenuitem
+fullsnippath := A_thisMenu "\" A_thismenuitem
+; splitpath, fullsnippath,,,ext
+
+if (GetKeyState("Control", "P") && GetKeyState("shift", "P")) ;; run the snippet
+	{
+		try run, "%A_thismenu%\%A_ThisMenuItem%"
+		return
+	}
+if (GetKeyState("Lwin", "P") && GetKeyState("control", "P")) ;; append selection to another snippet
+	{
+		sleep 350 ; give time to let the window underneath the menu reactivate 
+		copyclipboardclm()
+		addsnip:=clipboard
+		RestoreClipboard()
+		sleep 300
+		; MsgBox %fullsnippath%`n`n%addsnip%
+		FileAppend,`n`n%addsnip%,%fullsnippath%
+		sleep 200
+		if !ErrorLevel
+			{
+				tooltip Snip added to ...`n`n  %snipfile%
+				SetTimer, RemoveToolTip, -1500
+			}
+		sleep 250
+		addsnip:=""
+		return
+	}
+if (GetKeyState("Lwin", "P") && GetKeyState("Shift", "P")) ;; delete snippet
+	{
+		MsgBox, 4132, Delete Snippet?, Do you want to delete`n`n   %snipfile%`n`nto the Recycle Bin?
+		IfMsgBox No
+			Return
+		FileRecycle, %fullsnippath%
+		return
+	}
+if (GetKeyState("Control", "p")) ;; edit the snippet
+	{
+		Run %texteditor% "%fullsnippath%"
+		return
+	}
+if (GetKeyState("Shift", "P")) ;; Copy snippet to Clipboard, doesn't auto paste
+	{
+		Clipboard =
+		sleep 75
+		fileread, sniptoclipboard,%fullsnippath%
+		sleep 100
+		clipboard := sniptoclipboard
+		clipwait,0.5
+		if (clipboard != "")
+			{
+			tooltip Copied to Clipboard...`n %A_thismenuitem%
+			SetTimer, RemoveToolTip, -1500
+			}
+		return
+	}
+else ;; normal click, past the text text in the clicked snippet
+	{
+		WinActivate, ahk_id %active_id%
+		sleep 150 ; give time to let the window underneath the menu reactivate 
+		sniptopaste:=""
+		backupclipboard()
+		sleep 100
+		fileread, sniptopaste, %fullsnippath%
+		Clipboard:=sniptopaste
+		ClipWait, 1
+		if ErrorLevel
+			{
+				Tooltip, ERR! Fail to copy file to clipboard! `n @ Line#:  %A_LineNumber%`n %A_LineFile%
+				SetTimer, RemoveToolTip, -2000
+				RestoreClipboard()
+				Return
+			}
+		; MsgBox, %sniptopaste%
+		; sleep 150
+		send ^v
+		sleep 300
+		RestoreClipboard()
+		sleep 300
+		sniptosend:=""
+		; return
+	}
+snipfile := ""
+fullsnippath := ""
+return
+
+addsnip:
+WinActivate, ahk_id %active_id%
+sleep 200 ; give time to let the window underneath the menu reactivate 
+snipname:=""
+copyclipboardclm()
+if (ErrorLevel || Clipboard = "")
+	{
+		tooltip ERR! Failed To Copy Snippet!`n @ Line: %A_LineNumber%`n %A_LineFile%
+		SetTimer, RemoveToolTip, -2000
+		RestoreClipboard()
+		sleep 300
+		return
+	}
+newsnip:=Clipboard
+RestoreClipboard()
+sleep 300
+FileSelectFile, Snipname, S, %snipdir%, Save As + Creating New Snippet
+if (snipname = "")
+	{
+		Tooltip Cancel!`nA File Name is Required.
+		SetTimer, RemoveToolTip, -1500
+		return
+	}
+SplitPath, snipname,, , ext
+if (ext = "")
+   {
+		if (A_Username = "CLOUDEN")
+			snipname := snipname . ".ahk" 
+		Else
+			snipname := snipname . ".txt" 
+	}
+else
+	snipname := snipname  ; Keep original filename with extension
+; msgbox sd: %snipdir%`n`nsn: %snipname%`n`n%ext%
+Fileappend,%newsnip%,%snipname%,utf-8
+if !errorlevel
+	{
+		tooltip New Snippet Saved.
+		SetTimer, RemoveToolTip, -1500
+	}
+newsnip:=""
+snipname:=""
+return
+
+opensnipfolder:
+run %snipdir% ; run %sf%
+return
+
+OpenSnipHeader:
+run %A_ThisMenu%
+return
+aboutsnipsmsgbox:
+MsgBox, 262144, - ECLM - ? About Live Snippets Menu, Snippet are Pre-Saved Text-Based* documents that you can use to quickly paste`, with a click`, to save yourself the time of repetitively typing them out.`n`nThis is a live & interactive folder menu linked the "Snippets" folder next to this app.`n`nDepending on your office environment or coding language these can vary wildly so this menu\folder is ment to be populated by you.`n`nOpen an empty Text Editor or Notepad and click ...`nOpen Notepad && Click this file to learn about Snippets!.txt`n... it will be pasted into the editor where you can read more.`n`n-------------------------`n`nYou can interact with the files in this folder menu by holding done Modifier keys when clicking a item. The key at the bottom of the menu is a guide.`n`nAutoHotkey's Abbreviations for the Modifier keys are...`n`n^ = Ctrl `, + = Shift `, # ⊞ = Windows Key`n`n`n^Ctrl & Click`nwill open the snippet in your text editor or notepad for editing.`n`n+Shift & Click`nwill copy the text to your Clipboard so can paste it yourself.`n`n^Ctrl & ⊞Windows Key & Click`nwill copy select text to Add\Append it to bottom of the snippet.`n`n+Shift & ⊞Windows Key`nClick will Delete a Snippet to the Recycle Bin.`n`n^Ctrl & +Shift & Click`nwill RUN a snippet.`n`n
+
+return
+
+
+
+aboutsnips:
+
+snipinfo := " ;"
+(
+
+Click this file to paste a Snippet about Snippets
+
+;--------------------------------------------------
+??? What are snippets?
+;--------------------------------------------------
+
+Snippet are Pre-Saved Text Based* documents that you can
+use to quickly paste, with a click, to save yourself the
+time of repetitively typing them out.
+
+
+;**************************************************
+??? Who will find them useful?
+;**************************************************
+
+Anyone who does a lot of monotonous typing computer work!
+
+e.g. Something simple, I use a dozen+ times a day..
+if ErrorLevel
+	{
+		Tooltip, ERROR!``n @ Line#:  ``%A_LineNumber``%``n ``%A_LineFile``%
+		SetTimer, RemoveToolTip, -2000
+		Return
+	}
+
+Or this can be Standard reply phrase or Full Letter ...
+( such as this one )
+
+Most people working in a computer driven environments
+where emails, documents, invoices, reports, logs, etc.,
+are large part of your workflow... e.g. Customer Relations, HR,
+PR, Secretaries, Receptions, DRs, etc., Can benefit from this menu.
+
+Don't type out the stock reply outline again and again and.... again.
+Just click and paste!
+
+Most coders, Programmers, Developers, IT Techs, and so on,
+are likely already familiar with and using some form of snippets.
+
+And there are many automation application for these
+kinds of text macro out there. Soo..
+
+;**************************************************
+??? What makes this Snippet Menu stand out?
+;**************************************************
+
+This is a *Live* Menu! Its linked to 'Snippets' folder next this app.
+Any files inside that directory will show up in the menu, in realtime.
+
+Just click the file to paste the text inside of it
+into any window that has text field with a blinking cursor.
+
+Copy your own text based* documents inside of it to
+have them instantly available for production.
+
++++ Additionally, You can create new snippets using the menu, on the fly!
+Selected some text, click the 'Save Selection + New Snippet' menu item.
+It will copy it and save it to a new file inside the Snippets Folder,
+ask you to crate a file name.
+Which you can use to paste else where seconds later!
+
+Its that simple.
+
+;**************************************************
+??? How to use this live snippet menu?
+;**************************************************
+
+As already stated, just click a file to paste the text content inside of it.
+
+Holding down Modifier Keys while clicking on a snippet \ menu item
+will carry out different actions on that file.
+
+The key on the bottom of the menu is reminder guide,
+they are AutoHotkey's abbreviated
+symbols for Modifier Keys on your keyboard.
+
+^ = Ctrl , + = Shift , ⊞ = Windows Key
+( The ! = Alt key can't be use on menus, only hotkeys. )
+
+^Ctrl & Click
+will open the snippet in your text editor or notepad for editing.
+
++Shift & Click
+will copy the text to your Clipboard so can paste it yourself.
+
+^Ctrl & ⊞Windows Key & Click
+will copy select text to Add\Append it to bottom of the snippet.
+
++Shift & ⊞Windows Key
+Click will Delete a Snippet to the Recycle Bin.
+
+^Ctrl & +Shift & Click
+will RUN a snippet.
+( This options mostly for coders who keep automation scripts in snippets )
+
+To organize the menu open the Snippet directory then
+create and rearrange a folder structure that benefits your workflow.
+The menu will update to reflect your layout.
+
+
+;**************************************************
+* ! Footnotes ! *
+;**************************************************
+
+*Text Based documents should be used in this menu.
+Pretty much anything you can open in Notepad++ is good to go!
+
+
+**MS Office documents are not Standard text based computer documents!
+You can paste text INTO an Office app but 
+you cannot paste the text OUT of Office document.
+They will *NOT* work from this menu.
+
+The hotkey for this menu is Ctrl + Insert or ^Insert.
+You can change it in the ini file if you'd a different key combo.
+
+)" 
+
+
+; Fileappend,%snipinfo%,%aboutsnipsfile%,utf-8
+; sleep 750
+return
+
+;"
+;///////////////////////////////////////////////////////////////////////////
+;--------------------------------------------------------------------------- 
+; " 
+;---------------------------------------------------------------------------
+;///////////////////////////////////////////////////////////////////////////
+
+ShowClipboardMenu:
+gosub buildClipboardMenu
+menu, c, show
+menu, c, deleteall  ; Clear the menu after showing 
+return
+
+buildClipboardMenu:
+    menu, c, add
+    menu, c, deleteall  ; Clear the menu before rebuilding
+    
+    menu, c, add, Clipboard Menu%showclipboardmenu%, showclipboardmenu
+    menu, c, icon, Clipboard Menu%showclipboardmenu%, %icons%\checkclipboard.ico,,32
+    menu, c, default, Clipboard Menu%showclipboardmenu%
+    menu, c, add, ; line -------------------------
+
+    if (Clipboard = "" || Clipboard = A_Tab || RegExMatch(Clipboard, "^\s+$"))
+    {
+        menu, c, add, Clipboard is empty or has no text, DoNothing
+        menu, c, icon, Clipboard is empty or has no text, %iconerror%,,32
+        menu, c, default, Clipboard is empty or has no text
+        return
+    }
+
+    paths := Clipboard  ; Use existing clipboard content
+    countFiles := 0
+    countText := 0
+    totalLines := 0
+    foundValidPath := false
+    validPaths := ""  ; Store valid file paths
+    RawText := false
+    PathTooLong := false
+
+    if (MaxClipboardLines = "" || MaxClipboardLines = 0)
+        MaxClipboardLines := 50
+    
+    ; First pass - count total lines to know what we're dealing with
+    totalLines := 0
+    Loop, Parse, paths, `n, `r
+    {
+        totalLines++
+    }
+    
+    ; Process file paths first
+    Loop, Parse, paths, `n, `r
+    {
+        path := Trim(A_LoopField)
+        if (path = "" || countFiles >= MaxClipboardLines)  ; Ignore empty lines, limit to 50 items
+            continue
+            
+        if (SubStr(path, 1, 2) = "/*")  ; Ignore lines that start with /*
+            continue
+
+        if FileExist(path)  ; Check if the path exists
+        {
+            if (StrLen(path) > 250)  
+            {
+                SplitPath, path, fileName,,ext,namestem,drive
+                path := "**  " drive "\..\..\" filename 
+                PathTooLong := true
+            }
+                
+            menu, c, add, %path%, ClipboardMenuFileActions
+            iconpath := Getfileicon(path)
+            menu, c, icon, %path%, %iconpath%
+            
+            validPaths .= path "`r`n"   ; Store for bulk copy
+            
+            countFiles++
+            foundValidPath := true
+            
+            if (countFiles >= MaxClipboardLines)
+                break
+        }
+    } 
+
+    if (foundValidPath)
+    {
+        If (PathTooLong)
+        {
+            menu, c, add, ; line -------------------------
+            Menu, c, add, ** <- Error! "\..\..\" These paths are too long for the menu to display!, ShowClipboardMenu
+            Menu, c, icon, ** <- Error! "\..\..\" These paths are too long for the menu to display!, %iconerror%,,24
+            menu, c, Default,  ** <- Error! "\..\..\" These paths are too long for the menu to display!
+            PathTooLong := false
+        }
+
+        menu, c, add, ; line -------------------------
+        menu, c, add, 🡱 Existing Folders\Files 🡱 - (?? Mod-Click Options)`tFile Count: %countFiles%, aboutclipfiles
+        menu, c, icon, 🡱 Existing Folders\Files 🡱 - (?? Mod-Click Options)`tFile Count: %countFiles%, %icons%\documents multimedia imageres_5334_256x256.ico,,24
+		; menu, c, add,  Click=Run`, ^Open In File Manager`, ^+Copy to Clipboard`, ⊞+Clip Extract Existing List 🡱`tFile Count: %countFiles%, showclipboardmenu
+		; menu, c, icon,  Click=Run`, ^Open In File Manager`, ^+Copy to Clipboard`, ⊞+Clip Extract Existing List 🡱`tFile Count: %countFiles%, %icons%\about.ico
+    }
+
+    ; First check if there's any non-file text to display
+    textLineCount := 0
+    Loop, Parse, paths, `n, `r
+    {
+        line := Trim(A_LoopField)
+        if (line = "")
+            continue
+
+        if !FileExist(line)  ; It's plain text, not a file
+            textLineCount++
+    }
+
+    ; Only proceed with text section if we found text lines
+    if (textLineCount > 0)
+    {
+        textIcon := icons "\paint_text_32x32.ico"
+        menu, c, add, ; line -------------------------
+        menu, c, add, 🡳 Plain Text Per-Line. 🡳   - Click to Paste\Insert a Single Line 🡳`tLine Count: %textLineCount%, ShowClipboardMenu
+        menu, c, icon, 🡳 Plain Text Per-Line. 🡳   - Click to Paste\Insert a Single Line 🡳`tLine Count: %textLineCount%, %icons%\ToolAdd line document_32x32.ico,,28
+        menu, c, add, ; line -------------------------
+        
+        ; Reset counter for the actual menu addition
+        addedTextLines := 0
+        
+        Loop, Parse, paths, `n, `r
+        {
+            line := Trim(A_LoopField)
+            if (line = "")
+                continue
+
+            if !FileExist(line)  ; Ensure it's plain text, not a file
+            {
+                ; Limit text lines to remaining slots in MaxClipboardLines
+                if (addedTextLines >= (MaxClipboardLines - countFiles))
+                    break
+                    
+                if (StrLen(line) > 240)  ; Trim long lines
+                    line := SubStr(line, 1, 240) . "..."
+
+                menu, c, add, %line%, PasteClipboardText
+                menu, c, icon, %line%, %textIcon%
+                    
+                addedTextLines++
+                RawText := True
+            }
+        }
+    }
+
+    menu, c, add, ; line -------------------------
+    menu, c, add, Save Clipboard to New Text Document`t%SaveClipboardAsTxt%, SaveClipboardAsTxt
+    menu, c, icon, Save Clipboard to New Text Document`t%SaveClipboardAsTxt%, %Icons%\clipboard save b_xedit_48x48.ico
+    menu, c, add, View Clipboard Text`t%viewclip%, viewclip
+    menu, c, icon, View Clipboard Text`t%viewclip%, %Icons%\QAP-preview_pane_c_26x26.ico
+    menu, c, add, Clear the Clipboard`t%clearclip%, clearclip
+    menu, c, icon, Clear the Clipboard`t%clearclip%, %icons%\clean_clear_clipboard_empty_xedit3_32x32.ico
+    
+    ; Add a note if we had to limit items due to MaxClipboardLines
+    ; if (textLineCount > MaxClipboardLines)
+    ; {
+        ; menu, c, add, ; line -------------------------
+        ; menu, c, add, ** Note: Clipboard has %totalLines% lines, only showing %MaxClipboardLines% items **, ShowClipboardMenu
+        ; menu, c, icon, ** Note: Clipboard has %totalLines% lines, only showing %MaxClipboardLines% items **, %iconerror%,,24
+    ; }
+return
+
+/*
+
+ buildClipboardMenu:
+	menu, c, add
+    menu, c, deleteall  ; Clear the menu before rebuilding
+	
+    menu, c, add, Clipboard Menu`t%showclipboardmenu%, showclipboardmenu
+    menu, c, icon, Clipboard Menu`t%showclipboardmenu%, %icons%\checkclipboard.ico,,32
+	menu, c, default, Clipboard Menu`t%showclipboardmenu%
+	menu, c, add, ; line -------------------------
+
+    ; if (clipboard = "")  
+	if (Clipboard = "" || Clipboard = A_Tab || RegExMatch(Clipboard, "^\s+$"))
+    {
+        menu, c, add, Clipboard is empty or has no text, DoNothing
+        menu, c, icon, Clipboard is empty or has no text, %iconerror%,,32
+        menu, c, default, Clipboard is empty or has no text
+        return
+    }
+
+	paths := Clipboard  ; Use existing clipboard content
+    countFiles := 0
+    countText := 0
+    foundValidPath := false
+	validPaths := ""  ; Store valid file paths
+	RawText := false
+	PathTooLong := false
+
+	if (MaxClipboardLines = "" || MaxClipboardLines = 0)
+		MaxClipboardLines := 50
+    
+	    ; First pass - count total lines to know what we're dealing with
+    ; totalLines := 0
+    ; Loop, Parse, paths, `n, `r
+    ; {
+        ; totalLines++
+    ; }
+	
+	Loop, Parse, paths, `n, `r ; --- Process file paths first --- ; this matching file paths one Per-Line, hold shows them if they exist on the computer
+    {
+        path := Trim(A_LoopField)
+        if (path = "" || countFiles >= MaxClipboardLines)  ; Ignore empty lines, limit to 50 items
+            continue
+			
+		if (SubStr(path, 1, 2) = "/*")  ; Ignore lines that start with /*
+        continue
+
+        if FileExist(path)  ; Check if the path exists
+        {
+			if (StrLen(path) > 250)  
+			{
+				; Menu, c, UseErrorLevel, 1 ; Reset user errorlevel
+				SplitPath, path, fileName,,ext,namestem,drive
+				path := "**  " drive "\..\..\" filename 
+				PathTooLong := true
+			}
+				; Menu, c, UseErrorLevel, 0 ; Reset user errorlevel
+            menu, c, add, %path%, ClipboardMenuFileActions
+            iconpath := Getfileicon(path)
+            menu, c, icon, %path%, %iconpath%
+			
+			
+			validPaths .= path "`r`n"   ; Store for bulk copy
+			
+            countFiles++
+            foundValidPath := true
+        }
+
+    } 
+
+    if (foundValidPath)
+        {
+			If (PathTooLong)
+				{
+					menu, c, add, ; line -------------------------
+					Menu, c, add, ** <- Error! "\..\..\" These paths are too long for the menu to display!, ShowClipboardMenu
+					Menu, c, icon, ** <- Error! "\..\..\" These paths are too long for the menu to display!, %iconerror%,,24
+					menu, c, Default,  ** <- Error! "\..\..\" These paths are too long for the menu to display!
+					PathTooLong := false
+				}
+
+			menu, c, add, ; line -------------------------
+			menu, c, add, 🡱 Existing Folders\Files 🡱 - (?? Mod-Click Options)`tFile Count: %countFiles%, aboutclipfiles
+			menu, c, icon, 🡱 Existing Folders\Files 🡱 - (?? Mod-Click Options)`tFile Count: %countFiles%, %icons%\documents multimedia imageres_5334_256x256.ico,,24
+			; menu, c, add,  Click=Run`, ^Open In File Manager`, ^+Copy to Clipboard`, ⊞+Clip Extract Existing List 🡱`tFile Count: %countFiles%, showclipboardmenu
+			; menu, c, icon,  Click=Run`, ^Open In File Manager`, ^+Copy to Clipboard`, ⊞+Clip Extract Existing List 🡱`tFile Count: %countFiles%, %icons%\about.ico ; gpt, leave this line alone
+
+		}
+;---------------------------------------------------------------------------
+ ; First check if there's any non-file text to display
+    ; textLineCount := 0
+
+; Second Pass: Process Raw Text
+ Loop, Parse, paths, `n, `r
+    { ;; this loop first checks for raw text, the lower adds it to the menu with its own heading. otherwise it will always show even if the clipboard only contains files.
+        line := Trim(A_LoopField)
+        ; if (line = "" || countText >= MaxClipboardLines)
+        if (line = "")
+            continue
+
+        if !FileExist(line)  ; Ensure it's plain text, not a file
+        {
+            countText++
+			rawtext := True
+        }
+    }
+
+if (RawText)
+{
+    textIcon := icons "\paint_text_32x32.ico"
+	menu, c, add, ; line -------------------------
+	menu, c, add, 🡳 Plain Text Per-Line. 🡳   - Click to Paste\Insert a Single Line 🡳`tLine Count: %counttext%, ShowClipboardMenu
+	menu, c, icon, 🡳 Plain Text Per-Line. 🡳   - Click to Paste\Insert a Single Line 🡳`tLine Count: %counttext%, %icons%\ToolAdd line document_32x32.ico,,28
+	menu, c, add, ; line -------------------------
+	
+    Loop, Parse, paths, `n, `r ; --- Process text lines separately ---
+    {
+        line := Trim(A_LoopField)
+        if (line = "" || countText >= MaxClipboardLines)
+            continue
+
+        if !FileExist(line)  ; Ensure it's plain text, not a file
+        {
+            if (StrLen(line) > 240)  ; Trim long lines
+                line := SubStr(line, 1, 240) . "..."
+
+            menu, c, add, %line%, PasteClipboardText
+            menu, c, icon, %line%, %textIcon%
+				
+            countText++
+			rawtext := True
+        }
+    }
+} 
+
+
+;---------------------------------------------------------------------------
+
+; if (rawtext = True)
+	; {
+			; can't think of any to put here to process raw text on its own?
+	
+	; }
+menu, c, add, ; line -------------------------
+menu, c, add, Save Clipboard to New Text Document`t%SaveClipboardAsTxt%, SaveClipboardAsTxt
+menu, c, icon, Save Clipboard to New Text Document`t%SaveClipboardAsTxt%, %Icons%\clipboard save b_xedit_48x48.ico
+menu, c, add, View Clipboard Text`t%viewclip%, viewclip
+menu, c, icon, View Clipboard Text`t%viewclip%, %Icons%\QAP-preview_pane_c_26x26.ico
+menu, c, add, Clear the Clipboard`t%clearclip%, clearclip
+menu, c, icon, Clear the Clipboard`t%clearclip%, %icons%\clean_clear_clipboard_empty_xedit3_32x32.ico
+return 
+
+*/
+
+
+PasteClipboardText:
+    ClipSaved := ClipboardAll  ; Save current clipboard
+	sleep 100
+    Clipboard := A_ThisMenuItem  ; Set selected menu text
+	sleep 100
+    Send, ^v  ; Paste
+    Sleep 100
+    Clipboard := ClipSaved  ; Restore clipboard
+	sleep 500
+return
+
+ClipboardMenuFileActions:
+splitpath, A_ThisMenuItem, filename, dir, ext
+; MsgBox athisMI: %A_thismenuitem%`n`nfn: %filename%`n`ndir:  %dir%`n`next:  %ext%`n`ndispalpath:  %displaypath%
+if (GetKeyState("Control", "P") && GetKeyState("Shift", "P"))
+	{
+		clipboard =
+		sleep 30
+		if FileExist(dopusrt)
+		{
+			Run, %dopusrt% /CMD Clipboard COPY FILE "%A_ThisMenuItem%", , UseErrorLevel
+			ToolTip, %A_ThisMenuItem% ...`n... copied to your Clipboard with Directory Opus!
+			SetTimer, RemoveToolTip, -2500
+			return
+		}
+		else
+		{
+			CopyToClipboard(A_ThisMenuItem)
+			ToolTip, %A_ThisMenuItem% ...`n... copied to your Clipboard.
+			SetTimer, RemoveToolTip, -2000
+		}
+		tooltip, Not assigned yet...`n%a_linefile%`n @ Line: %A_linenumber%
+		SetTimer, RemoveToolTip, -2000
+		return
+	}
+if (GetKeyState("Lwin", "P") && GetKeyState("Control", "P"))
+	{
+		tooltip, Not assigned yet...`n%a_linefile%`n @ Line: %A_linenumber%
+		SetTimer, RemoveToolTip, -2000
+		return
+	}
+if (GetKeyState("Lwin", "P") && GetKeyState("Shift", "P"))
+	{
+		Clipboard := RTrim(validPaths, "`r`n")  ; Copy all existing paths to clipboard
+		tooltip, All Valid Files Paths have been`ncopied to your clipboard.
+		SetTimer, RemoveToolTip, -2000
+		return
+	}
+if (GetKeyState("Control", "P"))
+	{
+		try Run, %dopusrt% /cmd Go "%A_ThisMenuItem%" NEWTAB TOFRONT
+		catch
+			Run explorer.exe /select`,"%A_ThisMenuItem%"
+		SetTimer, RemoveToolTip, -2000
+		return
+	}
+if (GetKeyState("Shift", "P"))
+	{
+
+	}
+else ;; normal click
+	{
+
+		Run, %A_ThisMenuItem%,,UseErrorLevel
+		if ErrorLevel
+		{
+			run, C:\Windows\System32\OpenWith.exe "%A_ThisMenuItem%"
+			Tooltip, ERR!`n`n Couldn't Run This File!`n @ Line#:  %A_LineNumber%`n %A_LineFile%
+			SetTimer, RemoveToolTip, -3000
+			; Return
+		}
+
+	}
+return 
+
+CopyValidAllFiles:
+Clipboard := RTrim(validPaths, "`r`n")  ; Copy all paths to clipboard
+return
+
+CopyToClipboard(ItemPath)
+{
+    if !FileExist(ItemPath)
+        return  ; Safety check, but shouldn't trigger since paths exist in the menu
+
+    clipboardData := ComObjCreate("Shell.Application").Namespace(0) ; Create an object for clipboard operations
+
+    fileObj := clipboardData.ParseName(ItemPath)  ; Get the file object
+    
+    if !fileObj
+        return  ; In case something goes wrong
+
+    fileObj.InvokeVerb("Copy")  ; Copy to clipboard
+}
+
+
+aboutclipfiles:
+MsgBox, 262176, ECLM - ?? About Live Clipboard Files, Holding down the modifier keys when clicking on a file will carry out different actions. The there a reminder guide on the menu. The Modifer keys symbols are`n`n ^ = Ctrl `, + = Shift `, ⊞ = Windows Key`n`nCtrl + Shift = will copy the actually file to you clipboard from the list.`n`nWin + Shift = will extract & Copy the text paths of all existing found on your clipboard.`n`nCtrl = will open that files folder in your file manager`n`nA regular click will run\open the file in it default handler.`n
+
+return
+
+;///////////////////////////////////////////////////////////////////////////
+;--------------------------------------------------------------------------- 
+
+
+;---------------------------------------------------------------------------
+;///////////////////////////////////////////////////////////////////////////
+
+;; insert menu labels
+;---------------------------------------------------------------------------
+OpenEmojiKeyboard() ;; function
+{
+    Send {LWin down}.
+    Send {LWin up}
+}
+
+;---------------------------------------------------------------------------
+
+
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+InsertSymbols:
+Switch A_ThisMenuItem { 
+
+;;∙======∙ARROWS∙============================================∙
+;;-------∙Up Arrows∙-----------------------------------∙
+    Case "Insert Arrow >>     ↑": 
+
+        SendInput {Raw}↑
+
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >>     ⬆": 
+
+        SendInput {Raw}⬆
+
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >>     ⇧": 
+        SendInput {Raw}⇧
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >>     ▲": 
+        SendInput {Raw}▲
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >>     △": 
+        SendInput {Raw}△
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >>     🡱": 
+        SendInput {Raw}🡱
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⮙": 
+        SendInput {Raw}⮙
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⮝": 
+        SendInput {Raw}⮝
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >> ∙    ⌃": 
+        SendInput {Raw}⌃
+    Return
+;;-------∙Down Arrows∙-------------------------------∙
+    Case "Insert Ar​row >>     ↓": 
+        SendInput {Raw}↓
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >>     ⬇": 
+        SendInput {Raw}⬇
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⇩": 
+        SendInput {Raw}⇩
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ▼": 
+        SendInput {Raw}▼
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ▽": 
+        SendInput {Raw}▽
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arrow >>     🡳": 
+        SendInput {Raw}🡳
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arr​ow >>     ⮛": 
+        SendInput {Raw}⮛
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arr​ow >>     ⮟": 
+        SendInput {Raw}⮟
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⌄": 
+        SendInput {Raw}⌄
+    Return
+;;-------∙Left Arrows∙----------------------------------∙
+    Case "Insert Ar​row >>     ←": 
+        SendInput {Raw}←
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬅": 
+        SendInput {Raw}⬅
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⇦": 
+        SendInput {Raw}⇦
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◀": 
+        SendInput {Raw}◀
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◁": 
+        SendInput {Raw}◁
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⇒":
+		SendInput {Raw}⇒
+	Return
+    Case "Insert Ar​row >>     ⇐": 
+		SendInput {Raw}⇐
+	Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     🡰": 
+        SendInput {Raw}🡰
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arr​ow >>     ⮘": 
+        SendInput {Raw}⮘
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arr​ow >>     ⮜": 
+        SendInput {Raw}⮜
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⟪": 
+        SendInput {Raw}⟪
+    Return
+;;-------∙Right Arrows∙--------------------------------∙○
+    Case "Insert Ar​row >>     →": 
+        SendInput {Raw}→
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ➞": 
+        SendInput {Raw}➞
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⇨": 
+        SendInput {Raw}⇨
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ▶": 
+        SendInput {Raw}▶
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ▷": 
+        SendInput {Raw}▷
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     🡲": 
+        SendInput {Raw}🡲
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Arr​ow >>     ⮚": 
+        SendInput {Raw}⮚
+    Return
+;;∙-----------------------------------------∙ 
+    Case "Insert Ar​row >>     ⮞": 
+        SendInput {Raw}⮞
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⏴": 
+        SendInput {Raw}⏴
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⏵": 
+        SendInput {Raw}⏵
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⟫": 
+        SendInput {Raw}⟫
+    Return
+;;-------∙UpDown Arrows∙---------------------------∙
+    Case "Insert Ar​row >>     ↕": 
+        SendInput {Raw}↕
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬍": 
+        SendInput {Raw}⬍
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⇳": 
+        SendInput {Raw}⇳
+    Return
+;;∙-----------------------------------------∙ 
+    Case "Insert Ar​row >>     🡙": 
+        SendInput {Raw}🡙
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⇕": 
+        SendInput {Raw}⇕
+    Return
+;;-------∙LeftRight Arrows∙---------------------------∙
+    Case "Insert Ar​row >>     ↔": 
+        SendInput {Raw}↔
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬌": 
+        SendInput {Raw}⬌
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬄": 
+        SendInput {Raw}⬄
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     🡘": 
+        SendInput {Raw}🡘
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⇿": 
+        SendInput {Raw}⇿
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⟷": 
+        SendInput {Raw}⟷
+    Return
+;;-------∙UpLeft Arrows∙------------------------------∙
+    Case "Insert Ar​row >>     ↖": 
+        SendInput {Raw}↖
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬉": 
+        SendInput {Raw}⬉
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬁": 
+        SendInput {Raw}⬁
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◤": 
+        SendInput {Raw}◤
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◸": 
+        SendInput {Raw}◸
+    Return
+;;∙----------------------------------------∙
+    Case "Insert Ar​row >>     🡴": 
+        SendInput {Raw}🡴
+    Return
+;;-------∙UpRight Arrows∙----------------------------∙
+    Case "Insert Ar​row >>     ↗": 
+        SendInput {Raw}↗
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬈": 
+        SendInput {Raw}⬈
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬀": 
+        SendInput {Raw}⬀
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◥": 
+        SendInput {Raw}◥
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◹": 
+        SendInput {Raw}◹
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     🡵": 
+        SendInput {Raw}🡵
+    Return
+;;-------∙DownRight Arrows∙------------------------∙
+    Case "Insert Ar​row >>     ↘": 
+        SendInput {Raw}↘
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬊": 
+        SendInput {Raw}⬊
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬂": 
+        SendInput {Raw}⬂
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◢": 
+        SendInput {Raw}◢
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◿": 
+        SendInput {Raw}◿
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     🡶": 
+        SendInput {Raw}🡶
+    Return
+;;-------∙DownLeft Arrows∙--------------------------∙
+    Case "Insert Ar​row >>     ↙": 
+        SendInput {Raw}↙
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬋": 
+        SendInput {Raw}⬋
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⬃": 
+        SendInput {Raw}⬃
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◣": 
+        SendInput {Raw}◣
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ◺": 
+        SendInput {Raw}◺
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     🡷": 
+        SendInput {Raw}🡷
+    Return
+;;-------∙Circular Arrows∙-----------------------------∙
+    Case "Insert Ar​row >>     ↩": 
+        SendInput {Raw}↩
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ↪": 
+        SendInput {Raw}↪
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ↶": 
+        SendInput {Raw}↶
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ↷": 
+        SendInput {Raw}↷
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ↺": 
+        SendInput {Raw}↺
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ↻": 
+        SendInput {Raw}↻
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⥀": 
+        SendInput {Raw}⥀
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Ar​row >>     ⥁": 
+        SendInput {Raw}⥁
+    Return
+
+;;∙======∙BULLETS∙=============================================∙
+   Case "Insert Bullet >>     ◦": 
+        SendInput {Raw}◦
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     •": 
+        SendInput {Raw}•
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ○": 
+        SendInput {Raw}○
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ●": 
+        SendInput {Raw}●
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ▫": 
+        SendInput {Raw}▫
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ▪": 
+        SendInput {Raw}▪
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ☐": 
+       SendInput {Raw}☐
+   Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ■ ), CCase": 
+       SendInput {Raw}■
+   Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ◇": 
+       SendInput {Raw}◇
+   Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ◈": 
+        SendInput {Raw}◈
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ◆": 
+        SendInput {Raw}◆
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ✧": 
+        SendInput {Raw}✧
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ✦": 
+        SendInput {Raw}✦
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ▹": 
+        SendInput {Raw}▹
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ▸": 
+        SendInput {Raw}▸
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ⪧": 
+        SendInput {Raw}⪧
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     🠺": 
+        SendInput {Raw}🠺
+   Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ▣": 
+        SendInput {Raw}▣
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Bullet >>     ⬢": 
+        SendInput {Raw}⬢
+    Return
+    Case "Insert Bullet >>     ◯": 
+        SendInput {Raw}◯
+    Return
+	    Case "Insert Bullet >>     ◎": 
+        SendInput {Raw}◎
+    Return
+	    Case "Insert Bullet >>     ◉": 
+        SendInput {Raw}◎
+    Return
+;;∙======∙STARS∙===============================================∙
+    Case "Insert Star >>     ✶": 
+        SendInput {Raw}✶
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert Star >>     ✹": 
+        SendInput {Raw}✹
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ✸": 
+        SendInput {Raw}✸
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ★": 
+        SendInput {Raw}★
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ✦": 
+        SendInput {Raw}✦
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ❊": 
+        SendInput {Raw}❊
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ❈": 
+        SendInput {Raw}❈
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ❋": 
+        SendInput {Raw}❋
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ❉": 
+        SendInput {Raw}❉
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ✺": 
+        SendInput {Raw}✺
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ⛤": 
+        SendInput {Raw}⛤
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ⚝": 
+        SendInput {Raw}⚝
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ⛧": 
+        SendInput {Raw}⛧
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ✰": 
+        SendInput {Raw}✰
+    Return
+;;∙-----------------------------------------∙
+Case "Insert Star >>     ☆": 
+        SendInput {Raw}☆
+    Return
+
+;;∙======∙SYMBOLS∙============================================∙
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     °":  
+        SendInput {Raw}°
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ÷": 
+        SendInput {Raw}÷
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ⨯":  
+        SendInput {Raw}⨯
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ±":  
+        SendInput {Raw}±
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ≥":  
+        SendInput {Raw}≥
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ≤":  
+        SendInput {Raw}≤
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ≈":  
+        SendInput {Raw}≈
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ∓":  
+        SendInput {Raw}∓
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ➕":  
+        SendInput {Raw}➕
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ➖":  
+        SendInput {Raw}➖
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ✖️":  
+        SendInput {Raw}✖️
+    Return
+;;∙-----------------------------------------∙
+    Case "Insert  Symbol >>     ➗":  
+        SendInput {Raw}➗
+    Return
+	
+Case "Insert  Symbol >>     ∞":
+SendInput {Raw}∞
+Return
+Case "Insert  Symbol >>     ⊞":
+SendInput {Raw}⊞
+Return
+Case "Insert  Symbol >>     ©":
+SendInput {Raw}©
+Return
+Case "Insert  Symbol >>     ®":
+SendInput {Raw}®
+Return
+Case "Insert  Symbol >>     ™":
+SendInput {Raw}™
+Return
+Case "Insert  Symbol >>     ≠":
+SendInput {Raw}≠
+Return
+} 	 ; ⮘⮘ Keep this last curly bracket at the end of ALL Case Things! 
+	
+;---------------------------------------------------------------------------
+SendSymbol:
+    ; Extract only the last character from the menu item
+    StringTrimLeft, symbol, A_ThisMenuItem, StrLen("Insert Symbol >>     ")
+    SendInput {Raw}%symbol%
+return
+
+sendrune:
+    ; Extract only the last character from the menu item
+    StringTrimLeft, symbol, A_ThisMenuItem, StrLen("Insert Rune >>      ")
+    SendInput {Raw}%symbol%
+return
+    ; SendInput {Raw}%A_ThisMenuItem%
+    ; SendInput {Raw}%char%
+; return
+;---------------------------------------------------------------------------
+showinsertsymbolsmenu:
+menu, inssym, show
+return
+
+;---------------------------------------------------------------------------
+
+;///////////////////////////////////////////////////////////////////////////
+;--------------------------------------------------------------------------- 
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
+;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------
 ;---------------------------------------------------------------------------

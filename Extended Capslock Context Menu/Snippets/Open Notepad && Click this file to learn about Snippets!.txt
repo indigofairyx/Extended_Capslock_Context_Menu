@@ -1,0 +1,114 @@
+﻿
+
+
+;--------------------------------------------------
+??? What are snippets?
+;--------------------------------------------------
+
+Snippet are Pre-Saved Text Based* documents that you can
+use to quickly paste, with a click, to save yourself the
+time of repetitively typing them out.
+
+
+;**************************************************
+??? Who will find them useful?
+;**************************************************
+
+Anyone who does a lot of monotonous typing computer work!
+
+e.g. Something simple, I use a dozen+ times a day..
+if ErrorLevel
+	{
+		Tooltip, ERROR!`n @ Line#:  `%A_LineNumber`%`n `%A_LineFile`%
+		SetTimer, RemoveToolTip, -2000
+		Return
+	}
+Or this can be Standard reply phrase or Full Letter ...
+( such as this one )
+Most people working in a computer driven environments
+where emails, documents, invoices, reports, logs, etc.,
+are large part of your workflow... e.g. Customer Relations, HR,
+PR, Secretaries, Receptions, DRs, etc., Can benefit from this menu.
+
+Don't type out the stock reply outline again and again and.... again.
+Just click and paste!
+
+Most coders, Programmers, Developers, IT Techs, and so on,
+are likely already familiar with and using some form of snippets.
+
+And there are many automation application for these
+kinds of text macro out there. Soo..
+
+;**************************************************
+??? What makes this Snippet Menu stand out?
+;**************************************************
+
+This is a *Live* Menu! Its linked to 'Snippets' folder next this app.
+Any files inside that directory will show up in the menu, in realtime.
+
+Just click the file to paste the text inside of it
+into any window that has text field with a blinking cursor.
+
+Copy your own text based* documents inside of it to
+have them instantly available for production.
+
++++ Additionally, You can create new snippets using the menu, on the fly!
+Selected some text, click the 'Save Selection + New Snippet' menu item.
+It will copy it and save it to a new file inside the Snippets Folder,
+ask you to crate a file name.
+Which you can use to paste, by clicking on it, seconds later!
+
+Its that simple.
+;**************************************************
+??? How to use this live snippet menu?
+;**************************************************
+
+As already stated, just click a file to paste the text content inside of it.
+
+Holding down Modifier keys while clicking on a snippet \ menu item
+will carry out different actions on that file.
+
+The key on the bottom of the menu is reminder guide,
+they are AutoHotkey's abbreviated
+symbols for Modifier Keys on your keyboard.
+
+^ = Ctrl , + = Shift , # ⊞ = Windows Key
+( The ! = Alt key can't be use on menus, only hotkeys. )
+
+^Ctrl & Click
+will open the snippet in your text editor or notepad for editing.
+
++Shift & Click
+will copy the text to your Clipboard so can paste it yourself.
+
+^Ctrl & ⊞Windows Key & Click
+will copy select text to Add\Append it to bottom of the snippet.
+
++Shift & ⊞Windows Key
+Click will Delete a Snippet to the Recycle Bin.
+
+^Ctrl & +Shift & Click
+will RUN a snippet.
+( This options mostly for coders who keep automation scripts in snippets )
+
+To organize the menu open the Snippet directory then
+create and rearrange a folder structure that benefits your workflow.
+The menu will update to reflect your layout.
+
+
+
+
+;**************************************************
+* Footnotes *
+;**************************************************
+
+*Text Based documents should be used in this menu.
+Pretty much anything you can open in Notepad++ is good to go!
+
+**MS Office documents are not Standard text based computer documents!
+You can paste text INTO an Office app but 
+you cannot paste the text OUT of Office document.
+They will *NOT* work from this menu.
+
+The hotkey for this menu is Ctrl + Insert or ^Insert.
+You can change it in the ini file if you'd a different key combo.
